@@ -13,44 +13,10 @@ func NewRouter() *gin.Engine {
 	router.SetTrustedProxies([]string{"127.0.0.1", "::1"})
 
 	// Public routes (no auth required)
-	router.GET("/api/v1/echo", HandleEcho)
-	router.POST("/api/v1/login", HandleLogin)
-	router.POST("/api/v1/register", HandleRegister)
-
-	// Routes that require authentication
-	authedRoutes := router.Group("/api/v1")
-	authedRoutes.Use(auth.AuthRequired())
-	{
-		// All routes in this group require authentication
-		authedRoutes.GET("/users", GetUsers)
-		authedRoutes.GET("/profile", GetProfile)
-		authedRoutes.PUT("/profile", UpdateProfile)
-		authedRoutes.POST("/logout", HandleLogout)
-
-		// Admin-only routes
-		adminRoutes := authedRoutes.Group("/admin")
-		adminRoutes.Use(auth.RequireRole(db.RoleAdmin, db.RoleSuperAdmin))
-		{
-			adminRoutes.GET("/users", GetAllUsers)
-			adminRoutes.PUT("/users/:id", UpdateUser)
-			adminRoutes.DELETE("/users/:id", DeleteUser)
-		}
-
-		// SuperAdmin-only routes
-		superAdminRoutes := authedRoutes.Group("/superadmin")
-		superAdminRoutes.Use(auth.RequireRole(db.RoleSuperAdmin))
-		{
-			superAdminRoutes.POST("/admin/create", CreateAdmin)
-			superAdminRoutes.GET("/system/info", GetSystemInfo)
-		}
-	}
-
-	// Routes with optional authentication (auth if present, but not required)
-	publicRoutes := router.Group("/api/v1/public")
-	publicRoutes.Use(auth.OptionalAuth())
-	{
-		publicRoutes.GET("/posts", GetPublicPosts) // Shows different content if authenticated
-	}
+	apiRoutes := router.Group("/api/v1")
+	registerScheduleRoutes(apiRoutes)
+	registerTaskRoutes(apiRoutes)
+	registerUserRoutes(apiRoutes)
 
 	return router
 }
