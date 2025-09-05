@@ -1,0 +1,15 @@
+.env*
+tmp/
+
+# Local
+.DS_Store
+*.local
+*.log*
+
+frontend/node_modules
+frontend/dist/
+frontend/dist-ssr
+frontend/.rspack-profile-*/
+frontend/.nitro
+frontend/.tanstack
+
