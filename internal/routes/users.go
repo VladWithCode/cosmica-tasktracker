@@ -8,6 +8,12 @@ import (
 	"github.com/vladwithcode/tasktracker/internal/db"
 )
 
+func registerUserRoutes(router *gin.RouterGroup) {
+	router.GET("/api/v1/users", GetUsers)
+	router.GET("/api/v1/profile", GetProfile)
+	router.PUT("/api/v1/profile", UpdateProfile)
+}
+
 func GetUsers(c *gin.Context) {
 	// Get auth from context
 	auth, err := auth.GetAuth(c)

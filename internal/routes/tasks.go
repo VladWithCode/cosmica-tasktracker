@@ -10,7 +10,7 @@ import (
 	"github.com/vladwithcode/tasktracker/internal/db"
 )
 
-func registerTaskRoutes(router *gin.Engine) {
+func registerTaskRoutes(router *gin.RouterGroup) {
 	router.POST("/api/v1/tasks", CreateTask)
 	router.PUT("/api/v1/tasks/:id", UpdateTask)
 	router.DELETE("/api/v1/tasks/:id", DeleteTask)
@@ -19,20 +19,23 @@ func registerTaskRoutes(router *gin.Engine) {
 
 func CreateTask(c *gin.Context) {
 	// Get auth from context
-	auth, err := auth.GetAuth(c)
+	sessionAuth, err := auth.GetAuth(c)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get auth"})
 		return
 	}
 
-	task := db.Task{
-		Title:  c.PostForm("title"),
-		UserID: auth.ID,
+	var task db.Task
+	if err := c.ShouldBind(&task); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Error al crear tarea"})
+		return
 	}
+
+	task.UserID = sessionAuth.ID
 
 	err = db.CreateTask(c.Request.Context(), &task)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create task"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al crear tarea"})
 		return
 	}
 
@@ -70,6 +73,11 @@ func UpdateTask(c *gin.Context) {
 		return
 	}
 
+	if err := c.ShouldBind(&taskData); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Error al actualizar tarea"})
+		return
+	}
+
 	err = db.UpdateTask(c.Request.Context(), task)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update task"})
@@ -85,31 +93,32 @@ func DeleteTask(c *gin.Context) {
 	// Get auth from context
 	sessionAuth, err := auth.GetAuth(c)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get auth"})
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to get auth"})
 		return
 	}
 	task, err := db.GetTaskByID(c.Request.Context(), c.Param("id"))
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Tarea no encontrada"})
+			c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Tarea no encontrada"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error inesperado"})
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Error inesperado"})
 		return
 	}
 
 	if task.UserID != sessionAuth.ID && !sessionAuth.HasAccess(auth.AccessLevelAdmin) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "No tienes permisos para borrar esta tarea"})
+		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "No tienes permisos para borrar esta tarea"})
 		return
 	}
 
-	err = db.DeleteTask(c.Request.Context(), c.Param("id"), auth.ID)
+	err = db.DeleteTask(c.Request.Context(), task)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete task"})
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Error al borrar tarea"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
+		"success": true,
 		"message": "Task deleted",
 	})
 }
@@ -118,13 +127,13 @@ func GetTasksByUserID(c *gin.Context) {
 	// Get auth from context
 	auth, err := auth.GetAuth(c)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get auth"})
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to get auth"})
 		return
 	}
 
 	tasks, err := db.GetTasksByUserID(c.Request.Context(), auth.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get tasks"})
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to get tasks"})
 		return
 	}
 
