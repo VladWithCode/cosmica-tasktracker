@@ -18,6 +18,8 @@ CREATE TRIGGER update_updated_at_column BEFORE UPDATE ON users
 
 -- +goose Down
 -- +goose StatementBegin
+DROP TRIGGER update_updated_at_column ON users;
+
 DROP TABLE users;
 -- +goose StatementEnd
 
