@@ -13,3 +13,4 @@ frontend/.rspack-profile-*/
 frontend/.nitro
 frontend/.tanstack
 
+./tasktracker
