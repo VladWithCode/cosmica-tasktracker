@@ -11,14 +11,14 @@ import (
 
 type User struct {
 	ID       string `db:"id" json:"id"`
-	Fullname string `db:"fullname" json:"fullname"`
-	Password string `db:"password" json:"password"`
-	Username string `db:"username" json:"username"`
+	Fullname string `db:"fullname" json:"fullname" binding:"required"`
+	Password string `db:"password" json:"password" binding:"required"`
+	Username string `db:"username" json:"username" binding:"required"`
 	Role     string `db:"role" json:"role"`
-	Email    string `db:"email" json:"email"`
+	Email    string `db:"email" json:"email,omitempty"`
 
-	CreatedAt time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
+	CreatedAt time.Time `db:"created_at" json:"created_at,omitzero"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at,omitzero"`
 }
 
 // ValidatePass compares the provided string against the user's password
@@ -45,14 +45,13 @@ func (u *User) HashPass(pw string) error {
 const (
 	RoleSuperAdmin string = "superadmin"
 	RoleAdmin      string = "admin"
-	RoleEditor     string = "editor"
 	RoleUser       string = "user"
 )
 
-func CreateUser(ctx context.Context, user *User) (string, error) {
+func CreateUser(ctx context.Context, user *User) error {
 	conn, err := GetConn(ctx)
 	if err != nil {
-		return "", err
+		return err
 	}
 	defer conn.Release()
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -61,7 +60,7 @@ func CreateUser(ctx context.Context, user *User) (string, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	_, err = conn.Exec(
@@ -75,11 +74,7 @@ func CreateUser(ctx context.Context, user *User) (string, error) {
 		user.Email,
 	)
 
-	if err != nil {
-		return "", err
-	}
-
-	return user.ID, nil
+	return err
 }
 
 func GetUserByID(ctx context.Context, id string) (*User, error) {
@@ -128,7 +123,7 @@ func GetUserByUsername(ctx context.Context, username string) (*User, error) {
 
 	err = conn.QueryRow(
 		ctx,
-		"SELECT * FROM users WHERE username = $1",
+		"SELECT id, fullname, password, username, role, email FROM users WHERE username = $1",
 		username,
 	).Scan(
 		&user.ID,
@@ -217,4 +212,19 @@ func VerifyUserEmail(ctx context.Context, userID string) error {
 	}
 
 	return nil
+}
+
+func DeleteUser(ctx context.Context, userID string) error {
+	conn, err := GetConn(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	_, err = conn.Exec(ctx, `DELETE FROM users WHERE id = $1`, userID)
+
+	return err
 }

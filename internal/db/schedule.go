@@ -14,7 +14,6 @@ const (
 	ScheduleTaskStatusPaused    ScheduleTaskStatus = "paused"
 	ScheduleTaskStatusCompleted ScheduleTaskStatus = "completed"
 	ScheduleTaskStatusCancelled ScheduleTaskStatus = "cancelled"
-	ScheduleTaskStatusStopped   ScheduleTaskStatus = "stopped"
 )
 
 type ScheduleTaskPriority int
@@ -49,19 +48,25 @@ type ScheduleTask struct {
 	Description string `db:"description" json:"description,omitempty"`
 	// StartTime is the time the task is supposed to be completed. Usually some time
 	// during the current day.
-	StartTime time.Time `db:"start_time" json:"start_time,omitzero"`
+	StartTime time.Time `db:"start_time" json:"start_time,omitzero" time_format:"15:04"`
 	// EndTime is the time the task is supposed to be completed. Usually some time
 	// during the current day.
-	EndTime time.Time `db:"end_time" json:"end_time,omitzero"`
+	EndTime time.Time `db:"end_time" json:"end_time,omitzero" time_format:"15:04"`
 	// StartDate is the date the task is supposed to be completed.
 	// Normally, this is "today's date" since the task are expected to be completed
 	// on the same day.
-	StartDate time.Time `db:"start_date" json:"start_date,omitzero"`
+	//
+	// Note that for repeating tasks, the StartDate is used for monthly and bimonthly
+	// tasks to determine the day of the month to repeat on.
+	StartDate time.Time `db:"start_date" json:"start_date,omitzero" time_format:"2006-01-02"`
 	// EndDate is the date the task is supposed to be completed.
 	// Normally, this is "today's date" since the task are expected to be completed
 	// on the same day.
-	EndDate time.Time `db:"end_date" json:"end_date,omitzero"`
-	// Duration is the duration of the task. If StartTime and EndTime are set, this
+	EndDate time.Time `db:"end_date" json:"end_date,omitzero" time_format:"2006-01-02"`
+	// Duration allows users to define a task that they may complete at any time during the day
+	// for a specific duration.
+	//
+	// If StartTime and EndTime are set, this
 	// will be calculated automatically.
 	Duration time.Duration `db:"duration" json:"duration,omitempty"`
 	// Some tasks may be marked as required, meaning the user wants to give them a special
@@ -86,7 +91,7 @@ type ScheduleTask struct {
 	// RepeatInterval is an arbitrary interval in days to repeat on.
 	RepeatInterval int `db:"repeat_interval" json:"repeat_interval,omitempty"`
 	// RepeatEndDate is the date to stop repeating the task.
-	RepeatEndDate string `db:"repeat_end_date" json:"repeat_end_date,omitempty"`
+	RepeatEndDate time.Time `db:"repeat_end_date" json:"repeat_end_date,omitzero"`
 	// Status of the shceduling for this task.
 	//
 	// Possible values are active, paused, completed, cancelled and stopped.
@@ -110,11 +115,17 @@ func CreateScheduleTask(ctx context.Context, task *ScheduleTask) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
+	if !task.StartTime.IsZero() && !task.EndTime.IsZero() {
+		task.Duration = time.Duration(task.EndTime.Sub(task.StartTime).Minutes())
+	}
+
 	args := pgx.NamedArgs{
 		"id":              task.ID,
 		"userID":          task.UserID,
 		"title":           task.Title,
 		"description":     task.Description,
+		"startTime":       task.StartTime,
+		"endTime":         task.EndTime,
 		"startDate":       task.StartDate,
 		"endDate":         task.EndDate,
 		"duration":        task.Duration,
@@ -130,11 +141,11 @@ func CreateScheduleTask(ctx context.Context, task *ScheduleTask) error {
 	_, err = conn.Exec(
 		ctx,
 		`INSERT INTO schedule_tasks (
-			id, title, user_id, description, start_date, end_date, duration, required, 
+			id, title, user_id, description, start_time, end_time, start_date, end_date, duration, required, 
 			repeating, repeat_frequency, repeat_interval, repeat_weekdays, repeat_end_date, 
 			status, priority
 		) VALUES (
-			@id, @title, @userID, @description, @startDate, @endDate, @duration, @required, 
+			@id, @title, @userID, @description, @startTime, @endTime, @startDate, @endDate, @duration, @required, 
 			@repeating, @repeatFrequency, @repeatInterval, @repeatWeekdays, @repeatEndDate, 
 			@status, @priority
 		)`,
@@ -154,11 +165,17 @@ func UpdateScheduleTask(ctx context.Context, task *ScheduleTask) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
+	if !task.StartTime.IsZero() && !task.EndTime.IsZero() {
+		task.Duration = time.Duration(task.EndTime.Sub(task.StartTime).Minutes())
+	}
+
 	args := pgx.NamedArgs{
 		"id":              task.ID,
 		"userID":          task.UserID,
 		"title":           task.Title,
 		"description":     task.Description,
+		"startTime":       task.StartTime,
+		"endTime":         task.EndTime,
 		"startDate":       task.StartDate,
 		"endDate":         task.EndDate,
 		"duration":        task.Duration,
@@ -174,11 +191,12 @@ func UpdateScheduleTask(ctx context.Context, task *ScheduleTask) error {
 	_, err = conn.Exec(
 		ctx,
 		`UPDATE schedule_tasks SET
-			title = @title, description = @description, start_date = @startDate, 
-			end_date = @endDate, duration = @duration, required = @required, 
-			repeating = @repeating, repeat_frequency = @repeatFrequency, 
-			repeat_interval = @repeatInterval, repeat_weekdays = @repeatWeekdays, 
-			repeat_end_date = @repeatEndDate, status = @status, priority = @priority
+			title = @title, description = @description, start_time = @startTime, 
+			end_time = @endTime, start_date = @startDate, end_date = @endDate, 
+			duration = @duration, required = @required, repeating = @repeating, 
+			repeat_frequency = @repeatFrequency, repeat_interval = @repeatInterval, 
+			repeat_weekdays = @repeatWeekdays, repeat_end_date = @repeatEndDate, 
+			status = @status, priority = @priority
 		WHERE id = @id`,
 		args,
 	)
@@ -200,7 +218,7 @@ func GetScheduleTaskByID(ctx context.Context, id string) (*ScheduleTask, error) 
 	err = conn.QueryRow(
 		ctx,
 		`SELECT (
-			id, title, description, start_date, end_date, duration, required, 
+			id, title, description, start_time, end_time, start_date, end_date, duration, required,
 			repeating, repeat_frequency, repeat_interval, repeat_weekdays, repeat_end_date,
 			status, priority, user_id
 		) FROM schedule_tasks
@@ -246,7 +264,7 @@ func GetScheduleTasksByUserID(ctx context.Context, userID string) ([]*ScheduleTa
 	rows, err := conn.Query(
 		ctx,
 		`SELECT (
-			id, title, description, start_date, end_date, duration, required, 
+			id, title, description, start_time, end_time, start_date, end_date, duration, required,
 			repeating, repeat_frequency, repeat_interval, repeat_weekdays, repeat_end_date,
 			status, priority, user_id
 		) FROM schedule_tasks WHERE user_id = $1`,
@@ -310,4 +328,43 @@ func DeleteScheduleTask(ctx context.Context, task *ScheduleTask) error {
 	)
 
 	return err
+}
+
+func getUserActiveScheduleTasks(ctx context.Context, userID string) ([]*ScheduleTask, error) {
+	conn, err := GetConn(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	var tasks []*ScheduleTask
+	rows, err := conn.Query(ctx, `
+		SELECT id, title, description, start_time, end_time, start_date, end_date,
+			   repeating, repeat_frequency, repeat_weekdays, repeat_interval, repeat_end_date,
+			   status, priority, user_id, created_at, updated_at
+		FROM schedule_tasks 
+		WHERE user_id = $1 AND status = 'active'`, userID)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var task ScheduleTask
+		err = rows.Scan(&task.ID, &task.Title, &task.Description,
+			&task.StartTime, &task.EndTime, &task.StartDate, &task.EndDate,
+			&task.Repeating, &task.RepeatFrequency, &task.RepeatWeekdays,
+			&task.RepeatInterval, &task.RepeatEndDate, &task.Status,
+			&task.Priority, &task.UserID, &task.CreatedAt, &task.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		tasks = append(tasks, &task)
+	}
+
+	return tasks, nil
 }

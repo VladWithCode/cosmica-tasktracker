@@ -17,6 +17,11 @@ CREATE TABLE schedule_tasks (
     -- For tasks with specific start and end dates
     start_date DATE,
     end_date DATE,
+    -- Tasks can be registered with a duration instead of a specific start or end time.
+    -- Allowing users to define a task that they may complete at any time during the day
+    -- for a specific duration.
+    -- Duration is in minutes.
+    duration INT,
     -- By default all tasks are not recurring
     repeating BOOLEAN NOT NULL DEFAULT FALSE,
     -- If repeating, one or more of the following fields must be defined and will be

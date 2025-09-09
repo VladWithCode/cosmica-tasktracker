@@ -175,7 +175,7 @@ func AuthRequired() gin.HandlerFunc {
 }
 
 // RequireRole is a middleware that checks if the authenticated user has one of the required roles
-func RequireRole(roles ...string) gin.HandlerFunc {
+func RequireAccessLevel(lv AccessLevel) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		auth, exists := c.Get(string(DefaultAuthCtxKey))
 		if !exists {
@@ -191,19 +191,10 @@ func RequireRole(roles ...string) gin.HandlerFunc {
 			return
 		}
 
-		// Check if user has one of the required roles
-		hasRole := false
-		for _, role := range roles {
-			if authData.Role == role {
-				hasRole = true
-				break
-			}
-		}
-
-		if !hasRole {
+		if !authData.HasAccess(lv) {
 			c.JSON(http.StatusForbidden, gin.H{
-				"error":  "forbidden",
-				"reason": "Rol insuficiente",
+				"error":  "acceso denegado",
+				"reason": "Permiso insuficiente",
 			})
 			c.Abort()
 			return
@@ -315,7 +306,7 @@ func PopulateAuth(next AuthedHandler) http.HandlerFunc {
 
 func RejectUnauthenticated(c *gin.Context, reason string) {
 	c.JSON(http.StatusUnauthorized, gin.H{
-		"error":  "unauthorized",
+		"error":  "No autorizado",
 		"reason": reason,
 	})
 }

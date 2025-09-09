@@ -1,44 +1,47 @@
 package routes
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/vladwithcode/tasktracker/internal/auth"
 	"github.com/vladwithcode/tasktracker/internal/db"
 )
 
 func registerUserRoutes(router *gin.RouterGroup) {
-	router.GET("/api/v1/users", GetUsers)
-	router.GET("/api/v1/profile", GetProfile)
-	router.PUT("/api/v1/profile", UpdateProfile)
-}
+	router.GET("/profile", GetProfile)
+	router.PUT("/profile", UpdateProfile)
 
-func GetUsers(c *gin.Context) {
-	// Get auth from context
-	auth, err := auth.GetAuth(c)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get auth"})
-		return
+	// Admin routes
+	router.Use(auth.RequireAccessLevel(auth.AccessLevelAdmin))
+	{
+		router.POST("/users", CreateUser)
+		router.PUT("/users/:id", UpdateUser)
+		router.DELETE("/users/:id", DeleteUser)
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Hello " + auth.Fullname,
-		"users":   []string{"user1", "user2"}, // Replace with actual implementation
-	})
+	// SuperAdmin routes
+	router.Use(auth.RequireAccessLevel(auth.AccessLevelSuperAdmin))
+	{
+		router.POST("/admin", CreateAdmin)
+		router.GET("/system", GetSystemInfo)
+	}
 }
 
 func GetProfile(c *gin.Context) {
 	auth, err := auth.GetAuth(c)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get auth"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error inesperado"})
 		return
 	}
 
 	// Get full user details from database
 	user, err := db.GetUserByID(c.Request.Context(), auth.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error inesperado"})
+		log.Printf("failed to get user: %v\n", err)
 		return
 	}
 
@@ -54,7 +57,8 @@ func GetProfile(c *gin.Context) {
 func UpdateProfile(c *gin.Context) {
 	auth, err := auth.GetAuth(c)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get auth"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error inesperado"})
+		log.Printf("failed to get auth: %v\n", err)
 		return
 	}
 
@@ -64,14 +68,16 @@ func UpdateProfile(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&updateReq); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Información inválida"})
+		log.Printf("failed to bind json: %v\n", err)
 		return
 	}
 
 	// Get user and update
 	user, err := db.GetUserByID(c.Request.Context(), auth.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error inesperado"})
+		log.Printf("failed to get user: %v\n", err)
 		return
 	}
 
@@ -79,20 +85,33 @@ func UpdateProfile(c *gin.Context) {
 	user.Email = updateReq.Email
 
 	if err := db.UpdateUser(c.Request.Context(), user); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error inesperado"})
+		log.Printf("failed to update user: %v\n", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Profile updated successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Perfil actualizado"})
 }
 
 // Admin routes
-func GetAllUsers(c *gin.Context) {
-	// This route is only accessible by admin or superadmin
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Admin access granted",
-		"users":   []string{"all", "users", "here"},
-	})
+func CreateUser(c *gin.Context) {
+	user := db.User{}
+
+	if err := c.ShouldBindJSON(&user); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Información inválida"})
+		log.Printf("failed to bind json: %v\n", err)
+		return
+	}
+
+	user.Role = db.RoleUser
+	user.ID = uuid.Must(uuid.NewV7()).String()
+	if err := db.CreateUser(c.Request.Context(), &user); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error inesperado"})
+		log.Printf("failed to create user: %v\n", err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Usuario creado", "user": user})
 }
 
 func UpdateUser(c *gin.Context) {
@@ -104,8 +123,42 @@ func UpdateUser(c *gin.Context) {
 
 func DeleteUser(c *gin.Context) {
 	userID := c.Param("id")
+
+	user, err := db.GetUserByID(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error inesperado"})
+		return
+	}
+
+	sessionAuth, err := auth.GetAuth(c)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error inesperado"})
+		return
+	}
+
+	isSameUser := user.ID == sessionAuth.ID
+	userIsSuperAdmin := user.Role == db.RoleSuperAdmin
+	loggedHasAdminPrivilege := sessionAuth.HasAccess(auth.AccessLevelAdmin)
+	loggedHasSuperPrivilege := sessionAuth.HasAccess(auth.AccessLevelSuperAdmin)
+
+	if !isSameUser && (!loggedHasAdminPrivilege || userIsSuperAdmin && !loggedHasSuperPrivilege) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "No tienes permisos para borrar este usuario"})
+		return
+	}
+
+	err = db.DeleteUser(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error inesperado"})
+		return
+	}
+
+	// Logout if deleting current user
+	if isSameUser {
+		c.SetCookie("auth_token", "", -1, "/", "", false, true)
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"message": "User " + userID + " deleted",
+		"message": "Usuario borrado",
 	})
 }
 

@@ -3,44 +3,62 @@ package routes
 import (
 	"database/sql"
 	"errors"
+	"log"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/vladwithcode/tasktracker/internal/auth"
 	"github.com/vladwithcode/tasktracker/internal/db"
 )
 
 func registerTaskRoutes(router *gin.RouterGroup) {
-	router.POST("/api/v1/tasks", CreateTask)
-	router.PUT("/api/v1/tasks/:id", UpdateTask)
-	router.DELETE("/api/v1/tasks/:id", DeleteTask)
-	router.GET("/api/v1/tasks", GetTasksByUserID)
+	router.POST("/tasks", CreateTask)
+	router.PUT("/tasks/:id", UpdateTask)
+	router.DELETE("/tasks/:id", DeleteTask)
+
+	router.GET("/tasks", GetUserTasks)
+	router.GET("/tasks/today", GenerateTodaysTasks)
 }
 
 func CreateTask(c *gin.Context) {
 	// Get auth from context
 	sessionAuth, err := auth.GetAuth(c)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get auth"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error de autenticación"})
+		log.Printf("failed to get auth: %v\n", err)
 		return
 	}
 
-	var task db.Task
-	if err := c.ShouldBind(&task); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Error al crear tarea"})
+	var scheduleTask *db.ScheduleTask
+	if err := c.ShouldBind(&scheduleTask); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Información inválida"})
+		log.Printf("failed to bind json: %v\n", err)
 		return
 	}
 
-	task.UserID = sessionAuth.ID
+	scheduleTask.UserID = sessionAuth.ID
+	scheduleTask.ID = uuid.Must(uuid.NewV7()).String()
+	scheduleTask.Status = db.ScheduleTaskStatusActive
 
-	err = db.CreateTask(c.Request.Context(), &task)
+	err = db.CreateScheduleTask(c.Request.Context(), scheduleTask)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error inesperado"})
+		log.Printf("failed to create schedule task: %v\n", err)
+		return
+	}
+
+	task, err := db.CreateTaskForSchedule(c.Request.Context(), scheduleTask)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al crear tarea"})
+		log.Printf("failed to create task: %v\n", err)
 		return
 	}
 
+	detailedTask := db.NewDetailedTask(task, scheduleTask)
 	c.JSON(http.StatusOK, gin.H{
-		"task": task,
+		"task": detailedTask,
 	})
 }
 
@@ -123,21 +141,44 @@ func DeleteTask(c *gin.Context) {
 	})
 }
 
-func GetTasksByUserID(c *gin.Context) {
+func GetUserTasks(c *gin.Context) {
 	// Get auth from context
 	auth, err := auth.GetAuth(c)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to get auth"})
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Error inesperado"})
+		log.Printf("failed to get auth: %v\n", err)
 		return
 	}
 
 	tasks, err := db.GetTasksByUserID(c.Request.Context(), auth.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to get tasks"})
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Error inesperado"})
+		log.Printf("failed to get tasks: %v\n", err)
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"tasks": tasks,
+	})
+}
+
+func GenerateTodaysTasks(c *gin.Context) {
+	// Get auth from context
+	sessionAuth, err := auth.GetAuth(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+
+	// Generate today's tasks
+	tasks, err := db.CreateUsersTodayTasks(c.Request.Context(), sessionAuth.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate today's tasks"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"tasks": tasks,
+		"date":  time.Now().Format("2006-01-02"),
 	})
 }

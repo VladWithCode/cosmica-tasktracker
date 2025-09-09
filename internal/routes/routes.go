@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -12,8 +13,12 @@ func NewRouter() *gin.Engine {
 	router := gin.Default()
 	router.SetTrustedProxies([]string{"127.0.0.1", "::1"})
 
+	router.POST("/login", HandleLogin)
+	router.POST("/logout", HandleLogout)
+
 	// Public routes (no auth required)
 	apiRoutes := router.Group("/api/v1")
+	apiRoutes.Use(auth.AuthRequired())
 	registerScheduleRoutes(apiRoutes)
 	registerTaskRoutes(apiRoutes)
 	registerUserRoutes(apiRoutes)
@@ -27,33 +32,39 @@ func HandleEcho(c *gin.Context) {
 }
 
 func HandleLogin(c *gin.Context) {
+	if _, err := auth.GetAuth(c); err == nil {
+		c.JSON(http.StatusAccepted, gin.H{"action": "redirect", "url": "/api/v1/users/profile"})
+	}
+
 	var loginReq struct {
 		Username string `json:"username" binding:"required"`
 		Password string `json:"password" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&loginReq); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Información inválida"})
 		return
 	}
 
 	// Get user from database
 	user, err := db.GetUserByUsername(c.Request.Context(), loginReq.Username)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Usuario o contraseña incorrectos"})
+		log.Printf("failed to get user: %v", err)
 		return
 	}
 
 	// Validate password
 	if err := user.ValidatePass(loginReq.Password); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Usuario o contraseña incorrectos"})
+		log.Printf("invalid password: %v", err)
 		return
 	}
 
 	// Create token
 	token, err := auth.CreateToken(user)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create session"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error inesperado"})
 		return
 	}
 
@@ -61,7 +72,7 @@ func HandleLogin(c *gin.Context) {
 	c.SetCookie("auth_token", token, 86400, "/", "", false, true)
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Login successful",
+		"message": "Sesión iniciada",
 		"user": gin.H{
 			"id":       user.ID,
 			"username": user.Username,
@@ -71,35 +82,8 @@ func HandleLogin(c *gin.Context) {
 	})
 }
 
-func HandleRegister(c *gin.Context) {
-	// Implementation for user registration
-	c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented"})
-}
-
 func HandleLogout(c *gin.Context) {
 	// Clear the auth cookie
 	c.SetCookie("auth_token", "", -1, "/", "", false, true)
-	c.JSON(http.StatusOK, gin.H{"message": "Logout successful"})
-}
-
-// Public routes with optional auth
-func GetPublicPosts(c *gin.Context) {
-	// Check if user is authenticated
-	auth, err := auth.GetAuth(c)
-
-	if err != nil {
-		// User is not authenticated, show public posts only
-		c.JSON(http.StatusOK, gin.H{
-			"posts":         []string{"public post 1", "public post 2"},
-			"authenticated": false,
-		})
-		return
-	}
-
-	// User is authenticated, show personalized content
-	c.JSON(http.StatusOK, gin.H{
-		"posts":         []string{"public post 1", "public post 2", "private post for " + auth.Username},
-		"authenticated": true,
-		"user":          auth.Username,
-	})
+	c.JSON(http.StatusOK, gin.H{"message": "Sesión cerrada"})
 }
