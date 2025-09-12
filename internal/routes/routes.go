@@ -19,6 +19,7 @@ func NewRouter() *gin.Engine {
 	// Public routes (no auth required)
 	apiRoutes := router.Group("/api/v1")
 	apiRoutes.Use(auth.AuthRequired())
+	apiRoutes.GET("/check-auth", CheckAuth)
 	registerScheduleRoutes(apiRoutes)
 	registerTaskRoutes(apiRoutes)
 	registerUserRoutes(apiRoutes)
@@ -26,9 +27,21 @@ func NewRouter() *gin.Engine {
 	return router
 }
 
-func HandleEcho(c *gin.Context) {
-	msg := c.Request.URL.Query().Get("msg")
-	c.String(http.StatusOK, msg)
+func CheckAuth(c *gin.Context) {
+	auth, err := auth.GetAuth(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "No autorizado"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"user": gin.H{
+			"id":       auth.ID,
+			"username": auth.Username,
+			"fullname": auth.Fullname,
+			"role":     auth.Role,
+		},
+	})
 }
 
 func HandleLogin(c *gin.Context) {
@@ -69,7 +82,16 @@ func HandleLogin(c *gin.Context) {
 	}
 
 	// Set cookie
-	c.SetCookie("auth_token", token, 86400, "/", "", false, true)
+	c.SetSameSite(http.SameSiteStrictMode)
+	c.SetCookie(
+		auth.DefaultCookieName,
+		token,
+		auth.DefaultCookieMaxAge,
+		"/",
+		"",
+		auth.UseSecureCookies,
+		auth.UseHTTPOnlyCookies,
+	)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Sesión iniciada",

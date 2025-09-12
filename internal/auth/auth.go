@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,6 +15,33 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/vladwithcode/tasktracker/internal/db"
 )
+
+var (
+	// UseSecureCookies is a flag to enable secure cookies, by default they are not secure
+	// This should be set to true in production, through the USE_SECURE_COOKIES environment variable
+	UseSecureCookies = false
+	// UseHTTPOnlyCookies is a flag to enable HTTP only cookies, by default they are HTTP only
+	// This may be changed through the USE_HTTP_ONLY_COOKIES environment variable if needed
+	UseHTTPOnlyCookies = true
+	// DefaultCookieName is the name of the cookie used to store the auth token
+	DefaultCookieName = "auth_token"
+	// DefaultCookieMaxAge is the max age of the cookie in seconds
+	DefaultCookieMaxAge = 60 * 60 * 24 * 7 // 1 week
+)
+
+func SetAuthParameters() {
+	UseSecureCookies = os.Getenv("USE_SECURE_COOKIES") == "true"
+	UseHTTPOnlyCookies = os.Getenv("USE_HTTP_ONLY_COOKIES") != "false"
+
+	envCookieName := os.Getenv("DEFAULT_COOKIE_NAME")
+	if envCookieName != "" {
+		DefaultCookieName = envCookieName
+	}
+	envMaxAge, _ := strconv.Atoi(os.Getenv("DEFAULT_COOKIE_MAX_AGE"))
+	if envMaxAge > 0 {
+		DefaultCookieMaxAge = envMaxAge
+	}
+}
 
 var (
 	ErrInvalidAuth = errors.New("invalid auth")

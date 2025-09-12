@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/joho/godotenv"
+	"github.com/vladwithcode/tasktracker/internal/auth"
 	"github.com/vladwithcode/tasktracker/internal/db"
 	"github.com/vladwithcode/tasktracker/internal/routes"
 )
@@ -25,6 +26,8 @@ func main() {
 		log.Fatal(err)
 	}
 	defer conn.Close()
+
+	auth.SetAuthParameters()
 
 	router := routes.NewRouter()
 	err = router.Run()
