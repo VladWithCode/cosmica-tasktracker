@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -176,6 +177,14 @@ func AuthRequired() gin.HandlerFunc {
 			if !ok1 || !ok2 || !ok3 || !ok4 {
 				RejectUnauthenticated(c, "Token claims inválidos")
 				c.Abort()
+				return
+			}
+
+			_, err = db.GetUserByID(c.Request.Context(), id)
+			if err != nil {
+				RejectUnauthenticated(c, "Usuario inexistente")
+				c.Abort()
+				log.Printf("failed to get user: %v", err)
 				return
 			}
 
