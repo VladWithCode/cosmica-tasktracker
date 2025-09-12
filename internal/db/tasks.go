@@ -32,8 +32,8 @@ const (
 
 type Task struct {
 	ID             string `db:"id" json:"id,omitempty"`
-	UserID         string `db:"user_id" json:"user_id,omitempty"`
-	ScheduleTaskID string `db:"schedule_task_id" json:"schedule_task_id,omitempty"`
+	UserID         string `db:"user_id" json:"userId,omitempty"`
+	ScheduleTaskID string `db:"schedule_task_id" json:"scheduleTaskId,omitempty"`
 
 	// The date the task is meant to be completed.
 	// Normally, this is "today's date" since the task are expected to be completed
@@ -45,7 +45,7 @@ type Task struct {
 	Status TaskStatus `db:"status" json:"status,omitempty"`
 	// The time the task is supposed to be completed. Usually some time
 	// during the current day.
-	CompletedAt time.Time `db:"completed_at" json:"completed_at,omitzero"`
+	CompletedAt time.Time `db:"completed_at" json:"completedAt,omitzero"`
 
 	CreatedAt time.Time `db:"created_at" json:"created_at,omitzero"`
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at,omitzero"`
@@ -57,20 +57,20 @@ type Task struct {
 // StartTime, EndTime, and Duration fields from the ScheduleTask struct.
 type DetailedTask struct {
 	ID             string               `db:"id" json:"id,omitempty"`
-	UserID         string               `db:"user_id" json:"user_id,omitempty"`
-	ScheduleTaskID string               `db:"schedule_task_id" json:"schedule_task_id,omitempty"`
+	UserID         string               `db:"user_id" json:"userId,omitempty"`
+	ScheduleTaskID string               `db:"schedule_task_id" json:"scheduleTaskId,omitempty"`
 	Title          string               `db:"title" json:"title,omitempty"`
 	Description    string               `db:"description" json:"description,omitempty"`
 	Date           time.Time            `db:"date" json:"date,omitzero"`
 	Status         TaskStatus           `db:"status" json:"status,omitempty"`
 	Priority       ScheduleTaskPriority `db:"priority" json:"priority,omitempty"`
-	CompletedAt    time.Time            `db:"completed_at" json:"completed_at,omitzero"`
-	StartTime      time.Time            `db:"start_time" json:"start_time,omitzero"`
-	EndTime        time.Time            `db:"end_time" json:"end_time,omitzero"`
+	CompletedAt    time.Time            `db:"completed_at" json:"completedAt,omitzero"`
+	StartTime      time.Time            `db:"start_time" json:"startTime,omitzero"`
+	EndTime        time.Time            `db:"end_time" json:"endTime,omitzero"`
 	Duration       time.Duration        `db:"duration" json:"duration,omitempty"`
 
-	CreatedAt time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
+	CreatedAt time.Time `db:"created_at" json:"createdAt"`
+	UpdatedAt time.Time `db:"updated_at" json:"updatedAt"`
 }
 
 // NewDetailedTask creates a new DetailedTask struct based on the provided task and schedule task.

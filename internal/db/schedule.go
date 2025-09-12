@@ -43,26 +43,26 @@ const (
 // Or just one if the task's Repeating field is set to false.
 type ScheduleTask struct {
 	ID          string `db:"id" json:"id,omitempty"`
-	UserID      string `db:"user_id" json:"user_id,omitempty"`
+	UserID      string `db:"user_id" json:"userId,omitempty"`
 	Title       string `db:"title" json:"title,omitempty" binding:"required"`
 	Description string `db:"description" json:"description,omitempty"`
 	// StartTime is the time the task is supposed to be completed. Usually some time
 	// during the current day.
-	StartTime time.Time `db:"start_time" json:"start_time,omitzero" time_format:"15:04"`
+	StartTime time.Time `db:"start_time" json:"startTime,omitzero" time_format:"15:04"`
 	// EndTime is the time the task is supposed to be completed. Usually some time
 	// during the current day.
-	EndTime time.Time `db:"end_time" json:"end_time,omitzero" time_format:"15:04"`
+	EndTime time.Time `db:"end_time" json:"endTime,omitzero" time_format:"15:04"`
 	// StartDate is the date the task is supposed to be completed.
 	// Normally, this is "today's date" since the task are expected to be completed
 	// on the same day.
 	//
 	// Note that for repeating tasks, the StartDate is used for monthly and bimonthly
 	// tasks to determine the day of the month to repeat on.
-	StartDate time.Time `db:"start_date" json:"start_date,omitzero" time_format:"2006-01-02"`
+	StartDate time.Time `db:"start_date" json:"startDate,omitzero" time_format:"2006-01-02"`
 	// EndDate is the date the task is supposed to be completed.
 	// Normally, this is "today's date" since the task are expected to be completed
 	// on the same day.
-	EndDate time.Time `db:"end_date" json:"end_date,omitzero" time_format:"2006-01-02"`
+	EndDate time.Time `db:"end_date" json:"endDate,omitzero" time_format:"2006-01-02"`
 	// Duration allows users to define a task that they may complete at any time during the day
 	// for a specific duration.
 	//
@@ -80,18 +80,18 @@ type ScheduleTask struct {
 	// on the specified days.
 	//
 	// Possible values are daily, weekly, biweekly, monthly, bimonthly, yearly
-	RepeatFrequency ScheduleTaskRepeatFrequency `db:"repeat_frequency" json:"repeat_frequency,omitempty"`
+	RepeatFrequency ScheduleTaskRepeatFrequency `db:"repeat_frequency" json:"repeatFrequency,omitempty"`
 	// RepeatWeekdays is a 0 indexed list of integers representing the days of the week
 	// to repeat on. 0 = sunday.
 	//
 	// If RepeatFrequency set to weekly, this will be used
 	// to determine the day of the week to repeat on, using only the first index and ignoring
 	// the rest of the values.
-	RepeatWeekdays []int `db:"repeat_weekdays" json:"repeat_weekdays,omitempty"`
+	RepeatWeekdays []int `db:"repeat_weekdays" json:"repeatWeekdays,omitempty"`
 	// RepeatInterval is an arbitrary interval in days to repeat on.
-	RepeatInterval int `db:"repeat_interval" json:"repeat_interval,omitempty"`
+	RepeatInterval int `db:"repeat_interval" json:"repeatInterval,omitempty"`
 	// RepeatEndDate is the date to stop repeating the task.
-	RepeatEndDate time.Time `db:"repeat_end_date" json:"repeat_end_date,omitzero"`
+	RepeatEndDate time.Time `db:"repeat_end_date" json:"repeatEndDate,omitzero"`
 	// Status of the shceduling for this task.
 	//
 	// Possible values are active, paused, completed, cancelled and stopped.
@@ -101,8 +101,8 @@ type ScheduleTask struct {
 	// tasks list.
 	Priority ScheduleTaskPriority `db:"priority" json:"priority,omitempty"`
 
-	CreatedAt time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
+	CreatedAt time.Time `db:"created_at" json:"createdAt"`
+	UpdatedAt time.Time `db:"updated_at" json:"updatedAt"`
 }
 
 func CreateScheduleTask(ctx context.Context, task *ScheduleTask) error {
@@ -145,9 +145,9 @@ func CreateScheduleTask(ctx context.Context, task *ScheduleTask) error {
 			repeating, repeat_frequency, repeat_interval, repeat_weekdays, repeat_end_date, 
 			status, priority
 		) VALUES (
-			@id, @title, @userID, @description, @startTime, @endTime, @startDate, @endDate, @duration, @required, 
-			@repeating, @repeatFrequency, @repeatInterval, @repeatWeekdays, @repeatEndDate, 
-			@status, @priority
+			@id, @title, @userID, @description, date_trunc('minute', @startTime::timestamp), date_trunc('minute', @endTime::timestamp),
+			@startDate, @endDate, @duration, @required, @repeating, @repeatFrequency,
+			@repeatInterval, @repeatWeekdays, @repeatEndDate, @status, @priority
 		)`,
 		args,
 	)

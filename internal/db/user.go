@@ -17,8 +17,8 @@ type User struct {
 	Role     string `db:"role" json:"role"`
 	Email    string `db:"email" json:"email,omitempty"`
 
-	CreatedAt time.Time `db:"created_at" json:"created_at,omitzero"`
-	UpdatedAt time.Time `db:"updated_at" json:"updated_at,omitzero"`
+	CreatedAt time.Time `db:"created_at" json:"createdAt,omitzero"`
+	UpdatedAt time.Time `db:"updated_at" json:"updatedAt,omitzero"`
 }
 
 // ValidatePass compares the provided string against the user's password
@@ -91,7 +91,7 @@ func GetUserByID(ctx context.Context, id string) (*User, error) {
 
 	err = conn.QueryRow(
 		ctx,
-		"SELECT * FROM users WHERE id = $1",
+		"SELECT id, fullname, password, username, role, email FROM users WHERE id = $1",
 		id,
 	).Scan(
 		&user.ID,
