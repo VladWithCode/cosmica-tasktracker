@@ -7,7 +7,7 @@ CREATE TABLE tasks (
     -- Normally, this is "today's date" since the task are expected to be completed
     -- on the same day.
     -- Past tasks can be differentiated in history through this field.
-    date DATE,
+    date TIMESTAMPTZ NOT NULL,
     -- This is the status of the task. User may change this to indicate that the task
     -- is being worked on, or that it is paused.
     status VARCHAR(255) NOT NULL, -- pending | completed | overdue | cancelled
