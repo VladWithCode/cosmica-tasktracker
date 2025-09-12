@@ -3,7 +3,10 @@ package routes
 import (
 	"log"
 	"net/http"
+	"os"
+	"strings"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/vladwithcode/tasktracker/internal/auth"
 	"github.com/vladwithcode/tasktracker/internal/db"
@@ -12,6 +15,19 @@ import (
 func NewRouter() *gin.Engine {
 	router := gin.Default()
 	router.SetTrustedProxies([]string{"127.0.0.1", "::1"})
+
+	// CORS config
+	corsAllowOrigins := os.Getenv("CORS_ALLOW_ORIGINS")
+	router.Use(cors.New(
+		cors.Config{
+			AllowOrigins:     strings.Split(corsAllowOrigins, ","),
+			AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+			AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+			ExposeHeaders:    []string{"Content-Length"},
+			AllowCredentials: true,
+			MaxAge:           300, // Maximum value not ignored by any of major browsers
+		},
+	))
 
 	router.POST("/login", HandleLogin)
 	router.POST("/logout", HandleLogout)
