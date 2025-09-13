@@ -11,8 +11,7 @@
     html,
     body,
     #app {
-        max-height: 100vh;
-        overflow: hidden;
+        @apply h-screen w-screen overflow-hidden;
     }
     body {
         @apply bg-background text-foreground;
