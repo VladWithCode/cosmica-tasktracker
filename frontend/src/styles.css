@@ -42,6 +42,21 @@
     }
 }
 
+@layer components {
+    .hour-toggle.current {
+        color: var(--color-purple-700) !important;
+        opacity: 1 !important;
+
+        &::before {
+            content: "•";
+            position: absolute;
+            left: 3px;
+            top: 0px;
+            font-weight: bold;
+        }
+    }
+}
+
 :root {
     --background: oklch(1 0 0);
     --foreground: oklch(0.141 0.005 285.823);

@@ -63,6 +63,7 @@ function RouteComponent() {
 }
 
 function createHours(tasks: TTask[]) {
+    let currentHour = new Date().getHours();
     let hours = Array(24).fill(0);
     for (let i = 0; i < 24; i++) {
         let hourTasks = [];
@@ -71,7 +72,7 @@ function createHours(tasks: TTask[]) {
                 hourTasks.push(task);
             }
         }
-        hours[i] = <HourRow key={i} hour={i} tasks={hourTasks} />;
+        hours[i] = <HourRow key={i} hour={i} tasks={hourTasks} isCurrentHour={i === currentHour} />;
     }
     return hours;
 }

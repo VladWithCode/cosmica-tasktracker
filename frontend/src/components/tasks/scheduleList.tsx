@@ -8,7 +8,7 @@ import type { TTask } from "@/lib/schemas/task";
 /*
  * This component is used to display a list of tasks for a specific hour.
  */
-export function HourRow({ hour, tasks }: { hour: number, tasks: TTask[] }) {
+export function HourRow({ hour, tasks, isCurrentHour }: { hour: number, tasks: TTask[], isCurrentHour: boolean }) {
     const [isFullListOpen, setIsFullListOpen] = useState(false);
     const hasNoTasks = tasks === undefined || tasks.length === 0;
     const hasOneTask = tasks && tasks.length === 1;
@@ -25,9 +25,10 @@ export function HourRow({ hour, tasks }: { hour: number, tasks: TTask[] }) {
                     <Button
                         className={
                             cn(
-                                "flex items-start h-full w-full rounded-none text-current/80 font-medium font-mono hover:shadow-none active:shadow-none focus:shadow-none p-0 px-4",
+                                "hour-toggle relative flex items-start h-full w-full rounded-none text-current/80 font-medium font-mono hover:shadow-none active:shadow-none focus:shadow-none p-0 px-4",
                                 hasNoTasks && "disabled:opacity-50",
                                 hasOneTask && "disabled:opacity-90",
+                                isCurrentHour && "current",
                             )
 
                         }
