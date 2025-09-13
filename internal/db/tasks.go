@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"slices"
@@ -459,7 +460,7 @@ func GetTasksByUserID(ctx context.Context, userID string) ([]*DetailedTask, erro
 		ctx,
 		`SELECT 
 			id, user_id, schedule_task_id, title, description, date, status, priority,
-			start_time, end_time, completed_at, duration
+			start_time, end_time, completed_at, duration, created_at, updated_at
 		FROM detailed_tasks WHERE user_id = $1`,
 		userID,
 	)
@@ -472,7 +473,8 @@ func GetTasksByUserID(ctx context.Context, userID string) ([]*DetailedTask, erro
 
 	for rows.Next() {
 		var (
-			task DetailedTask
+			task        DetailedTask
+			completedAt sql.NullTime
 		)
 
 		err = rows.Scan(
@@ -486,12 +488,18 @@ func GetTasksByUserID(ctx context.Context, userID string) ([]*DetailedTask, erro
 			&task.Priority,
 			&task.StartTime,
 			&task.EndTime,
-			&task.CompletedAt,
+			&completedAt,
 			&task.Duration,
+			&task.CreatedAt,
+			&task.UpdatedAt,
 		)
 
 		if err != nil {
 			return nil, err
+		}
+
+		if completedAt.Valid {
+			task.CompletedAt = completedAt.Time
 		}
 
 		tasks = append(tasks, &task)
