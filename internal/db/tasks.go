@@ -508,6 +508,74 @@ func GetTasksByUserID(ctx context.Context, userID string) ([]*DetailedTask, erro
 	return tasks, nil
 }
 
+// GetUserDetailedTasksForToday returns a list of detailed tasks for the specified user for today.
+// This queries the detailed_tasks view and filters by user_id and today's date.
+func GetUserTodayDetailedTasks(ctx context.Context, userID string) ([]*DetailedTask, error) {
+	conn, err := GetConn(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	var tasks []*DetailedTask
+
+	rows, err := conn.Query(
+		ctx,
+		`SELECT
+			id, user_id, schedule_task_id, title, description, date, status, priority,
+			start_time, end_time, completed_at, duration, created_at, updated_at
+		FROM detailed_tasks
+		WHERE user_id = $1 AND DATE(date) = CURRENT_DATE
+		ORDER BY start_time ASC`,
+		userID,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var (
+			task        DetailedTask
+			completedAt sql.NullTime
+		)
+
+		err = rows.Scan(
+			&task.ID,
+			&task.UserID,
+			&task.ScheduleTaskID,
+			&task.Title,
+			&task.Description,
+			&task.Date,
+			&task.Status,
+			&task.Priority,
+			&task.StartTime,
+			&task.EndTime,
+			&completedAt,
+			&task.Duration,
+			&task.CreatedAt,
+			&task.UpdatedAt,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if completedAt.Valid {
+			task.CompletedAt = completedAt.Time
+		}
+
+		tasks = append(tasks, &task)
+	}
+
+	return tasks, nil
+}
+
 // getNextTaskDate returns the next date for the schedule task based on the
 // current time and the schedule task's settings
 func getNextTaskDate(sct *ScheduleTask) (time.Time, error) {

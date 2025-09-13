@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/vladwithcode/tasktracker/internal/auth"
 	"github.com/vladwithcode/tasktracker/internal/db"
 )
@@ -167,14 +168,25 @@ func GenerateTodaysTasks(c *gin.Context) {
 	sessionAuth, err := auth.GetAuth(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		log.Printf("failed to get auth: %v\n", err)
 		return
 	}
 
 	// Generate today's tasks
-	tasks, err := db.CreateUsersTodayTasks(c.Request.Context(), sessionAuth.ID)
-	if err != nil {
+	var tasks []*db.DetailedTask
+	tasks, err = db.GetUserTodayDetailedTasks(c.Request.Context(), sessionAuth.ID)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate today's tasks"})
+		log.Printf("failed to generate today's tasks: %v\n", err)
 		return
+	}
+	if len(tasks) == 0 {
+		tasks, err = db.CreateUsersTodayTasks(c.Request.Context(), sessionAuth.ID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate today's tasks"})
+			log.Printf("failed to generate today's tasks: %v\n", err)
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{

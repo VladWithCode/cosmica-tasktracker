@@ -10,12 +10,12 @@ import type { TTask } from "@/lib/schemas/task";
 const tasksQueryOptions = queryOptions({
     queryKey: ["tasks"],
     queryFn: async () => {
-        return await fetch("http://localhost:8080/api/v1/tasks", {
+        return await fetch("http://localhost:8080/api/v1/tasks/today", {
             method: "GET",
             credentials: "include",
         }).then(async (res) => {
             const data = await res.json();
-            const tasks: TTask[] = data.tasks.map((task: any) => {
+            const tasks: TTask[] = data.tasks !== undefined ? data.tasks.map((task: any) => {
                 return {
                     ...task,
                     date: new Date(task.date),
@@ -26,7 +26,7 @@ const tasksQueryOptions = queryOptions({
                     createdAt: new Date(task.createdAt),
                     updatedAt: new Date(task.updatedAt),
                 };
-            });
+            }) : [];
             return { tasks };
         });
     },
