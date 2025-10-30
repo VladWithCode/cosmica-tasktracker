@@ -33,16 +33,16 @@ export function HourRow({ hour, tasks, isCurrentHour }: { hour: number, tasks: T
 
                         }
                         variant="ghost"
-                        disabled={tasks === undefined || tasks.length <= 0}
+                        disabled={hasNoTasks}
                     >
                         {numberToHour(hour)}
                     </Button>
                 </CollapsibleTrigger>
             </div>
             <div className="col-start-2 row-start-1 pr-0.5">
-                {tasks !== undefined && tasks.length > 0
-                    ? <TaskListing tasks={tasks} />
-                    : <EmptyTaskList />
+                {hasNoTasks
+                    ? <EmptyTaskList />
+                    : <TaskListing tasks={tasks} />
                 }
             </div>
         </Collapsible>
