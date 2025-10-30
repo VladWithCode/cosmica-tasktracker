@@ -27,9 +27,11 @@ export function TaskCard({ taskData }: { taskData: TTask }) {
                         className={cn(isDone && "text-primary")}
                     >
                         <View className="h-4 w-4" />
+                        <div className="sr-only">Ver detalles</div>
                     </Button>
                     <Button variant="default" size="icon" disabled={isDone}>
                         <CheckIcon className="h-4 w-4" />
+                        <div className="sr-only">Completar tarea</div>
                     </Button>
                 </CardAction>
             </CardHeader>

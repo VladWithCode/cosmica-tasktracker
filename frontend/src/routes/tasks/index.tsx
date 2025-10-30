@@ -26,12 +26,14 @@ function RouteComponent() {
     }, []);
 
     return (
-        <main className="relative z-0 h-full">
+        <main className="relative h-full">
             <ScrollArea className="h-full w-full">
                 <div className="min-h-full grid grid-cols-[auto_1fr] auto-rows-auto gap-y-2">
                     {hours}
                 </div>
-                <ScrollBar />
+                <div className="absolute inset-0 z-30 pointer-events-none">
+                    <ScrollBar />
+                </div>
             </ScrollArea>
             <NewTask />
         </main>
