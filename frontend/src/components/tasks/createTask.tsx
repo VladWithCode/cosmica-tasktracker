@@ -19,8 +19,9 @@ import { Collapsible } from "@radix-ui/react-collapsible";
 import { CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
 import { Switch } from "../ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { queryClient } from "@/routes/__root";
+import { toast } from "sonner";
 
 const taskSchema = z
     .object({
@@ -73,6 +74,7 @@ const taskSchema = z
 type TaskFormData = z.infer<typeof taskSchema>;
 
 export function NewTask() {
+    const [dialogOpen, setDialogOpen] = useState(false);
     const form = useForm<TaskFormData>({
         resolver: zodResolver(taskSchema),
         defaultValues: {
@@ -121,22 +123,30 @@ export function NewTask() {
         }
     }, [startTime, endTime, form]);
 
-    const onSubmit = async (data: TaskFormData) => {
+    const onSubmit = (data: TaskFormData) => {
         const [startH, startM] = data.startTime.split(":");
         const [endH, endM] = data.endTime.split(":");
         const start = new Date();
         const end = new Date();
-        start.setHours(parseInt(startH), parseInt(startM));
-        end.setHours(parseInt(endH), parseInt(endM));
+        start.setHours(parseInt(startH), parseInt(startM), 0, 0);
+        end.setHours(parseInt(endH), parseInt(endM), 0, 0);
         data.startTime = start.toISOString();
         data.endTime = end.toISOString();
-        const response = await createTask.mutateAsync(data);
-        console.log(response);
+        createTask.mutate(data, {
+            onSuccess: () => {
+                toast.success("La tarea se creó correctamente");
+                setDialogOpen(false);
+                form.reset();
+            },
+            onError: (err) => {
+                toast.error(err.message || "Ocurrió un error al crear la tarea");
+            },
+        });
     };
 
     return (
-        <Dialog>
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-x-2">
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-x-2 max-w-full">
                 <DialogTrigger asChild>
                     <Button size="icon" className="bg-indigo-900 rounded-full p-6">
                         <PlusIcon className="size-6" />
