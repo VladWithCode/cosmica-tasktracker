@@ -1,45 +1,21 @@
 import { NewTask } from "@/components/tasks/createTask";
 import { HourRow } from "@/components/tasks/scheduleList";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useLayoutEffect } from "react";
 import { queryClient } from "../__root";
 import type { TTask } from "@/lib/schemas/task";
-
-const tasksQueryOptions = queryOptions({
-    queryKey: ["tasks"],
-    queryFn: async () => {
-        return await fetch("http://localhost:8080/api/v1/tasks/today", {
-            method: "GET",
-            credentials: "include",
-        }).then(async (res) => {
-            const data = await res.json();
-            const tasks: TTask[] = data.tasks !== undefined ? data.tasks.map((task: any) => {
-                return {
-                    ...task,
-                    date: new Date(task.date),
-                    startTime: task.startTime ? new Date(task.startTime) : null,
-                    endTime: task.endTime ? new Date(task.endTime) : null,
-                    endDate: task.endDate ? new Date(task.endDate) : null,
-                    completedAt: task.completedAt ? new Date(task.completedAt) : null,
-                    createdAt: new Date(task.createdAt),
-                    updatedAt: new Date(task.updatedAt),
-                };
-            }) : [];
-            return { tasks };
-        });
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-})
+import { PinnedTasks } from "@/components/tasks/pinnedTasks";
+import { getTodayTasksOpts } from "@/queries/tasks";
 
 export const Route = createFileRoute("/tasks/")({
     component: RouteComponent,
-    loader: () => queryClient.ensureQueryData(tasksQueryOptions),
+    loader: () => queryClient.ensureQueryData(getTodayTasksOpts),
 });
 
 function RouteComponent() {
-    const { data: { tasks } } = useSuspenseQuery(tasksQueryOptions);
+    const { data: { tasks } } = useSuspenseQuery(getTodayTasksOpts);
     let hours = createHours(tasks);
 
     useLayoutEffect(() => {

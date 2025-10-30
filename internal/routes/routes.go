@@ -29,8 +29,8 @@ func NewRouter() *gin.Engine {
 		},
 	))
 
-	router.POST("/login", HandleLogin)
-	router.POST("/logout", HandleLogout)
+	router.POST("/api/login", HandleLogin)
+	router.POST("/api/logout", HandleLogout)
 
 	// Public routes (no auth required)
 	apiRoutes := router.Group("/api/v1")

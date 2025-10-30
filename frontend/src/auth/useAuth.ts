@@ -5,7 +5,7 @@ export function useAuth() {
     return useQuery({
         queryKey: ["session"],
         queryFn: async () => {
-            return await (await fetch("http://localhost:8080/api/v1/check-auth", {
+            return await (await fetch("/api/v1/check-auth", {
                 method: "GET",
                 credentials: "include",
             })).json();
@@ -21,7 +21,7 @@ export async function checkAuth(): Promise<boolean> {
         const data = await queryClient.fetchQuery({
             queryKey: ["session"],
             queryFn: async () => {
-                const res = await fetch("http://localhost:8080/api/v1/check-auth", {
+                const res = await fetch("/api/v1/check-auth", {
                     method: "GET",
                     credentials: "include",
                 });

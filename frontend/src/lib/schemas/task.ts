@@ -15,7 +15,10 @@ export type TTask = {
     completedAt: Date | null;
     startTime: Date | null;
     endTime: Date | null;
+    startDate: Date | null;
+    endDate: Date | null;
     duration: number | null;
+    required: boolean;
 
     createdAt: Date;
     updatedAt: Date;

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { redirect } from "@tanstack/react-router";
+import { redirect, useRouter } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -29,6 +29,7 @@ interface LoginFormProps {
 
 export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
     const [isLoading, setIsLoading] = useState(false);
+    const router = useRouter();
 
     const {
         register,
@@ -42,7 +43,7 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
         setIsLoading(true);
 
         try {
-            const response = await fetch("http://localhost:8080/login", {
+            const response = await fetch("/api/login", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -56,7 +57,7 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
             if (response.ok) {
                 toast.success(result.message || "Inicio de sesión exitoso");
                 onLoginSuccess?.();
-                redirect({ to: "/tasks" })
+                router.history.push("/tasks");
             } else {
                 toast.error(result.error || "Error al iniciar sesión");
             }
