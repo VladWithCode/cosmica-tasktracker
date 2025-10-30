@@ -25,14 +25,14 @@ import { toast } from "sonner";
 
 const taskSchema = z
     .object({
-        title: z.string().min(5, "El título debe tener al menos 5 caracteres").max(255),
+        title: z.string().min(1, "El título no puede estar vacío").max(255),
         description: z.string().max(512, "La descripción no puede exceder 512 caracteres"),
         startTime: z.iso.time(),
         endTime: z.iso.time(),
         duration: z.union([z.number().positive(), z.nan()]).optional(), // Duration in minutes
         priority: z.number().min(1).max(5).default(3),
         required: z.boolean().default(false),
-        repeat: z.boolean().default(false),
+        repeating: z.boolean().default(false),
         repeatFrequency: z.union([z.string().optional(), z.literal("")]),
         repeatInterval: z.union([z.number(), z.nan()]).optional(),
         repeatWeekdays: z.union([z.array(z.number()), z.nan()]).optional(),
@@ -40,8 +40,8 @@ const taskSchema = z
     })
     .refine(
         (data) => {
-            // If repeat is true, repeatFrequency is required
-            if (data.repeat && !data.repeatFrequency) {
+            // If repeating is true, repeatFrequency is required
+            if (data.repeating && !data.repeatFrequency) {
                 return false;
             }
             return true;
@@ -84,7 +84,7 @@ export function NewTask() {
             endTime: "",
             priority: 3,
             required: false,
-            repeat: false,
+            repeating: false,
             repeatFrequency: "",
             repeatWeekdays: [],
             repeatInterval: 0,
@@ -105,7 +105,7 @@ export function NewTask() {
         },
     })
 
-    const repeatValue = form.watch("repeat");
+    const repeatValue = form.watch("repeating");
     const startTime = form.watch("startTime");
     const endTime = form.watch("endTime");
 
@@ -153,7 +153,7 @@ export function NewTask() {
                     </Button>
                 </DialogTrigger>
             </div>
-            <DialogContent>
+            <DialogContent className="flex flex-col">
                 <DialogHeader>
                     <DialogTitle>Nueva tarea</DialogTitle>
                 </DialogHeader>
@@ -169,6 +169,7 @@ export function NewTask() {
                                     <FormLabel>Título</FormLabel>
                                     <FormControl>
                                         <Input
+                                            className="max-w-full"
                                             placeholder="Escribe el título de la tarea"
                                             {...field}
                                         />
@@ -191,9 +192,9 @@ export function NewTask() {
                                 </FormItem>
                             )}
                         />
-                        <div className="flex items-start gap-x-4">
+                        <div className="flex items-start gap-x-3 [&>*]:flex-1">
                             <FormField
-                                name="repeat"
+                                name="repeating"
                                 control={form.control}
                                 render={({ field }) => (
                                     <FormItem>
@@ -297,8 +298,9 @@ export function NewTask() {
     );
 }
 
+// @ts-ignore
+// not used yet
 function moreOptions() {
-
     return (
         <Collapsible open={true}>
             <CollapsibleTrigger asChild>
