@@ -65,9 +65,12 @@ type DetailedTask struct {
 	Date           time.Time            `db:"date" json:"date,omitzero"`
 	Status         TaskStatus           `db:"status" json:"status,omitempty"`
 	Priority       ScheduleTaskPriority `db:"priority" json:"priority,omitempty"`
+	Required       bool                 `db:"required" json:"required,omitempty"`
 	CompletedAt    time.Time            `db:"completed_at" json:"completedAt,omitzero"`
 	StartTime      time.Time            `db:"start_time" json:"startTime,omitzero"`
 	EndTime        time.Time            `db:"end_time" json:"endTime,omitzero"`
+	StartDate      time.Time            `db:"start_date" json:"startDate,omitzero"`
+	EndDate        time.Time            `db:"end_date" json:"endDate,omitzero"`
 	Duration       time.Duration        `db:"duration" json:"duration,omitempty"`
 
 	CreatedAt time.Time `db:"created_at" json:"createdAt"`
@@ -526,10 +529,13 @@ func GetUserTodayDetailedTasks(ctx context.Context, userID string) ([]*DetailedT
 		ctx,
 		`SELECT
 			id, user_id, schedule_task_id, title, description, date, status, priority,
-			start_time, end_time, completed_at, duration, created_at, updated_at
+			required, start_time, end_time, completed_at, duration, created_at, updated_at
 		FROM detailed_tasks
 		WHERE user_id = $1 AND DATE(date) = CURRENT_DATE
-		ORDER BY start_time ASC`,
+		ORDER BY 
+			(CASE WHEN required THEN 1 ELSE 2 END) ASC,
+			start_time ASC
+		`,
 		userID,
 	)
 
@@ -554,6 +560,7 @@ func GetUserTodayDetailedTasks(ctx context.Context, userID string) ([]*DetailedT
 			&task.Date,
 			&task.Status,
 			&task.Priority,
+			&task.Required,
 			&task.StartTime,
 			&task.EndTime,
 			&completedAt,
@@ -580,7 +587,25 @@ func GetUserTodayDetailedTasks(ctx context.Context, userID string) ([]*DetailedT
 // current time and the schedule task's settings
 func getNextTaskDate(sct *ScheduleTask) (time.Time, error) {
 	currentTime := time.Now()
-	nextDate := currentTime.AddDate(0, 0, 1)
+
+	if !sct.StartTime.IsZero() {
+		startHr, startMin, _ := sct.StartTime.Clock()
+		currHr, currMin, _ := currentTime.Clock()
+		if currHr <= startHr && currMin <= startMin {
+			return time.Date(
+				currentTime.Year(),
+				currentTime.Month(),
+				currentTime.Day(),
+				startHr,
+				startMin,
+				0,
+				0,
+				time.Local,
+			), nil
+		}
+	}
+
+	var nextDate time.Time
 
 	if sct.RepeatFrequency != "" {
 		switch sct.RepeatFrequency {

@@ -43,6 +43,10 @@ func CreateTask(c *gin.Context) {
 	scheduleTask.ID = uuid.Must(uuid.NewV7()).String()
 	scheduleTask.Status = db.ScheduleTaskStatusActive
 
+	if scheduleTask.StartDate.IsZero() {
+		scheduleTask.StartDate = time.Now()
+	}
+
 	err = db.CreateScheduleTask(c.Request.Context(), scheduleTask)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error inesperado"})

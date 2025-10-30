@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/vladwithcode/tasktracker/internal/auth"
@@ -20,6 +21,12 @@ func main() {
 		log.Fatalf("error loading env file: %v\n", err)
 	}
 	globalCtx := context.Background()
+	time.Local, err = time.LoadLocation("America/Mexico_City")
+	if err != nil {
+		log.Printf("failed to load time zone: %v\n", err)
+		log.Println("defaulting to UTC")
+		time.Local = time.UTC
+	}
 
 	conn, err := db.Connect(globalCtx)
 	if err != nil {

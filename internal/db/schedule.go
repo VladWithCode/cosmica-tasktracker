@@ -105,6 +105,25 @@ type ScheduleTask struct {
 	UpdatedAt time.Time `db:"updated_at" json:"updatedAt"`
 }
 
+// CorrectDates converts the dates to the local timezone
+func (st *ScheduleTask) CorrectDates() {
+	if !st.StartTime.IsZero() {
+		st.StartTime = st.StartTime.In(time.Local)
+	}
+
+	if !st.EndTime.IsZero() {
+		st.EndTime = st.EndTime.In(time.Local)
+	}
+
+	if !st.StartDate.IsZero() {
+		st.StartDate = st.StartDate.In(time.Local)
+	}
+
+	if !st.EndDate.IsZero() {
+		st.EndDate = st.EndDate.In(time.Local)
+	}
+}
+
 func CreateScheduleTask(ctx context.Context, task *ScheduleTask) error {
 	conn, err := GetConn(ctx)
 	if err != nil {
@@ -114,6 +133,8 @@ func CreateScheduleTask(ctx context.Context, task *ScheduleTask) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
+
+	task.CorrectDates()
 
 	if !task.StartTime.IsZero() && !task.EndTime.IsZero() {
 		task.Duration = time.Duration(task.EndTime.Sub(task.StartTime).Minutes())
