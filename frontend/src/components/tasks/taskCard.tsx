@@ -4,8 +4,8 @@ import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "../ui/
 import { CheckIcon, View } from "lucide-react";
 import type { TTask } from "@/lib/schemas/task";
 
-export function TaskCard({ taskData }: { taskData: TTask }) {
-    const isDone = taskData.status === "completed";
+export function TaskCard({ task }: { task: TTask }) {
+    const isDone = task.status === "completed";
     return (
         <Card
             className={cn(
@@ -15,10 +15,11 @@ export function TaskCard({ taskData }: { taskData: TTask }) {
         >
             <CardHeader>
                 <CardTitle>
-                    {formatStartTime(taskData.startTime)} - {taskData.title}
+                    {task.startTime !== null ? `${formatStartTime(task.startTime)} -` : null}
+                    {task.title}
                 </CardTitle>
                 <CardDescription className={cn(isDone && "text-primary-foreground")}>
-                    {taskData.description}
+                    {task.description}
                 </CardDescription>
                 <CardAction className="flex items-center gap-x-2">
                     <Button

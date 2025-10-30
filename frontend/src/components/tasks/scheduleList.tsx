@@ -52,13 +52,13 @@ export function HourRow({ hour, tasks, isCurrentHour }: { hour: number, tasks: T
 function TaskListing({ tasks }: { tasks: TTask[]; }) {
     return (
         <>
-            <TaskCard taskData={tasks[0]} />
+            <TaskCard task={tasks[0]} />
             <CollapsibleContent
                 className={cn("space-y-2 mt-2 data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up")}
             >
                 {
                     tasks?.filter((_, idx) => idx > 0).map((task) => (
-                        <TaskCard key={task.id} taskData={task} />
+                        <TaskCard key={task.id} task={task} />
                     ))
                 }
             </CollapsibleContent>
