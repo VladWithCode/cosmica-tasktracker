@@ -1,5 +1,6 @@
 import type { TTask } from "@/lib/schemas/task";
-import { queryOptions } from "@tanstack/react-query";
+import { mutationOptions, queryOptions } from "@tanstack/react-query";
+import { queryClient } from "./queryClient";
 
 export const TasksQueryKeys = {
     all: () => ["tasks"] as const,
@@ -48,6 +49,33 @@ export async function getTodayTasks() {
     let tasks: TTask[] = data.tasks ? data.tasks.map(hydrateTask) : [];
 
     return { tasks };
+}
+
+// Mutations
+export const markAsCompletedOpts = mutationOptions({
+    mutationFn: markTaskAsCompleted,
+    onSuccess: (data, variables, context) => {
+        const { taskId } = variables;
+        queryClient.invalidateQueries(TasksQueryKeys.today());
+        queryClient.invalidateQueries(TasksQueryKeys.byId(taskId));
+    },
+})
+export async function markTaskAsCompleted({ taskId }: { taskId: string }) {
+    const response = await fetch(`/api/v1/tasks/${taskId}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            status: "completed",
+        }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.error || "Error al marcar tarea como completada");
+    }
+    return data;
 }
 
 export function hydrateTask(task: Partial<TTask>): TTask {
