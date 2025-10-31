@@ -591,7 +591,8 @@ func getNextTaskDate(sct *ScheduleTask) (time.Time, error) {
 	if !sct.StartTime.IsZero() {
 		startHr, startMin, _ := sct.StartTime.Clock()
 		currHr, currMin, _ := currentTime.Clock()
-		if currHr <= startHr && currMin <= startMin {
+
+		if currHr < startHr || (currHr == startHr && currMin < startMin) {
 			return time.Date(
 				currentTime.Year(),
 				currentTime.Month(),
