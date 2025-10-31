@@ -6,7 +6,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useLayoutEffect, useRef } from "react";
 import { queryClient } from "../__root";
 import type { TTask } from "@/lib/schemas/task";
-import { PinnedTasks } from "@/components/tasks/pinnedTasks";
 import { getTodayTasksOpts } from "@/queries/tasks";
 
 export const Route = createFileRoute("/tasks/")({
