@@ -57,7 +57,7 @@ function TaskListing({ tasks }: { tasks: TTask[]; }) {
                 className={cn("space-y-2 mt-2 data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up")}
             >
                 {
-                    tasks?.filter((_, idx) => idx > 0).map((task) => (
+                    tasks.filter((_, idx) => idx > 0).map((task) => (
                         <TaskCard key={task.id} task={task} />
                     ))
                 }
