@@ -3,8 +3,10 @@
 -- Temporarily drop the view
 DROP VIEW detailed_tasks;
 
-ALTER TABLE schedule_tasks ALTER COLUMN start_time TYPE timestamptz USING (CURRENT_DATE + (start_time AT TIME ZONE 'America/Mexico_City'))::timestamptz;
-ALTER TABLE schedule_tasks ALTER COLUMN end_time TYPE timestamptz USING (CURRENT_DATE + (end_time AT TIME ZONE 'America/Mexico_City'))::timestamptz;
+ALTER TABLE schedule_tasks ALTER COLUMN start_time TYPE timestamptz USING (CURRENT_DATE + (start_time AT TIME ZONE 'UTC'))::timestamptz;
+ALTER TABLE schedule_tasks ALTER COLUMN end_time TYPE timestamptz USING (CURRENT_DATE + (end_time AT TIME ZONE 'UTC'))::timestamptz;
+
+ALTER TABLE tasks ALTER COLUMN completed_at TYPE timestamptz USING (CURRENT_DATE + (completed_at AT TIME ZONE 'UTC'))::timestamptz;
 
 -- Recreate the view
 CREATE VIEW detailed_tasks AS
