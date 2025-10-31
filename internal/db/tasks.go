@@ -377,6 +377,9 @@ func GetTaskByID(ctx context.Context, id string) (*Task, error) {
 
 	var task Task
 
+	var (
+		completedAt sql.NullTime
+	)
 	err = conn.QueryRow(
 		ctx,
 		`SELECT
@@ -390,11 +393,15 @@ func GetTaskByID(ctx context.Context, id string) (*Task, error) {
 		&task.ScheduleTaskID,
 		&task.Date,
 		&task.Status,
-		&task.CompletedAt,
+		&completedAt,
 	)
 
 	if err != nil {
 		return nil, err
+	}
+
+	if completedAt.Valid {
+		task.CompletedAt = completedAt.Time
 	}
 
 	return &task, nil
@@ -533,6 +540,7 @@ func GetUserTodayDetailedTasks(ctx context.Context, userID string) ([]*DetailedT
 		FROM detailed_tasks
 		WHERE user_id = $1 AND DATE(date) = CURRENT_DATE
 		ORDER BY 
+			(CASE WHEN completed_at IS NULL THEN 1 ELSE 2 END) ASC,
 			(CASE WHEN required THEN 1 ELSE 2 END) ASC,
 			start_time ASC
 		`,

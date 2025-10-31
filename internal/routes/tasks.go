@@ -72,6 +72,7 @@ func UpdateTask(c *gin.Context) {
 	sessionAuth, err := auth.GetAuth(c)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al recuperar autenticación"})
+		log.Printf("failed to get auth: %v\n", err)
 		return
 	}
 
@@ -88,6 +89,7 @@ func UpdateTask(c *gin.Context) {
 		}
 
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error inesperado"})
+		log.Printf("failed to get task: %v\n", err)
 		return
 	}
 
@@ -98,12 +100,22 @@ func UpdateTask(c *gin.Context) {
 
 	if err := c.ShouldBind(&taskData); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Error al actualizar tarea"})
+		log.Printf("failed to bind json: %v\n", err)
 		return
+	}
+
+	task.Status = taskData.Status
+	if !taskData.Date.IsZero() {
+		task.Date = taskData.Date
+	}
+	if task.CompletedAt.IsZero() && taskData.Status == db.TaskStatusCompleted {
+		task.CompletedAt = time.Now()
 	}
 
 	err = db.UpdateTask(c.Request.Context(), task)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update task"})
+		log.Printf("failed to update task: %v\n", err)
 		return
 	}
 
