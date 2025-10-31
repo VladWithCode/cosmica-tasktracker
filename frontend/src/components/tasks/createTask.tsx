@@ -20,8 +20,8 @@ import { CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
 import { Switch } from "../ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { useEffect, useState } from "react";
-import { queryClient } from "@/routes/__root";
 import { toast } from "sonner";
+import { queryClient } from "@/queries/queryClient";
 
 const taskSchema = z
     .object({

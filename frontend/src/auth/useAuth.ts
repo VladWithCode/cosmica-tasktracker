@@ -1,4 +1,4 @@
-import { queryClient } from "@/routes/__root";
+import { queryClient } from "@/queries/queryClient";
 import { useQuery } from "@tanstack/react-query";
 
 export function useAuth() {

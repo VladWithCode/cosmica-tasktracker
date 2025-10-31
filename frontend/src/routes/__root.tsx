@@ -1,8 +1,7 @@
 import { Outlet, createRootRoute } from "@tanstack/react-router";
 import { Toaster } from "sonner";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-
-export const queryClient = new QueryClient();
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "@/queries/queryClient";
 
 export const Route = createRootRoute({
     component: () => (

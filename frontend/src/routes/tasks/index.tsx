@@ -4,9 +4,9 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useLayoutEffect, useRef } from "react";
-import { queryClient } from "../__root";
 import type { TTask } from "@/lib/schemas/task";
 import { getTodayTasksOpts } from "@/queries/tasks";
+import { queryClient } from "@/queries/queryClient";
 
 export const Route = createFileRoute("/tasks/")({
     component: RouteComponent,
