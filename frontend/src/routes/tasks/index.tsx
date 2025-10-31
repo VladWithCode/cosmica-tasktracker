@@ -3,7 +3,7 @@ import { HourRow } from "@/components/tasks/scheduleList";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useLayoutEffect } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { queryClient } from "../__root";
 import type { TTask } from "@/lib/schemas/task";
 import { PinnedTasks } from "@/components/tasks/pinnedTasks";
@@ -15,20 +15,28 @@ export const Route = createFileRoute("/tasks/")({
 });
 
 function RouteComponent() {
+    const taskListRef = useRef<HTMLDivElement>(null);
     const { data: { tasks } } = useSuspenseQuery(getTodayTasksOpts);
     let hours = createHours(tasks);
 
     useLayoutEffect(() => {
+        if (!taskListRef.current) {
+            return;
+        }
+
         const currentHour = new Date().getHours();
-        document.querySelector(`[data-testid="hour-${currentHour}"]`)?.scrollIntoView({
-            behavior: "smooth",
-        });
+        const hourContainer = document.querySelector(`[data-testid="hour-${currentHour}"]`)
+        const scrollViewport = taskListRef.current.querySelector('[data-slot="scroll-area-viewport"]')
+        if (hourContainer && scrollViewport) {
+            const rect = hourContainer.getBoundingClientRect();
+            scrollViewport.scrollBy({ top: rect.top + rect.height / 2, behavior: 'smooth' });
+        }
     }, []);
 
     return (
         <main className="relative h-full">
-            <ScrollArea className="h-full w-full">
-                <div className="min-h-full grid grid-cols-[auto_1fr] auto-rows-auto gap-y-2">
+            <ScrollArea className="h-full w-full" ref={taskListRef}>
+                <div className="h-full grid grid-cols-[auto_1fr] auto-rows-auto gap-y-2">
                     {hours}
                 </div>
                 <div className="absolute inset-0 z-30 pointer-events-none">
