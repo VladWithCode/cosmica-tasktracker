@@ -23,13 +23,13 @@ function RouteComponent() {
             return;
         }
 
-        const currentHour = new Date().getHours();
-        const hourContainer = document.querySelector(`[data-testid="hour-${currentHour}"]`)
-        const scrollViewport = taskListRef.current.querySelector('[data-slot="scroll-area-viewport"]')
-        if (hourContainer && scrollViewport) {
-            const rect = hourContainer.getBoundingClientRect();
-            scrollViewport.scrollBy({ top: rect.top + rect.height / 2, behavior: 'smooth' });
-        }
+        let tid = setTimeout(() => {
+            scrollToCurrentHour(taskListRef.current!);
+        }, 1000 * 60 * 5);
+
+        return () => {
+            clearTimeout(tid);
+        };
     }, []);
 
     return (
@@ -60,4 +60,15 @@ function createHours(tasks: TTask[]) {
         hours[i] = <HourRow key={i} hour={i} tasks={hourTasks} isCurrentHour={i === currentHour} />;
     }
     return hours;
+}
+
+function scrollToCurrentHour(taskListElt: HTMLElement) {
+    const currentHour = new Date().getHours();
+    const hourContainer = document.querySelector(`[data-testid="hour-${currentHour}"]`)
+    const scrollViewport = taskListElt.querySelector('[data-slot="scroll-area-viewport"]')
+
+    if (hourContainer && scrollViewport) {
+        const rect = hourContainer.getBoundingClientRect();
+        scrollViewport.scrollBy({ top: rect.top - rect.height, behavior: 'smooth' });
+    }
 }
