@@ -23,12 +23,12 @@ function RouteComponent() {
             return;
         }
 
-        let tid = setTimeout(() => {
+        let tid = setInterval(() => {
             scrollToCurrentHour(taskListRef.current!);
         }, 1000 * 60 * 5);
 
         return () => {
-            clearTimeout(tid);
+            clearInterval(tid);
         };
     }, []);
 
