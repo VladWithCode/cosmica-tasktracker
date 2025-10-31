@@ -54,10 +54,15 @@ export async function getTodayTasks() {
 // Mutations
 export const markAsCompletedOpts = mutationOptions({
     mutationFn: markTaskAsCompleted,
-    onSuccess: (data, variables, context) => {
+    onSuccess: (_, variables) => {
         const { taskId } = variables;
-        queryClient.invalidateQueries(TasksQueryKeys.today());
-        queryClient.invalidateQueries(TasksQueryKeys.byId(taskId));
+
+        queryClient.invalidateQueries({
+            queryKey: TasksQueryKeys.today(),
+        });
+        queryClient.invalidateQueries({
+            queryKey: TasksQueryKeys.byId(taskId),
+        });
     },
 })
 export async function markTaskAsCompleted({ taskId }: { taskId: string }) {
