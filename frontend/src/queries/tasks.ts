@@ -8,7 +8,7 @@ export const TasksQueryKeys = {
     history: () => [...TasksQueryKeys.listing(), "history"] as const,
 
     detail: () => [...TasksQueryKeys.all(), "detail"] as const,
-    byId: () => [...TasksQueryKeys.detail(), "byId"] as const,
+    byId: (id: string) => [...TasksQueryKeys.detail(), "byId", id] as const,
 } as const;
 
 export const getTasksOpts = queryOptions({
