@@ -15,8 +15,6 @@ CREATE TABLE tasks (
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT unique_tasks_user_date UNIQUE (user_id, date)
 );
 
 CREATE TRIGGER trigger_update_tasks_updated_at BEFORE UPDATE ON tasks
