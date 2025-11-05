@@ -8,6 +8,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/vladwithcode/tasktracker/internal/auth"
 	"github.com/vladwithcode/tasktracker/internal/db"
+	"github.com/vladwithcode/tasktracker/internal/notifications"
 	"github.com/vladwithcode/tasktracker/internal/routes"
 )
 
@@ -35,6 +36,9 @@ func main() {
 	defer conn.Close()
 
 	auth.SetAuthParameters()
+
+	scheduler := notifications.NewTaskScheduler(globalCtx)
+	go scheduler.Start()
 
 	router := routes.NewRouter()
 	err = router.Run()

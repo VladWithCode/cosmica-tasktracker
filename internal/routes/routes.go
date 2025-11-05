@@ -14,7 +14,7 @@ import (
 
 func NewRouter() *gin.Engine {
 	router := gin.Default()
-	router.SetTrustedProxies([]string{"127.0.0.1", "::1"})
+	router.SetTrustedProxies([]string{"127.0.0.1", "::1", "192.168.1.0/24"})
 
 	// CORS config
 	corsAllowOrigins := os.Getenv("CORS_ALLOW_ORIGINS")
@@ -39,6 +39,7 @@ func NewRouter() *gin.Engine {
 	registerScheduleRoutes(apiRoutes)
 	registerTaskRoutes(apiRoutes)
 	registerUserRoutes(apiRoutes)
+	registerNotificationRoutes(apiRoutes)
 
 	return router
 }
