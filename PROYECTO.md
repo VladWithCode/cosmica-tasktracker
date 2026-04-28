@@ -72,12 +72,26 @@ La interfaz de usuario consistirá en las siguientes secciones/pantallas:
     necesarios para crear una nueva rutina, desde la cual se generará la nueva tarea la próxima vez que esta pueda ser realizada.
     (Esto significa que una tarea que se registra con un horario en el pasado, esperara al proximo día o intervalo de tiempo
     adecuado).
--   **Detalle de tarea (/tasks/new/id)**: es la pantalla de detalle de una tarea. En ella se muestran los detalles de la tarea
+-   **Detalle de tarea (/tasks/:id)**: es la pantalla de detalle de una tarea. En ella se muestran los detalles de la tarea
     y se le da al usuario la posibilidad de modificar los campos de la tarea (por defecto, solo se modifica la instancia siguiente
     instancia de la tarea, el usuario debe marcar las modificaciones como "globales" para que se apliquen a la configuración de la
     rutina).
 
+### Sobre los usuarios
+
+Los usuarios requieren de autenticación para acceder a la aplicación y para determinar las tareas específicas para ellos. La aplicación
+maneja la autenticación de los usuarios mediante el uso de JWT (JSON Web Tokens). Y un sistema de roles y permisos basico para determinar
+las acciones permitidas para cada usuario.
+
+Dado que el usuario desea que otros usuarios puedan crear tareas para otros usuarios, el sistema debe implementar
+un sistema de permisos que proporcione esta funcionalidad, de forma que un usuario pueda darle el permiso a otro para crear
+tareas que el primero debe realizar. Este sistema también permitiria a los usuarios brindarle acceso a otros para ver las
+tareas/rutinas que tienen registradas y el estado de las mismas (de forma que la aplicación permita "compartir la responsabilidad"
+de las tareas).
+
 ### Funcionalidades específicas
+
+#### Tomar agua con iconos
 
 El usuario desea tener un apartado que muestre gráficamente la tarea de tomar agua. De forma que se muestre un icono de botella
 de agua por cada vez que el usuario desee tomar agua al día (representando cada botella 1L de agua). Cada icono tendra 2 estados:
@@ -88,15 +102,26 @@ de agua por cada vez que el usuario desee tomar agua al día (representando cada
 El estado pendiente mostrará un el icono una paleta "apagada", de baja opacidad o desaturada. Mientras que el estado completado
 mostrará un icono con una paleta "encendida", de alta opacidad o saturada.
 
+#### Pings de tareas pendientes
+
+El usuario desea tener la capacidad de enviar un "ping" a otro usuario cuando este ultimo no ha realizado una tarea. (Como un "toque"
+de Facebook, para una tarea específica).
+
 ### Web Push
 
 La aplicación debe ser capaz de enviar notificaciones push a los usuarios cuando se aproxime una tarea que debe realizarse.
+
+### Sobre Goose y la gestión de migraciones
+
+El proyecto utiliza Goose para gestionar la creación de las migraciones y la ejecución de ellas en la base de datos.
+Con esto se busca garantizar la integridad de los datos y la consistencia de las tablas, relaciones, etc. en la Base de Datos.
 
 ## Tecnologías usadas
 
 -   [Go](https://go.dev/)
 -   [PostgreSQL](https://www.postgresql.org/)
 -   [PGX](https://github.com/jackc/pgx/)
+-   [Goose](https://github.com/pressly/goose)
 -   [Tailwind CSS](https://tailwindcss.com/)
 -   [React](https://reactjs.org/)
 -   [TanStack Router](https://tanstack.com/router/latest)
