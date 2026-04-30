@@ -5,8 +5,10 @@ type NotificationState = {
     enabled: boolean;
     isSupported: boolean;
     isSubscribed: boolean;
+    permission: NotificationPermission | "unsupported";
     subscription: PushSubscription | null;
     vapidKey: string;
+    checkSubscription: () => Promise<void>;
     subscribe: (publicKey: string) => Promise<PushSubscription>;
     unsubscribe: () => Promise<void>;
     requestPermission: () => Promise<NotificationPermission>;
@@ -17,11 +19,12 @@ export const useNotifications = create<NotificationState>((set, get) => {
         'serviceWorker' in navigator &&
         'PushManager' in window;
 
-    let permission: NotificationPermission | null = null
+    let permission: NotificationPermission | "unsupported" = isSupported ? Notification.permission : "unsupported";
 
-    if (isSupported && permission !== "granted") {
+    if (isSupported && permission === "default") {
         Notification.requestPermission().then(newPerm => {
             permission = newPerm;
+            set({ enabled: newPerm === "granted", permission: newPerm });
         });
     }
 
@@ -29,6 +32,7 @@ export const useNotifications = create<NotificationState>((set, get) => {
         enabled: permission === "granted",
         isSupported,
         isSubscribed: false,
+        permission,
         subscription: null,
         vapidKey: import.meta.env.VITE_VAPID_PUBLIC_KEY,
         checkSubscription: async () => {
@@ -46,7 +50,10 @@ export const useNotifications = create<NotificationState>((set, get) => {
         subscribe: async (publicKey) => {
             const state = get();
             if (state.isSubscribed) {
-                return;
+                if (state.subscription) {
+                    return state.subscription;
+                }
+                throw new Error('No active subscription found');
             }
 
             if (!state.isSupported) {
@@ -85,7 +92,7 @@ export const useNotifications = create<NotificationState>((set, get) => {
                 return subscription;
             } catch (error) {
                 console.error('Error subscribing:', error);
-                return null;
+                throw error;
             }
         },
 
@@ -109,7 +116,7 @@ export const useNotifications = create<NotificationState>((set, get) => {
             }
 
             const permission = await Notification.requestPermission();
-            set({ enabled: permission === "granted" });
+            set({ enabled: permission === "granted", permission });
             return permission;
         },
     };
@@ -158,17 +165,18 @@ export function useNotificationSubscription() {
 }
 
 // Convert VAPID public key to Uint8Array
-export function urlBase64ToUint8Array(base64String: string): Uint8Array {
+export function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
     const base64 = (base64String + padding)
         .replace(/\-/g, '+')
         .replace(/_/g, '/');
 
     const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
+    const buffer = new ArrayBuffer(rawData.length);
+    const outputArray = new Uint8Array(buffer);
 
     for (let i = 0; i < rawData.length; ++i) {
         outputArray[i] = rawData.charCodeAt(i);
     }
-    return outputArray;
+    return buffer;
 }

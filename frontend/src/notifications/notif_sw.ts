@@ -4,6 +4,14 @@ import { precacheAndRoute } from 'workbox-precaching';
 
 declare const self: ServiceWorkerGlobalScope;
 
+type NotificationOptionsWithActions = NotificationOptions & {
+    actions?: Array<{
+        action: string;
+        title: string;
+        icon?: string;
+    }>;
+};
+
 // Workbox will inject precache manifest here
 precacheAndRoute(self.__WB_MANIFEST);
 
@@ -21,7 +29,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('push', (event) => {
     console.log('Push notification received:', event);
 
-    let notificationData: NotificationOptions = {
+    let notificationData: NotificationOptionsWithActions = {
         body: 'Tienes tareas activas o pendientes por completar',
         icon: '/icon-192x192.png',
         badge: '/badge-72x72.png',

@@ -13,7 +13,7 @@ export const Route = createFileRoute("/")({
             isAuthenticated = false;
         }
         if (isAuthenticated) {
-            throw redirect({ to: "/tasks" });
+            throw redirect({ to: "/dashboard" });
         }
     },
 });

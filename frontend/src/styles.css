@@ -15,7 +15,7 @@
     }
     body {
         @apply bg-background text-foreground;
-        font-family: "Space Grotesk", "Roboto", sans-serif;
+        font-family: "Manrope", sans-serif;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
     }
@@ -28,7 +28,7 @@
 
 @layer utilities {
     .font-main {
-        font-family: "Space Grotesk", "Roboto", sans-serif;
+        font-family: "Manrope", sans-serif;
     }
     .font-mono {
         font-family:
@@ -42,19 +42,56 @@
     }
 }
 
-@layer components {
-    .hour-toggle.current {
-        color: var(--color-purple-700) !important;
-        opacity: 1 !important;
+.material-symbols-outlined {
+    font-family: "Material Symbols Outlined";
+    font-weight: normal;
+    font-style: normal;
+    font-size: 24px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -webkit-font-feature-settings: "liga";
+    -webkit-font-smoothing: antialiased;
+    font-variation-settings:
+        "FILL" 0,
+        "wght" 400,
+        "GRAD" 0,
+        "opsz" 24;
+}
 
-        &::before {
-            content: "•";
-            position: absolute;
-            left: 3px;
-            top: 0px;
-            font-weight: bold;
-        }
-    }
+.material-symbols-outlined[data-filled="true"] {
+    font-variation-settings:
+        "FILL" 1,
+        "wght" 400,
+        "GRAD" 0,
+        "opsz" 24;
+}
+
+.timeline-progress {
+    appearance: none;
+    border: 0;
+    background-color: #242434;
+}
+
+.timeline-progress::-webkit-progress-bar {
+    border-radius: 9999px;
+    background-color: #242434;
+}
+
+.timeline-progress::-webkit-progress-value {
+    border-radius: 9999px;
+    background: linear-gradient(90deg, #81ecff, #afa2ff);
+    box-shadow: 0 0 20px rgba(129, 236, 255, 0.4);
+}
+
+.timeline-progress::-moz-progress-bar {
+    border-radius: 9999px;
+    background: linear-gradient(90deg, #81ecff, #afa2ff);
+    box-shadow: 0 0 20px rgba(129, 236, 255, 0.4);
 }
 
 :root {
@@ -165,6 +202,65 @@
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
+
+    --color-outline: #757482;
+    --color-primary-dim: #7459f7;
+    --color-primary-container: #a192ff;
+    --color-on-surface: #e9e6f7;
+    --color-on-surface-variant: #aba9b9;
+    --color-on-secondary-fixed-variant: #2a24f1;
+    --color-on-error: #490013;
+    --color-secondary-fixed-dim: #bdbeff;
+    --color-secondary-fixed: #cdcdff;
+    --color-inverse-primary: #5e40e0;
+    --color-surface-tint: #afa2ff;
+    --color-tertiary-fixed-dim: #00d4ec;
+    --color-on-primary-fixed-variant: #2a0091;
+    --color-secondary: #8f93ff;
+    --color-surface-dim: #0d0d18;
+    --color-inverse-on-surface: #555461;
+    --color-tertiary-container: #00e3fd;
+    --color-secondary-dim: #5b5fff;
+    --color-surface-bright: #2b2a3c;
+    --color-tertiary-fixed: #00e3fd;
+    --color-surface-variant: #242434;
+    --color-on-primary-fixed: #000000;
+    --color-on-secondary: #07007a;
+    --color-on-background: #e9e6f7;
+    --color-error-container: #a70138;
+    --color-error-dim: #d73357;
+    --color-primary: #afa2ff;
+    --color-primary-foreground: #2c0097;
+    --color-inverse-surface: #fcf8ff;
+    --color-surface-container-highest: #242434;
+    --color-surface: #0d0d18;
+    --color-on-tertiary: #005762;
+    --color-secondary-container: #1a07e9;
+    --color-on-error-container: #ffb2b9;
+    --color-surface-container: #181826;
+    --color-outline-variant: #474754;
+    --color-on-tertiary-container: #004d57;
+    --color-error: #ff6e84;
+    --color-surface-container-high: #1e1e2d;
+    --color-on-primary: #2c0097;
+    --color-surface-container-lowest: #000000;
+    --color-on-tertiary-fixed-variant: #005762;
+    --color-tertiary-dim: #00d4ec;
+    --color-primary-fixed-dim: #9481ff;
+    --color-on-tertiary-fixed: #003840;
+    --color-on-secondary-container: #ccccff;
+    --color-background: #0d0d18;
+    --color-foreground: #e9e6f7;
+    --color-on-primary-container: #210077;
+    --color-primary-fixed: #a192ff;
+    --color-on-secondary-fixed: #0f00b5;
+    --color-surface-container-low: #12121e;
+    --color-tertiary: #81ecff;
+
+    --font-headline: "Manrope", sans-serif;
+    --font-display: "Manrope", sans-serif;
+    --font-body: "Manrope", sans-serif;
+    --font-label: "Manrope", sans-serif;
 }
 
 @font-face {
