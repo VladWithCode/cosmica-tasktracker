@@ -211,13 +211,16 @@ function StatsErrorState({ error, onRetry }: { error: Error | null; onRetry: () 
 
 function StatsEmptyState() {
     return (
-        <section className="rounded-xl border border-outline-variant/15 bg-surface-container-low p-8 text-center">
+        <section
+            aria-live="polite"
+            className="rounded-xl border border-outline-variant/15 bg-surface-container-low p-8 text-center"
+        >
             <MaterialIcon name="bar_chart" className="mx-auto mb-3 text-4xl text-tertiary" />
             <p className="font-headline text-lg font-bold text-on-surface">
                 Sin estadísticas todavía
             </p>
             <p className="mt-1 text-sm text-on-surface-variant">
-                Completa tareas para construir tu historial de progreso.
+                Completá tareas o registrá unidades en tus contadores para construir tu historial de progreso.
             </p>
         </section>
     );

@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/AppShell";
+import { CounterTaskProgress } from "@/components/tasks/CounterTaskProgress";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { cn, formatStartTime } from "@/lib/utils";
 import type { TTask, TTaskStatus } from "@/lib/schemas/task";
@@ -240,6 +241,18 @@ function TaskDetailContent({ task }: { task: TTask }) {
                     <DetailMetric icon="schedule" label="Horario" value={scheduledRange} />
                     <DetailMetric icon="timer" label="Duración" value={durationLabel} />
                 </div>
+                {task.targetCount && task.targetCount > 0 ? (
+                    <div className="mt-6">
+                        <CounterTaskProgress
+                            category={task.category ?? null}
+                            currentCount={task.currentCount}
+                            description={task.description ?? null}
+                            status={task.status}
+                            targetCount={task.targetCount}
+                            title={task.title}
+                        />
+                    </div>
+                ) : null}
             </section>
 
             <form
@@ -374,13 +387,28 @@ function TaskDetailContent({ task }: { task: TTask }) {
                             Conteo actual
                         </span>
                         <input
+                            aria-describedby={`${currentCountInputId}-help`}
                             className="w-full rounded-lg border border-outline-variant/15 bg-surface-container-lowest px-4 py-3 text-sm font-semibold text-on-surface outline-none transition-all duration-300 focus:border-primary focus:ring-2 focus:ring-primary/20"
                             id={currentCountInputId}
+                            max={formState.targetCount || undefined}
                             min={0}
-                            onChange={(event) => updateField("currentCount", event.target.value)}
+                            onChange={(event) =>
+                                updateField(
+                                    "currentCount",
+                                    clampCounterValue(event.target.value, formState.targetCount),
+                                )
+                            }
                             type="number"
                             value={formState.currentCount}
                         />
+                        <span
+                            className="block text-xs text-on-surface-variant"
+                            id={`${currentCountInputId}-help`}
+                        >
+                            {formState.targetCount
+                                ? `Entre 0 y ${formState.targetCount}.`
+                                : "Sin meta definida."}
+                        </span>
                     </label>
                     <label className="space-y-2" htmlFor={targetCountInputId}>
                         <span className="block font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant">
@@ -722,4 +750,18 @@ function toOptionalNumber(value: string) {
 
 function emptyToUndefined(value: string) {
     return value.trim() === "" ? undefined : value;
+}
+
+function clampCounterValue(rawValue: string, targetCountString: string): string {
+    if (rawValue.trim() === "") {
+        return "";
+    }
+    const parsed = Number(rawValue);
+    if (!Number.isFinite(parsed)) {
+        return "";
+    }
+    const target = Number(targetCountString);
+    const hasTarget = Number.isFinite(target) && target > 0;
+    const clamped = hasTarget ? Math.min(Math.max(parsed, 0), target) : Math.max(parsed, 0);
+    return String(Math.floor(clamped));
 }

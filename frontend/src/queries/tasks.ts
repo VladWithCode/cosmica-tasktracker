@@ -305,6 +305,105 @@ export async function markTaskAsCompleted({ taskId }: { taskId: string }) {
     return data;
 }
 
+export interface IncrementTaskCountInput {
+    taskId: string;
+    nextCount: number;
+    targetCount?: number | null;
+}
+
+export async function incrementTaskCount({
+    taskId,
+    nextCount,
+    targetCount,
+}: IncrementTaskCountInput) {
+    const safeNext = Math.max(0, Math.floor(Number.isFinite(nextCount) ? nextCount : 0));
+    const reachesTarget =
+        typeof targetCount === "number" && targetCount > 0 && safeNext >= targetCount;
+    const body: Record<string, unknown> = {
+        currentCount: reachesTarget && typeof targetCount === "number" ? targetCount : safeNext,
+    };
+    if (reachesTarget) {
+        body.status = "completed";
+    }
+    const response = await fetch(`/api/v1/tasks/${taskId}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+    });
+    const data = (await response.json()) as ApiResponse<TaskData>;
+    if (!response.ok) {
+        throw new Error(getApiError(data, "No se pudo actualizar el contador"));
+    }
+    return data;
+}
+
+export function useIncrementTaskCount() {
+    return {
+        mutationFn: incrementTaskCount,
+        onMutate: async ({ taskId, nextCount, targetCount }: IncrementTaskCountInput) => {
+            await queryClient.cancelQueries({ queryKey: TasksQueryKeys.today() });
+            const previous = queryClient.getQueryData<Awaited<ReturnType<typeof getTodayTasks>>>(
+                TasksQueryKeys.today(),
+            );
+            const safeNext = Math.max(0, Math.floor(nextCount));
+            const reachesTarget =
+                typeof targetCount === "number" && targetCount > 0 && safeNext >= targetCount;
+            const clampedCount =
+                reachesTarget && typeof targetCount === "number" ? targetCount : safeNext;
+
+            if (previous) {
+                queryClient.setQueryData(TasksQueryKeys.today(), {
+                    ...previous,
+                    feedItems: previous.feedItems.map((task) =>
+                        task.id === taskId
+                            ? {
+                                  ...task,
+                                  current_count: clampedCount,
+                                  status_level: reachesTarget
+                                      ? ("completed" as const)
+                                      : task.status_level,
+                                  completed_at: reachesTarget
+                                      ? new Date().toISOString()
+                                      : task.completed_at,
+                              }
+                            : task,
+                    ),
+                    tasks: previous.tasks.map((task) =>
+                        task.id === taskId
+                            ? {
+                                  ...task,
+                                  currentCount: clampedCount,
+                                  status: reachesTarget ? ("completed" as const) : task.status,
+                                  completedAt: reachesTarget ? new Date() : task.completedAt,
+                              }
+                            : task,
+                    ),
+                });
+            }
+
+            return { previous };
+        },
+        onError: (
+            _error: Error,
+            _variables: IncrementTaskCountInput,
+            context: { previous?: Awaited<ReturnType<typeof getTodayTasks>> } | undefined,
+        ) => {
+            if (context?.previous) {
+                queryClient.setQueryData(TasksQueryKeys.today(), context.previous);
+            }
+        },
+        onSettled: (_data: unknown, _error: Error | null, variables: IncrementTaskCountInput) => {
+            void queryClient.invalidateQueries({ queryKey: TasksQueryKeys.today() });
+            void queryClient.invalidateQueries({ queryKey: TasksQueryKeys.byId(variables.taskId) });
+            void queryClient.invalidateQueries({ queryKey: TasksQueryKeys.history() });
+            void queryClient.invalidateQueries({ queryKey: TasksQueryKeys.progress() });
+        },
+    };
+}
+
 export const updateTaskOpts = mutationOptions({
     mutationFn: updateTask,
     onSuccess: (data, variables) => {

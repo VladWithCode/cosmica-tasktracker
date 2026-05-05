@@ -4,11 +4,19 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/AppShell";
 import { FloatingActionButton } from "@/components/layout/FloatingActionButton";
+import {
+    CounterTaskProgress,
+    isCounterTask,
+} from "@/components/tasks/CounterTaskProgress";
 import { DayProgress } from "@/components/tasks/DayProgress";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { cn } from "@/lib/utils";
 import { sortTasksForFeed } from "@/lib/taskSort";
-import { getTodayTasksOpts, useCompleteTask } from "@/queries/tasks";
+import {
+    getTodayTasksOpts,
+    useCompleteTask,
+    useIncrementTaskCount,
+} from "@/queries/tasks";
 import type { TaskFeedItem } from "@/types/task";
 
 export const Route = createFileRoute("/tasks/")({
@@ -122,8 +130,14 @@ function HourBucket({ bucket }: { bucket: HourBucketData }) {
 function TaskCard({ task }: { task: TaskFeedItem }) {
     const router = useRouter();
     const completeTaskMutation = useMutation(useCompleteTask());
+    const incrementCountMutation = useMutation(useIncrementTaskCount());
     const isCompleted = task.status_level === "completed";
     const isCompletable = task.status_level === "pending" || task.status_level === "in_progress";
+    const isCounter = isCounterTask(task);
+    const targetCount = task.target_count ?? null;
+    const currentCount = task.current_count ?? 0;
+    const counterReached =
+        isCounter && targetCount !== null && currentCount >= targetCount;
 
     const completeTask = () => {
         completeTaskMutation.mutate(
@@ -137,6 +151,35 @@ function TaskCard({ task }: { task: TaskFeedItem }) {
         );
     };
 
+    const incrementCounter = () => {
+        if (!isCounter || !targetCount) {
+            return;
+        }
+        const nextCount = Math.min(currentCount + 1, targetCount);
+        if (nextCount === currentCount) {
+            return;
+        }
+        incrementCountMutation.mutate(
+            { taskId: task.id, nextCount, targetCount },
+            {
+                onError: (mutationError) => {
+                    toast.error(
+                        mutationError.message || "No se pudo registrar la unidad",
+                    );
+                },
+                onSuccess: () => {
+                    if (nextCount >= targetCount) {
+                        toast.success("Contador completo");
+                    }
+                },
+            },
+        );
+    };
+
+    const counterMutationPending = incrementCountMutation.isPending;
+    const incrementDisabled =
+        !isCompletable || counterReached || counterMutationPending;
+
     return (
         <article
             className={cn(
@@ -148,7 +191,7 @@ function TaskCard({ task }: { task: TaskFeedItem }) {
             <div className={cn("absolute left-0 top-0 h-full w-1", priorityBar(task.priority_level))} />
             <div className="flex items-center justify-between gap-4">
                 <button
-                    className="min-w-0 flex-1 text-left"
+                    className="min-w-0 flex-1 rounded-md text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                     onClick={() => void router.navigate({ to: "/tasks/$id", params: { id: task.id } })}
                     type="button"
                 >
@@ -162,36 +205,91 @@ function TaskCard({ task }: { task: TaskFeedItem }) {
                                 Vital
                             </span>
                         ) : null}
+                        {isCounter ? (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-tertiary/20 bg-tertiary/10 px-2 py-0.5 font-label text-[10px] font-bold uppercase tracking-widest text-tertiary">
+                                <MaterialIcon name="repeat" className="text-xs" />
+                                {currentCount}/{targetCount}
+                            </span>
+                        ) : null}
                     </div>
                     <p className="mt-1 font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant">
                         {task.schedule_start_time ?? "Sin horario"}
                     </p>
                 </button>
-                <button
-                    aria-label={isCompleted ? "Tarea completada" : "Completar tarea"}
-                    className={cn(
-                        "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-outline-variant/15 transition-all duration-300 active:scale-95",
-                        isCompleted
-                            ? "bg-tertiary/10 text-tertiary"
-                            : "bg-surface-container-highest text-on-surface-variant hover:text-tertiary",
-                    )}
-                    disabled={!isCompletable || completeTaskMutation.isPending}
-                    onClick={completeTask}
-                    type="button"
-                >
-                    <MaterialIcon
-                        filled={isCompleted}
-                        name={
-                            completeTaskMutation.isPending
-                                ? "progress_activity"
-                                : isCompleted
-                                  ? "check_circle"
-                                  : "radio_button_unchecked"
-                        }
-                        className={cn(completeTaskMutation.isPending && "animate-spin")}
-                    />
-                </button>
+                <div className="flex shrink-0 items-center gap-2">
+                    {isCounter ? (
+                        <button
+                            aria-label={
+                                counterReached
+                                    ? "Contador completo"
+                                    : "Sumar una unidad al contador"
+                            }
+                            className={cn(
+                                "flex h-11 min-w-[3rem] items-center justify-center gap-1 rounded-full border border-outline-variant/15 px-3 font-label text-xs font-extrabold uppercase tracking-widest transition-all duration-300 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60",
+                                counterReached
+                                    ? "bg-tertiary/10 text-tertiary"
+                                    : "bg-surface-container-highest text-on-surface hover:text-primary",
+                            )}
+                            disabled={incrementDisabled}
+                            onClick={incrementCounter}
+                            type="button"
+                        >
+                            <MaterialIcon
+                                filled
+                                name={
+                                    counterMutationPending
+                                        ? "progress_activity"
+                                        : counterReached
+                                          ? "check_circle"
+                                          : "add"
+                                }
+                                className={cn(
+                                    "text-base",
+                                    counterMutationPending && "animate-spin",
+                                )}
+                            />
+                            <span aria-hidden="true">+1</span>
+                        </button>
+                    ) : null}
+                    <button
+                        aria-label={isCompleted ? "Tarea completada" : "Completar tarea"}
+                        className={cn(
+                            "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-outline-variant/15 transition-all duration-300 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+                            isCompleted
+                                ? "bg-tertiary/10 text-tertiary"
+                                : "bg-surface-container-highest text-on-surface-variant hover:text-tertiary",
+                        )}
+                        disabled={!isCompletable || completeTaskMutation.isPending}
+                        onClick={completeTask}
+                        type="button"
+                    >
+                        <MaterialIcon
+                            filled={isCompleted}
+                            name={
+                                completeTaskMutation.isPending
+                                    ? "progress_activity"
+                                    : isCompleted
+                                      ? "check_circle"
+                                      : "radio_button_unchecked"
+                            }
+                            className={cn(completeTaskMutation.isPending && "animate-spin")}
+                        />
+                    </button>
+                </div>
             </div>
+            {isCounter ? (
+                <div className="mt-3">
+                    <CounterTaskProgress
+                        category={null}
+                        compact
+                        currentCount={currentCount}
+                        description={task.description ?? null}
+                        status={task.status_level}
+                        targetCount={targetCount}
+                        title={task.title}
+                    />
+                </div>
+            ) : null}
         </article>
     );
 }
@@ -275,7 +373,10 @@ function TasksErrorState({ error, onRetry }: { error: Error | null; onRetry: () 
 
 function TasksEmptyState() {
     return (
-        <section className="rounded-xl border border-outline-variant/15 bg-surface-container-low p-8 text-center">
+        <section
+            aria-live="polite"
+            className="rounded-xl border border-outline-variant/15 bg-surface-container-low p-8 text-center"
+        >
             <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-tertiary/10 text-tertiary shadow-[0_0_30px_rgba(129,236,255,0.18)]">
                 <MaterialIcon name="event_available" className="text-5xl" />
             </div>
@@ -283,13 +384,13 @@ function TasksEmptyState() {
                 No tenés tareas para hoy
             </h3>
             <p className="mx-auto mt-2 max-w-sm text-sm text-on-surface-variant">
-                Crea una rutina y se generará cuando su horario aplique.
+                Creá una rutina (por ejemplo, “Tomar agua: 8 botellas”) y se generará automáticamente cuando aplique su horario.
             </p>
             <Link
-                className="mt-5 inline-flex rounded-full bg-gradient-to-r from-primary to-primary-dim px-5 py-3 font-label text-xs font-extrabold uppercase tracking-widest text-on-primary shadow-[0_15px_40px_rgba(175,162,255,0.28)] transition-all duration-300 hover:-translate-y-1 active:scale-95"
+                className="mt-5 inline-flex rounded-full bg-gradient-to-r from-primary to-primary-dim px-5 py-3 font-label text-xs font-extrabold uppercase tracking-widest text-on-primary shadow-[0_15px_40px_rgba(175,162,255,0.28)] transition-all duration-300 hover:-translate-y-1 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 to="/tasks/new"
             >
-                Crear tarea
+                Crear rutina
             </Link>
         </section>
     );
