@@ -20,6 +20,8 @@ type Repository interface {
 	GetTaskDetailsByID(ctx context.Context, id string) (*db.DetailedTask, error)
 	GetTasksByUserID(ctx context.Context, userID string) ([]*db.DetailedTask, error)
 	GetUserDayProgress(ctx context.Context, userID string, day time.Time) (*db.DayProgress, error)
+	GetUserTaskHistory(ctx context.Context, userID string, from time.Time, to time.Time) (*db.TaskHistoryRange, error)
+	GetUserTaskMetrics(ctx context.Context, userID string, from time.Time, to time.Time) (*db.TaskMetricsRange, error)
 	GetUserTodayDetailedTasks(ctx context.Context, userID string) ([]*db.DetailedTask, error)
 	UpdateTask(ctx context.Context, task *db.Task) error
 	UpdateTaskAndSchedule(ctx context.Context, task *db.Task, schedule *db.ScheduleTask) error
@@ -77,6 +79,14 @@ func (r *DBRepository) GetTasksByUserID(ctx context.Context, userID string) ([]*
 
 func (r *DBRepository) GetUserDayProgress(ctx context.Context, userID string, day time.Time) (*db.DayProgress, error) {
 	return db.GetUserDayProgress(ctx, userID, day)
+}
+
+func (r *DBRepository) GetUserTaskHistory(ctx context.Context, userID string, from time.Time, to time.Time) (*db.TaskHistoryRange, error) {
+	return db.GetUserTaskHistory(ctx, userID, from, to)
+}
+
+func (r *DBRepository) GetUserTaskMetrics(ctx context.Context, userID string, from time.Time, to time.Time) (*db.TaskMetricsRange, error) {
+	return db.GetUserTaskMetrics(ctx, userID, from, to)
 }
 
 func (r *DBRepository) GetUserTodayDetailedTasks(ctx context.Context, userID string) ([]*db.DetailedTask, error) {

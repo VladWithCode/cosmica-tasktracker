@@ -49,6 +49,50 @@ export interface TaskFeedItem {
     title: string;
 }
 
+export interface TaskHistoryDay {
+    date: string;
+    total: number;
+    completed: number;
+    pending: number;
+    skipped: number;
+    failed: number;
+    in_progress: number;
+    percentage: number;
+}
+
+export interface TaskHistoryRange {
+    from: string;
+    to: string;
+    days: TaskHistoryDay[];
+}
+
+export interface TaskMetricsBestDay {
+    date: string;
+    percentage: number;
+}
+
+export interface TaskMetricsRange {
+    from: string;
+    to: string;
+    total: number;
+    completed: number;
+    pending: number;
+    skipped: number;
+    failed: number;
+    in_progress: number;
+    percentage: number;
+    days_count: number;
+    completions_count: number;
+    active_days: number;
+    best_day?: TaskMetricsBestDay | null;
+    current_streak: number;
+}
+
+export interface TaskStatsRangeInput {
+    from: string;
+    to: string;
+}
+
 export interface UpdateTaskInput {
     apply_to_schedule?: boolean;
     date?: string;

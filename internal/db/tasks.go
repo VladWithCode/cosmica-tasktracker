@@ -1088,6 +1088,45 @@ type DayProgress struct {
 	Percentage float64 `json:"percentage"`
 }
 
+type TaskHistoryDay struct {
+	Date       string  `json:"date"`
+	Total      int     `json:"total"`
+	Completed  int     `json:"completed"`
+	Pending    int     `json:"pending"`
+	Skipped    int     `json:"skipped"`
+	Failed     int     `json:"failed"`
+	InProgress int     `json:"in_progress"`
+	Percentage float64 `json:"percentage"`
+}
+
+type TaskHistoryRange struct {
+	From string           `json:"from"`
+	To   string           `json:"to"`
+	Days []TaskHistoryDay `json:"days"`
+}
+
+type TaskMetricsBestDay struct {
+	Date       string  `json:"date"`
+	Percentage float64 `json:"percentage"`
+}
+
+type TaskMetricsRange struct {
+	From             string              `json:"from"`
+	To               string              `json:"to"`
+	Total            int                 `json:"total"`
+	Completed        int                 `json:"completed"`
+	Pending          int                 `json:"pending"`
+	Skipped          int                 `json:"skipped"`
+	Failed           int                 `json:"failed"`
+	InProgress       int                 `json:"in_progress"`
+	Percentage       float64             `json:"percentage"`
+	DaysCount        int                 `json:"days_count"`
+	CompletionsCount int                 `json:"completions_count"`
+	ActiveDays       int                 `json:"active_days"`
+	BestDay          *TaskMetricsBestDay `json:"best_day,omitempty"`
+	CurrentStreak    int                 `json:"current_streak"`
+}
+
 // GetUserDayProgress counts the tasks of a given user for the calendar day
 // represented by `day` and returns a DayProgress aggregate. Percentage is 0
 // when there are no tasks (no division by zero).
@@ -1132,4 +1171,167 @@ func GetUserDayProgress(ctx context.Context, userID string, day time.Time) (*Day
 	}
 
 	return progress, nil
+}
+
+func GetUserTaskHistory(ctx context.Context, userID string, from time.Time, to time.Time) (*TaskHistoryRange, error) {
+	conn, err := GetConn(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	rows, err := conn.Query(
+		ctx,
+		`WITH days AS (
+			SELECT generate_series($2::date, $3::date, interval '1 day')::date AS day
+		),
+		task_counts AS (
+			SELECT
+				DATE(date) AS day,
+				COUNT(*) AS total,
+				COUNT(*) FILTER (WHERE status_level = 'completed') AS completed,
+				COUNT(*) FILTER (WHERE status_level = 'pending') AS pending,
+				COUNT(*) FILTER (WHERE status_level = 'skipped') AS skipped,
+				COUNT(*) FILTER (WHERE status_level = 'failed') AS failed,
+				COUNT(*) FILTER (WHERE status_level = 'in_progress') AS in_progress
+			FROM tasks
+			WHERE user_id = $1
+				AND DATE(date) BETWEEN $2::date AND $3::date
+			GROUP BY DATE(date)
+		)
+		SELECT
+			d.day,
+			COALESCE(tc.total, 0),
+			COALESCE(tc.completed, 0),
+			COALESCE(tc.pending, 0),
+			COALESCE(tc.skipped, 0),
+			COALESCE(tc.failed, 0),
+			COALESCE(tc.in_progress, 0)
+		FROM days d
+		LEFT JOIN task_counts tc ON tc.day = d.day
+		ORDER BY d.day ASC`,
+		userID,
+		from,
+		to,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	history := &TaskHistoryRange{
+		From: from.Format("2006-01-02"),
+		To:   to.Format("2006-01-02"),
+		Days: []TaskHistoryDay{},
+	}
+
+	for rows.Next() {
+		var dayDate time.Time
+		var day TaskHistoryDay
+		if err := rows.Scan(
+			&dayDate,
+			&day.Total,
+			&day.Completed,
+			&day.Pending,
+			&day.Skipped,
+			&day.Failed,
+			&day.InProgress,
+		); err != nil {
+			return nil, err
+		}
+		day.Date = dayDate.Format("2006-01-02")
+		if day.Total > 0 {
+			day.Percentage = math.Round(float64(day.Completed)*1000/float64(day.Total)) / 10
+		}
+		history.Days = append(history.Days, day)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return history, nil
+}
+
+func GetUserTaskMetrics(ctx context.Context, userID string, from time.Time, to time.Time) (*TaskMetricsRange, error) {
+	history, err := GetUserTaskHistory(ctx, userID, from, to)
+	if err != nil {
+		return nil, err
+	}
+
+	metrics := &TaskMetricsRange{
+		From:      history.From,
+		To:        history.To,
+		DaysCount: len(history.Days),
+	}
+	for _, day := range history.Days {
+		metrics.Total += day.Total
+		metrics.Completed += day.Completed
+		metrics.Pending += day.Pending
+		metrics.Skipped += day.Skipped
+		metrics.Failed += day.Failed
+		metrics.InProgress += day.InProgress
+		if day.Total > 0 {
+			metrics.ActiveDays++
+			if metrics.BestDay == nil || day.Percentage > metrics.BestDay.Percentage {
+				metrics.BestDay = &TaskMetricsBestDay{
+					Date:       day.Date,
+					Percentage: day.Percentage,
+				}
+			}
+		}
+	}
+	if metrics.Total > 0 {
+		metrics.Percentage = math.Round(float64(metrics.Completed)*1000/float64(metrics.Total)) / 10
+	}
+	metrics.CurrentStreak = calculateCurrentStreak(history.Days)
+
+	completionsCount, err := countUserTaskCompletions(ctx, userID, from, to)
+	if err != nil {
+		return nil, err
+	}
+	metrics.CompletionsCount = completionsCount
+
+	return metrics, nil
+}
+
+func countUserTaskCompletions(ctx context.Context, userID string, from time.Time, to time.Time) (int, error) {
+	conn, err := GetConn(ctx)
+	if err != nil {
+		return 0, err
+	}
+	defer conn.Release()
+
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	var count int
+	err = conn.QueryRow(
+		ctx,
+		`SELECT COUNT(*)
+		FROM task_completions
+		WHERE user_id = $1
+			AND DATE(completed_at) BETWEEN $2::date AND $3::date`,
+		userID,
+		from,
+		to,
+	).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func calculateCurrentStreak(days []TaskHistoryDay) int {
+	streak := 0
+	for index := len(days) - 1; index >= 0; index-- {
+		day := days[index]
+		if day.Total == 0 || day.Percentage < 100 {
+			break
+		}
+		streak++
+	}
+	return streak
 }

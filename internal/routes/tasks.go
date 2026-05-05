@@ -44,6 +44,8 @@ func registerTaskRoutes(router *gin.RouterGroup) {
 	router.GET("/tasks", GetUserTasks)
 	router.GET("/tasks/today", GenerateTodaysTasks)
 	router.GET("/tasks/progress", GetTaskProgress)
+	router.GET("/tasks/history", GetTaskHistory)
+	router.GET("/tasks/metrics", GetTaskMetrics)
 	router.GET("/tasks/:id", GetTaskDetails)
 }
 
@@ -317,6 +319,93 @@ func GetTaskProgress(c *gin.Context) {
 	}
 
 	httpx.OK(c, gin.H{"progress": progress}, "Progreso recuperado")
+}
+
+func GetTaskHistory(c *gin.Context) {
+	sessionAuth, err := auth.GetAuth(c)
+	if err != nil {
+		httpx.Unauthorized(c, "No autorizado")
+		log.Printf("failed to get auth: %v\n", err)
+		return
+	}
+
+	from, to, err := parseTaskRange(c)
+	if err != nil {
+		httpx.BadRequest(c, err.Error())
+		return
+	}
+
+	service := tasksvc.NewService(tasksvc.NewRepository())
+	history, err := service.GetHistory(c.Request.Context(), sessionAuth.ID, from, to)
+	if err != nil {
+		httpx.ServerError(c, "Error al recuperar historial")
+		log.Printf("failed to get task history: %v\n", err)
+		return
+	}
+
+	httpx.OK(c, gin.H{"history": history}, "Historial recuperado")
+}
+
+func GetTaskMetrics(c *gin.Context) {
+	sessionAuth, err := auth.GetAuth(c)
+	if err != nil {
+		httpx.Unauthorized(c, "No autorizado")
+		log.Printf("failed to get auth: %v\n", err)
+		return
+	}
+
+	from, to, err := parseTaskRange(c)
+	if err != nil {
+		httpx.BadRequest(c, err.Error())
+		return
+	}
+
+	service := tasksvc.NewService(tasksvc.NewRepository())
+	metrics, err := service.GetMetrics(c.Request.Context(), sessionAuth.ID, from, to)
+	if err != nil {
+		httpx.ServerError(c, "Error al recuperar métricas")
+		log.Printf("failed to get task metrics: %v\n", err)
+		return
+	}
+
+	httpx.OK(c, gin.H{"metrics": metrics}, "Métricas recuperadas")
+}
+
+func parseTaskRange(c *gin.Context) (time.Time, time.Time, error) {
+	now := time.Now()
+	to := time.Date(now.Year(), now.Month(), now.Day(), 12, 0, 0, 0, time.UTC)
+	from := to.AddDate(0, 0, -6)
+
+	if fromValue := strings.TrimSpace(c.Query("from")); fromValue != "" {
+		parsed, err := parseDateOnly(fromValue)
+		if err != nil {
+			return time.Time{}, time.Time{}, errors.New("Fecha inicial inválida")
+		}
+		from = parsed
+	}
+	if toValue := strings.TrimSpace(c.Query("to")); toValue != "" {
+		parsed, err := parseDateOnly(toValue)
+		if err != nil {
+			return time.Time{}, time.Time{}, errors.New("Fecha final inválida")
+		}
+		to = parsed
+	}
+	if from.After(to) {
+		return time.Time{}, time.Time{}, errors.New("La fecha inicial no puede ser posterior a la fecha final")
+	}
+	if to.Sub(from).Hours()/24 > 89 {
+		return time.Time{}, time.Time{}, errors.New("El rango máximo permitido es de 90 días")
+	}
+
+	return from, to, nil
+}
+
+func parseDateOnly(value string) (time.Time, error) {
+	parsed, err := time.Parse("2006-01-02", strings.TrimSpace(value))
+	if err != nil {
+		return time.Time{}, err
+	}
+	return time.Date(parsed.Year(), parsed.Month(), parsed.Day(), 12, 0, 0, 0, time.UTC), nil
 }
 
 func GenerateTodaysTasks(c *gin.Context) {

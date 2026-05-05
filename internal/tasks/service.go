@@ -249,6 +249,14 @@ func (s *Service) GetDayProgress(ctx context.Context, userID string, day time.Ti
 	return s.repo.GetUserDayProgress(ctx, userID, day)
 }
 
+func (s *Service) GetHistory(ctx context.Context, userID string, from time.Time, to time.Time) (*db.TaskHistoryRange, error) {
+	return s.repo.GetUserTaskHistory(ctx, userID, from, to)
+}
+
+func (s *Service) GetMetrics(ctx context.Context, userID string, from time.Time, to time.Time) (*db.TaskMetricsRange, error) {
+	return s.repo.GetUserTaskMetrics(ctx, userID, from, to)
+}
+
 func (s *Service) Delete(ctx context.Context, authData *auth.Auth, id string) error {
 	task, err := s.repo.GetTaskByID(ctx, id)
 	if err != nil {

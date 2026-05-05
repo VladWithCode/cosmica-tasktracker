@@ -1,5 +1,11 @@
 import type { TTask } from "@/lib/schemas/task";
-import type { TaskFeedItem, UpdateTaskInput } from "@/types/task";
+import type {
+    TaskFeedItem,
+    TaskHistoryRange,
+    TaskMetricsRange,
+    TaskStatsRangeInput,
+    UpdateTaskInput,
+} from "@/types/task";
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { queryClient } from "./queryClient";
 import type { ApiResponse } from "@/types/api";
@@ -59,6 +65,14 @@ interface DayProgressData {
     progress: DayProgress;
 }
 
+interface TaskHistoryData {
+    history: TaskHistoryRange;
+}
+
+interface TaskMetricsData {
+    metrics: TaskMetricsRange;
+}
+
 export const getTasksOpts = queryOptions({
     queryKey: TasksQueryKeys.all(),
     queryFn: getTasks,
@@ -76,6 +90,22 @@ export const getTodayProgressOpts = queryOptions({
     staleTime: 60 * 1000,
 });
 
+export function getTaskHistoryOpts(range: TaskStatsRangeInput) {
+    return queryOptions({
+        queryKey: [...TasksQueryKeys.history(), range.from, range.to] as const,
+        queryFn: () => getTaskHistory(range),
+        staleTime: 60 * 1000,
+    });
+}
+
+export function getTaskMetricsOpts(range: TaskStatsRangeInput) {
+    return queryOptions({
+        queryKey: [...TasksQueryKeys.progress(), "metrics", range.from, range.to] as const,
+        queryFn: () => getTaskMetrics(range),
+        staleTime: 60 * 1000,
+    });
+}
+
 export async function getTodayProgress(): Promise<DayProgress> {
     const response = await fetch("/api/v1/tasks/progress", {
         method: "GET",
@@ -89,6 +119,44 @@ export async function getTodayProgress(): Promise<DayProgress> {
         throw new Error("La respuesta no incluyó el progreso");
     }
     return data.data.progress;
+}
+
+export async function getTaskHistory(range: TaskStatsRangeInput): Promise<TaskHistoryRange> {
+    const params = new URLSearchParams({
+        from: range.from,
+        to: range.to,
+    });
+    const response = await fetch(`/api/v1/tasks/history?${params.toString()}`, {
+        method: "GET",
+        credentials: "include",
+    });
+    const data = (await response.json()) as ApiResponse<TaskHistoryData>;
+    if (!response.ok) {
+        throw new Error(getApiError(data, "Error al obtener historial"));
+    }
+    if (!data.data?.history) {
+        throw new Error("La respuesta no incluyó el historial");
+    }
+    return data.data.history;
+}
+
+export async function getTaskMetrics(range: TaskStatsRangeInput): Promise<TaskMetricsRange> {
+    const params = new URLSearchParams({
+        from: range.from,
+        to: range.to,
+    });
+    const response = await fetch(`/api/v1/tasks/metrics?${params.toString()}`, {
+        method: "GET",
+        credentials: "include",
+    });
+    const data = (await response.json()) as ApiResponse<TaskMetricsData>;
+    if (!response.ok) {
+        throw new Error(getApiError(data, "Error al obtener métricas"));
+    }
+    if (!data.data?.metrics) {
+        throw new Error("La respuesta no incluyó las métricas");
+    }
+    return data.data.metrics;
 }
 
 export function getTaskByIdOpts(taskId: string) {
@@ -156,6 +224,9 @@ export const markAsCompletedOpts = mutationOptions({
             queryKey: TasksQueryKeys.today(),
         });
         queryClient.invalidateQueries({
+            queryKey: TasksQueryKeys.history(),
+        });
+        queryClient.invalidateQueries({
             queryKey: TasksQueryKeys.byId(taskId),
         });
         queryClient.invalidateQueries({
@@ -211,6 +282,7 @@ export function useCompleteTask() {
         onSettled: (_data: unknown, _error: Error | null, variables: { taskId: string }) => {
             void queryClient.invalidateQueries({ queryKey: TasksQueryKeys.today() });
             void queryClient.invalidateQueries({ queryKey: TasksQueryKeys.byId(variables.taskId) });
+            void queryClient.invalidateQueries({ queryKey: TasksQueryKeys.history() });
             void queryClient.invalidateQueries({ queryKey: TasksQueryKeys.progress() });
         },
     };
@@ -248,6 +320,9 @@ export const updateTaskOpts = mutationOptions({
         });
         queryClient.invalidateQueries({
             queryKey: TasksQueryKeys.all(),
+        });
+        queryClient.invalidateQueries({
+            queryKey: TasksQueryKeys.history(),
         });
         queryClient.invalidateQueries({
             queryKey: TasksQueryKeys.progress(),
