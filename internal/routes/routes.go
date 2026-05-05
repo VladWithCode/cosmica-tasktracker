@@ -31,12 +31,13 @@ func NewRouter() *gin.Engine {
 
 	// Public routes (no auth required)
 	apiRoutes := router.Group("/api/v1")
+	registerPublicNotificationRoutes(apiRoutes)
 	apiRoutes.Use(auth.AuthRequired())
 	apiRoutes.GET("/check-auth", CheckAuth)
 	registerScheduleRoutes(apiRoutes)
 	registerTaskRoutes(apiRoutes)
-	registerUserRoutes(apiRoutes)
 	registerNotificationRoutes(apiRoutes)
+	registerUserRoutes(apiRoutes)
 
 	return router
 }

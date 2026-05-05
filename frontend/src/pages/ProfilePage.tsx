@@ -8,6 +8,7 @@ import { queryClient } from "@/queries/queryClient";
 import { getProfile, logoutProfile, updateProfile } from "@/services/profile";
 import type { UserProfile } from "@/types/profile";
 import { cn } from "@/lib/utils";
+import { NotificationSettings } from "@/notifications/notificationSettings";
 
 interface ProfileFormState {
     email: string;
@@ -169,10 +170,12 @@ export function ProfilePage() {
                             <ProfileActionButton
                                 icon="notifications"
                                 label="Notification Preferences"
-                                onClick={() => toast.info("Preferencias pendientes de endpoint")}
+                                onClick={() => toast.info("Configura las notificaciones en la tarjeta de abajo")}
                             />
                         </div>
                     </section>
+
+                    <NotificationSettings />
 
                     <section className="pt-2">
                         <button

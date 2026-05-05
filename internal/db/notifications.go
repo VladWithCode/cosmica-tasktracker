@@ -13,7 +13,7 @@ type PushSubscription struct {
 	UserID   string    `json:"user_id" db:"user_id"`
 	Endpoint string    `json:"endpoint" db:"endpoint"`
 	Keys     Keys      `json:"keys" db:"keys"`
-	Created  time.Time `json:"created" db:"created"`
+	Created  time.Time `json:"created_at" db:"created_at"`
 }
 
 type Keys struct {
@@ -69,7 +69,7 @@ func GetSubscriptionsByUserID(ctx context.Context, userID string) ([]*PushSubscr
 	}
 	defer rows.Close()
 
-	var subscriptions []*PushSubscription
+	subscriptions := []*PushSubscription{}
 	for rows.Next() {
 		var sub PushSubscription
 		var keysJSON []byte
