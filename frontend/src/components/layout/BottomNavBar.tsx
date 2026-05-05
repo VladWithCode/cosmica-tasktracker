@@ -3,7 +3,7 @@ import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { cn } from "@/lib/utils";
 
 interface BottomNavItem {
-    to: "/tasks" | "/control" | "/dashboard/stats" | "/wellness";
+    to: "/tasks" | "/focus" | "/stats" | "/wellness";
     activePaths: string[];
     icon: string;
     label: string;
@@ -11,10 +11,10 @@ interface BottomNavItem {
 
 const navItems: BottomNavItem[] = [
     { to: "/tasks", activePaths: ["/tasks"], icon: "auto_awesome", label: "Rituales" },
-    { to: "/control", activePaths: ["/control"], icon: "timer", label: "Focus" },
+    { to: "/focus", activePaths: ["/focus"], icon: "timer", label: "Focus" },
     {
-        to: "/dashboard/stats",
-        activePaths: ["/dashboard"],
+        to: "/stats",
+        activePaths: ["/stats"],
         icon: "insights",
         label: "Estadísticas",
     },

@@ -150,7 +150,7 @@ function isCompleted(task: TTask) {
 }
 
 function isFailed(task: TTask, now: Date) {
-    if (task.status === "cancelled" || task.status === "overdue") {
+    if (task.status === "failed" || task.status === "skipped") {
         return true;
     }
 

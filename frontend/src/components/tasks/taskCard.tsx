@@ -5,10 +5,11 @@ import { markAsCompletedOpts } from "@/queries/tasks";
 import { useCallback } from "react";
 import { toast } from "sonner";
 import { MaterialIcon } from "../ui/MaterialIcon";
+import { Link } from "@tanstack/react-router";
 
 export function TaskCard({ task }: { task: TTask }) {
     const isDone = task.status === "completed";
-    const isProblem = task.status === "overdue" || task.status === "cancelled";
+    const isProblem = task.status === "failed" || task.status === "skipped";
 
     return (
         <article
@@ -52,13 +53,14 @@ export function TaskCard({ task }: { task: TTask }) {
                     ) : null}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                    <button
+                    <Link
                         aria-label="Ver detalles"
                         className="flex h-10 w-10 items-center justify-center rounded-full border border-outline-variant/15 bg-surface-container-highest text-on-surface-variant transition-all duration-300 hover:text-primary active:scale-95"
-                        type="button"
+                        params={{ id: task.id }}
+                        to="/tasks/$id"
                     >
                         <MaterialIcon name="visibility" className="text-base" />
-                    </button>
+                    </Link>
                     <MarkAsCompletedBtn taskId={task.id} isDone={isDone} />
                 </div>
             </div>

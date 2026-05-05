@@ -8,10 +8,10 @@ export const Route = createFileRoute("/tasks")({
         try {
             const isAuthenticated = await checkAuth();
             if (!isAuthenticated) {
-                throw redirect({ to: "/" });
+                throw redirect({ to: "/login" });
             }
         } catch (error) {
-            throw redirect({ to: "/" });
+            throw redirect({ to: "/login" });
         }
     },
 });

@@ -10,7 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WellnessRouteImport } from './routes/wellness'
+import { Route as StatsRouteImport } from './routes/stats'
+import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as FocusRouteImport } from './routes/focus'
 import { Route as ControlRouteImport } from './routes/control'
 import { Route as TasksRouteRouteImport } from './routes/tasks/route'
 import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
@@ -18,6 +22,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as TasksIndexRouteImport } from './routes/tasks/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as TasksNewRouteImport } from './routes/tasks/new'
+import { Route as TasksIdRouteImport } from './routes/tasks/$id'
 import { Route as DashboardStatsRouteImport } from './routes/dashboard/stats'
 
 const WellnessRoute = WellnessRouteImport.update({
@@ -25,9 +30,29 @@ const WellnessRoute = WellnessRouteImport.update({
   path: '/wellness',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StatsRoute = StatsRouteImport.update({
+  id: '/stats',
+  path: '/stats',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FocusRoute = FocusRouteImport.update({
+  id: '/focus',
+  path: '/focus',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ControlRoute = ControlRouteImport.update({
@@ -65,6 +90,11 @@ const TasksNewRoute = TasksNewRouteImport.update({
   path: '/new',
   getParentRoute: () => TasksRouteRoute,
 } as any)
+const TasksIdRoute = TasksIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => TasksRouteRoute,
+} as any)
 const DashboardStatsRoute = DashboardStatsRouteImport.update({
   id: '/stats',
   path: '/stats',
@@ -76,9 +106,14 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRouteRouteWithChildren
   '/tasks': typeof TasksRouteRouteWithChildren
   '/control': typeof ControlRoute
+  '/focus': typeof FocusRoute
+  '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
+  '/register': typeof RegisterRoute
+  '/stats': typeof StatsRoute
   '/wellness': typeof WellnessRoute
   '/dashboard/stats': typeof DashboardStatsRoute
+  '/tasks/$id': typeof TasksIdRoute
   '/tasks/new': typeof TasksNewRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/tasks/': typeof TasksIndexRoute
@@ -86,9 +121,14 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/control': typeof ControlRoute
+  '/focus': typeof FocusRoute
+  '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
+  '/register': typeof RegisterRoute
+  '/stats': typeof StatsRoute
   '/wellness': typeof WellnessRoute
   '/dashboard/stats': typeof DashboardStatsRoute
+  '/tasks/$id': typeof TasksIdRoute
   '/tasks/new': typeof TasksNewRoute
   '/dashboard': typeof DashboardIndexRoute
   '/tasks': typeof TasksIndexRoute
@@ -99,9 +139,14 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRouteRouteWithChildren
   '/tasks': typeof TasksRouteRouteWithChildren
   '/control': typeof ControlRoute
+  '/focus': typeof FocusRoute
+  '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
+  '/register': typeof RegisterRoute
+  '/stats': typeof StatsRoute
   '/wellness': typeof WellnessRoute
   '/dashboard/stats': typeof DashboardStatsRoute
+  '/tasks/$id': typeof TasksIdRoute
   '/tasks/new': typeof TasksNewRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/tasks/': typeof TasksIndexRoute
@@ -113,9 +158,14 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/tasks'
     | '/control'
+    | '/focus'
+    | '/login'
     | '/profile'
+    | '/register'
+    | '/stats'
     | '/wellness'
     | '/dashboard/stats'
+    | '/tasks/$id'
     | '/tasks/new'
     | '/dashboard/'
     | '/tasks/'
@@ -123,9 +173,14 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/control'
+    | '/focus'
+    | '/login'
     | '/profile'
+    | '/register'
+    | '/stats'
     | '/wellness'
     | '/dashboard/stats'
+    | '/tasks/$id'
     | '/tasks/new'
     | '/dashboard'
     | '/tasks'
@@ -135,9 +190,14 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/tasks'
     | '/control'
+    | '/focus'
+    | '/login'
     | '/profile'
+    | '/register'
+    | '/stats'
     | '/wellness'
     | '/dashboard/stats'
+    | '/tasks/$id'
     | '/tasks/new'
     | '/dashboard/'
     | '/tasks/'
@@ -148,7 +208,11 @@ export interface RootRouteChildren {
   DashboardRouteRoute: typeof DashboardRouteRouteWithChildren
   TasksRouteRoute: typeof TasksRouteRouteWithChildren
   ControlRoute: typeof ControlRoute
+  FocusRoute: typeof FocusRoute
+  LoginRoute: typeof LoginRoute
   ProfileRoute: typeof ProfileRoute
+  RegisterRoute: typeof RegisterRoute
+  StatsRoute: typeof StatsRoute
   WellnessRoute: typeof WellnessRoute
 }
 
@@ -161,11 +225,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WellnessRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/stats': {
+      id: '/stats'
+      path: '/stats'
+      fullPath: '/stats'
+      preLoaderRoute: typeof StatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/profile': {
       id: '/profile'
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/focus': {
+      id: '/focus'
+      path: '/focus'
+      fullPath: '/focus'
+      preLoaderRoute: typeof FocusRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/control': {
@@ -217,6 +309,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TasksNewRouteImport
       parentRoute: typeof TasksRouteRoute
     }
+    '/tasks/$id': {
+      id: '/tasks/$id'
+      path: '/$id'
+      fullPath: '/tasks/$id'
+      preLoaderRoute: typeof TasksIdRouteImport
+      parentRoute: typeof TasksRouteRoute
+    }
     '/dashboard/stats': {
       id: '/dashboard/stats'
       path: '/stats'
@@ -242,11 +341,13 @@ const DashboardRouteRouteWithChildren = DashboardRouteRoute._addFileChildren(
 )
 
 interface TasksRouteRouteChildren {
+  TasksIdRoute: typeof TasksIdRoute
   TasksNewRoute: typeof TasksNewRoute
   TasksIndexRoute: typeof TasksIndexRoute
 }
 
 const TasksRouteRouteChildren: TasksRouteRouteChildren = {
+  TasksIdRoute: TasksIdRoute,
   TasksNewRoute: TasksNewRoute,
   TasksIndexRoute: TasksIndexRoute,
 }
@@ -260,7 +361,11 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRouteRoute: DashboardRouteRouteWithChildren,
   TasksRouteRoute: TasksRouteRouteWithChildren,
   ControlRoute: ControlRoute,
+  FocusRoute: FocusRoute,
+  LoginRoute: LoginRoute,
   ProfileRoute: ProfileRoute,
+  RegisterRoute: RegisterRoute,
+  StatsRoute: StatsRoute,
   WellnessRoute: WellnessRoute,
 }
 export const routeTree = rootRouteImport

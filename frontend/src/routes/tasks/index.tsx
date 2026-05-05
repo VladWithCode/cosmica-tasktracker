@@ -1,192 +1,274 @@
+import { useMemo, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { AppShell } from "@/components/layout/AppShell";
 import { FloatingActionButton } from "@/components/layout/FloatingActionButton";
-import { HourRow } from "@/components/tasks/scheduleList";
+import { DayProgress } from "@/components/tasks/DayProgress";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { useLayoutEffect, useMemo, useRef } from "react";
-import type { TTask } from "@/lib/schemas/task";
-import { getTodayTasksOpts } from "@/queries/tasks";
+import { cn } from "@/lib/utils";
+import { sortTasksForFeed } from "@/lib/taskSort";
+import { getTodayTasksOpts, useCompleteTask } from "@/queries/tasks";
+import type { TaskFeedItem } from "@/types/task";
 
 export const Route = createFileRoute("/tasks/")({
     component: RouteComponent,
 });
 
+interface HourBucketData {
+    hour: number | null;
+    label: string;
+    tasks: TaskFeedItem[];
+}
+
 function RouteComponent() {
-    const taskListRef = useRef<HTMLDivElement>(null);
-    const { data, error, isError, isLoading } = useQuery(getTodayTasksOpts);
-    const tasks = data?.tasks ?? [];
-    const hours = useMemo(() => createHours(tasks), [tasks]);
-    const completedCount = tasks.filter((task) => task.status === "completed").length;
-    const pendingCount = tasks.length - completedCount;
-    const progress = tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0;
-
-    useLayoutEffect(() => {
-        if (!taskListRef.current || tasks.length === 0) {
-            return;
-        }
-
-        scrollToCurrentHour(taskListRef.current);
-
-        const intervalId = setInterval(() => {
-            scrollToCurrentHour(taskListRef.current!);
-        }, 1000 * 60 * 5);
-
-        return () => {
-            clearInterval(intervalId);
-        };
-    }, [tasks.length]);
+    const { data, error, isError, isLoading, refetch } = useQuery(getTodayTasksOpts);
+    const tasks = data?.feedItems ?? [];
+    const buckets = useMemo(() => buildBuckets(tasks), [tasks]);
+    const formattedDate = new Date().toLocaleDateString("es-MX", {
+        day: "2-digit",
+        month: "long",
+        weekday: "long",
+    });
 
     return (
-        <AppShell contentClassName="overflow-hidden">
-            <main className="relative h-full bg-surface text-on-surface">
-                <div className="pointer-events-none absolute left-1/2 top-12 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/5 blur-[120px]" />
-                <ScrollArea className="h-full w-full" ref={taskListRef}>
-                    <div className="relative mx-auto flex min-h-full max-w-4xl flex-col gap-6 px-6 pb-36 pt-8">
-                        <section className="space-y-5">
-                            <div>
-                                <p className="font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant">
-                                    Rutina diaria
-                                </p>
-                                <h2 className="mt-2 font-display text-4xl font-extrabold tracking-tight text-on-surface">
-                                    Tareas
-                                </h2>
-                            </div>
-                            <div className="grid grid-cols-3 gap-3">
-                                <TaskStatCard
-                                    icon="task_alt"
-                                    label="Total"
-                                    value={tasks.length}
-                                    tone="text-tertiary"
-                                />
-                                <TaskStatCard
-                                    icon="done_all"
-                                    label="Hechas"
-                                    value={completedCount}
-                                    tone="text-primary"
-                                />
-                                <TaskStatCard
-                                    icon="pending_actions"
-                                    label="Pendientes"
-                                    value={pendingCount}
-                                    tone="text-error"
-                                />
-                            </div>
-                            <section className="rounded-xl border border-outline-variant/10 bg-surface-container-low p-5">
-                                <div className="mb-3 flex items-end justify-between">
-                                    <div>
-                                        <p className="font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant">
-                                            Progreso
-                                        </p>
-                                        <p className="font-display text-2xl font-black tracking-tighter text-tertiary tabular-nums">
-                                            {progress}% Done
-                                        </p>
-                                    </div>
-                                    <MaterialIcon
-                                        name="check_circle"
-                                        filled
-                                        className="text-3xl text-tertiary"
-                                    />
-                                </div>
-                                <progress
-                                    aria-label="Progreso de tareas del día"
-                                    className="timeline-progress h-3 w-full overflow-hidden rounded-full"
-                                    max={100}
-                                    value={progress}
-                                />
-                            </section>
-                        </section>
+        <AppShell title="Hoy">
+            <main className="relative mx-auto min-h-full max-w-4xl px-6 pb-36 pt-8">
+                <div className="pointer-events-none absolute left-1/2 top-16 h-80 w-80 -translate-x-1/2 rounded-full bg-primary/5 blur-[120px]" />
+                <section className="relative mb-8">
+                    <p className="font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant">
+                        {formattedDate}
+                    </p>
+                    <h2 className="mt-2 font-display text-4xl font-extrabold tracking-tight text-on-surface">
+                        Hoy
+                    </h2>
+                </section>
 
-                        {isLoading ? <TasksLoadingState /> : null}
-                        {isError ? <TasksErrorState error={error} /> : null}
-                        {!isLoading && !isError && tasks.length === 0 ? <TasksEmptyState /> : null}
-                        {!isLoading && !isError && tasks.length > 0 ? (
-                            <section className="grid auto-rows-auto grid-cols-[5rem_1fr] gap-x-4 gap-y-4 md:grid-cols-[6rem_1fr]">
-                                {hours}
-                            </section>
-                        ) : null}
-                    </div>
-                    <div className="pointer-events-none absolute inset-0 z-30">
-                        <ScrollBar />
-                    </div>
-                </ScrollArea>
+                <DayProgress />
+
+                {isLoading ? <TasksLoadingState /> : null}
+                {isError ? <TasksErrorState error={error} onRetry={() => void refetch()} /> : null}
+                {!isLoading && !isError && tasks.length === 0 ? <TasksEmptyState /> : null}
+                {!isLoading && !isError && tasks.length > 0 ? (
+                    <section className="relative space-y-5">
+                        {buckets.map((bucket) => (
+                            <HourBucket
+                                bucket={bucket}
+                                key={bucket.hour === null ? "unscheduled" : bucket.hour}
+                            />
+                        ))}
+                    </section>
+                ) : null}
                 <FloatingActionButton />
             </main>
         </AppShell>
     );
 }
 
-interface TaskStatCardProps {
-    icon: string;
-    label: string;
-    tone: string;
-    value: number;
+function HourBucket({ bucket }: { bucket: HourBucketData }) {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [showAllModal, setShowAllModal] = useState(false);
+    const sortedTasks = useMemo(() => sortTasksForFeed(bucket.tasks), [bucket.tasks]);
+    const visibleTasks = isExpanded ? sortedTasks.slice(0, 5) : [nextPendingTask(sortedTasks)];
+    const currentHour = new Date().getHours();
+    const isCurrentHour = bucket.hour === currentHour;
+    const allComplete = sortedTasks.every((task) => task.status_level === "completed");
+
+    return (
+        <article className="grid grid-cols-[4rem_1fr] gap-4 md:grid-cols-[5rem_1fr]">
+            <button
+                className={cn(
+                    "flex min-h-20 flex-col items-center justify-center rounded-xl border border-outline-variant/10 bg-surface-container-low p-2 transition-all duration-300 hover:-translate-y-1 active:scale-95",
+                    isCurrentHour ? "text-primary ring-1 ring-primary/30" : "text-on-surface-variant",
+                )}
+                onClick={() => setIsExpanded((current) => !current)}
+                type="button"
+            >
+                <span className="font-display text-lg font-bold tabular-nums">{bucket.label}</span>
+                <MaterialIcon
+                    name={isExpanded ? "expand_less" : "expand_more"}
+                    className="mt-1 text-lg"
+                />
+            </button>
+            <div className="space-y-3">
+                {!isExpanded && allComplete ? <CompletedHourCard /> : null}
+                {!isExpanded && !allComplete && visibleTasks[0] ? (
+                    <TaskCard task={visibleTasks[0]} />
+                ) : null}
+                {isExpanded
+                    ? visibleTasks.map((task) => <TaskCard key={task.id} task={task} />)
+                    : null}
+                {isExpanded && sortedTasks.length > 5 ? (
+                    <button
+                        className="rounded-full border border-outline-variant/15 bg-surface-container-highest px-4 py-2 text-sm font-bold text-primary transition-all duration-300 hover:-translate-y-1 active:scale-95"
+                        onClick={() => setShowAllModal(true)}
+                        type="button"
+                    >
+                        Ver todas ({sortedTasks.length})
+                    </button>
+                ) : null}
+            </div>
+            {showAllModal ? (
+                <TaskListModal
+                    label={bucket.label}
+                    onClose={() => setShowAllModal(false)}
+                    tasks={sortedTasks}
+                />
+            ) : null}
+        </article>
+    );
 }
 
-function TaskStatCard({ icon, label, tone, value }: TaskStatCardProps) {
+function TaskCard({ task }: { task: TaskFeedItem }) {
+    const router = useRouter();
+    const completeTaskMutation = useMutation(useCompleteTask());
+    const isCompleted = task.status_level === "completed";
+    const isCompletable = task.status_level === "pending" || task.status_level === "in_progress";
+
+    const completeTask = () => {
+        completeTaskMutation.mutate(
+            { taskId: task.id },
+            {
+                onError: (mutationError) => {
+                    toast.error(mutationError.message || "No se pudo completar la tarea");
+                },
+                onSuccess: () => toast.success("Tarea completada"),
+            },
+        );
+    };
+
     return (
-        <article className="relative overflow-hidden rounded-xl bg-surface-container-high p-4 text-center shadow-[0_10px_30px_rgba(116,89,247,0.08)]">
-            <div className="absolute -inset-4 bg-gradient-to-br from-primary/10 to-transparent opacity-40 blur-xl" />
-            <div className="relative">
-                <MaterialIcon name={icon} filled className={tone} />
-                <p className="mt-1 font-display text-2xl font-black tracking-tighter tabular-nums text-on-surface">
-                    {value}
-                </p>
-                <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">
-                    {label}
-                </p>
+        <article
+            className={cn(
+                "group relative overflow-hidden rounded-xl border border-outline-variant/10 bg-surface-container-low p-4 pl-5 transition-all duration-300 hover:-translate-y-1 active:scale-[0.99]",
+                task.is_required && "ring-1 ring-primary/30 shadow-[0_0_24px_rgba(175,162,255,0.12)]",
+                isCompleted && "opacity-70",
+            )}
+        >
+            <div className={cn("absolute left-0 top-0 h-full w-1", priorityBar(task.priority_level))} />
+            <div className="flex items-center justify-between gap-4">
+                <button
+                    className="min-w-0 flex-1 text-left"
+                    onClick={() => void router.navigate({ to: "/tasks/$id", params: { id: task.id } })}
+                    type="button"
+                >
+                    <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="truncate font-headline text-base font-medium text-on-surface">
+                            {task.title}
+                        </h3>
+                        {task.is_required ? (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 font-label text-[10px] font-bold uppercase tracking-widest text-primary">
+                                <MaterialIcon name="priority_high" className="text-xs" />
+                                Vital
+                            </span>
+                        ) : null}
+                    </div>
+                    <p className="mt-1 font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant">
+                        {task.schedule_start_time ?? "Sin horario"}
+                    </p>
+                </button>
+                <button
+                    aria-label={isCompleted ? "Tarea completada" : "Completar tarea"}
+                    className={cn(
+                        "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-outline-variant/15 transition-all duration-300 active:scale-95",
+                        isCompleted
+                            ? "bg-tertiary/10 text-tertiary"
+                            : "bg-surface-container-highest text-on-surface-variant hover:text-tertiary",
+                    )}
+                    disabled={!isCompletable || completeTaskMutation.isPending}
+                    onClick={completeTask}
+                    type="button"
+                >
+                    <MaterialIcon
+                        filled={isCompleted}
+                        name={
+                            completeTaskMutation.isPending
+                                ? "progress_activity"
+                                : isCompleted
+                                  ? "check_circle"
+                                  : "radio_button_unchecked"
+                        }
+                        className={cn(completeTaskMutation.isPending && "animate-spin")}
+                    />
+                </button>
             </div>
         </article>
     );
 }
 
-function createHours(tasks: TTask[]) {
-    let currentHour = new Date().getHours();
-    return Array.from({ length: 24 }, (_, hour) => {
-        const hourTasks = tasks.filter((task) => task.startTime?.getHours() === hour);
-        return (
-            <HourRow
-                key={hour}
-                hour={hour}
-                tasks={hourTasks}
-                isCurrentHour={hour === currentHour}
-            />
-        );
-    });
+function TaskListModal({
+    label,
+    onClose,
+    tasks,
+}: {
+    label: string;
+    onClose: () => void;
+    tasks: TaskFeedItem[];
+}) {
+    return (
+        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-surface-container-lowest/70 px-4 pb-6 backdrop-blur-sm md:items-center">
+            <section className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-xl border border-outline-variant/15 bg-surface-container-low p-5 shadow-[0_20px_60px_rgba(0,0,0,0.4)]">
+                <div className="mb-4 flex items-center justify-between">
+                    <h3 className="font-headline text-lg font-bold text-on-surface">
+                        Tareas de {label}
+                    </h3>
+                    <button
+                        aria-label="Cerrar modal"
+                        className="rounded-full p-2 text-on-surface-variant transition-all duration-300 hover:bg-surface-container-highest hover:text-primary active:scale-95"
+                        onClick={onClose}
+                        type="button"
+                    >
+                        <MaterialIcon name="close" />
+                    </button>
+                </div>
+                <div className="space-y-3">
+                    {tasks.map((task) => (
+                        <TaskCard key={task.id} task={task} />
+                    ))}
+                </div>
+            </section>
+        </div>
+    );
 }
 
-function scrollToCurrentHour(taskListElt: HTMLElement) {
-    const currentHour = new Date().getHours();
-    const hourContainer = document.querySelector(`[data-testid="hour-${currentHour}"]`);
-    const scrollViewport = taskListElt.querySelector('[data-slot="scroll-area-viewport"]');
-
-    if (hourContainer && scrollViewport) {
-        const rect = hourContainer.getBoundingClientRect();
-        scrollViewport.scrollBy({ top: rect.top - rect.height, behavior: "smooth" });
-    }
+function CompletedHourCard() {
+    return (
+        <div className="flex min-h-20 items-center gap-3 rounded-xl border border-tertiary/15 bg-tertiary/5 p-4 text-tertiary opacity-80">
+            <MaterialIcon name="check_circle" filled />
+            <span className="font-label text-xs font-bold uppercase tracking-widest">
+                Hora completa
+            </span>
+        </div>
+    );
 }
 
 function TasksLoadingState() {
     return (
         <section className="space-y-4">
-            {Array.from({ length: 4 }, (_, item) => (
-                <div className="grid grid-cols-[5rem_1fr] gap-4 md:grid-cols-[6rem_1fr]" key={item}>
-                    <div className="h-20 rounded-xl bg-surface-container-highest/60" />
-                    <div className="h-20 rounded-xl bg-surface-container-low" />
+            {Array.from({ length: 3 }, (_, index) => (
+                <div className="grid grid-cols-[4rem_1fr] gap-4" key={index}>
+                    <div className="h-20 animate-pulse rounded-xl bg-surface-container-highest/60" />
+                    <div className="h-20 animate-pulse rounded-xl bg-surface-container-low" />
                 </div>
             ))}
         </section>
     );
 }
 
-function TasksErrorState({ error }: { error: Error | null }) {
+function TasksErrorState({ error, onRetry }: { error: Error | null; onRetry: () => void }) {
     return (
-        <section className="rounded-xl border border-error-dim/30 bg-error-container/10 p-5 text-error">
+        <section className="rounded-xl border border-error-dim/30 bg-error-container/10 p-6 text-error">
             <div className="flex items-center gap-2">
-                <MaterialIcon name="error" filled />
+                <MaterialIcon name="error_outline" />
                 <p>{error?.message || "No se pudieron cargar las tareas"}</p>
             </div>
+            <button
+                className="mt-4 rounded-full bg-surface-container-highest px-4 py-2 text-sm font-bold text-on-surface transition-all duration-300 hover:-translate-y-1 active:scale-95"
+                onClick={onRetry}
+                type="button"
+            >
+                Reintentar
+            </button>
         </section>
     );
 }
@@ -194,11 +276,75 @@ function TasksErrorState({ error }: { error: Error | null }) {
 function TasksEmptyState() {
     return (
         <section className="rounded-xl border border-outline-variant/15 bg-surface-container-low p-8 text-center">
-            <MaterialIcon name="event_available" className="mx-auto mb-3 text-4xl text-tertiary" />
-            <h3 className="font-headline text-xl font-bold text-on-surface">Sin tareas para hoy</h3>
+            <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-tertiary/10 text-tertiary shadow-[0_0_30px_rgba(129,236,255,0.18)]">
+                <MaterialIcon name="event_available" className="text-5xl" />
+            </div>
+            <h3 className="font-headline text-xl font-bold text-on-surface">
+                No tenés tareas para hoy
+            </h3>
             <p className="mx-auto mt-2 max-w-sm text-sm text-on-surface-variant">
-                Crea una tarea para empezar a organizar el flujo del día.
+                Crea una rutina y se generará cuando su horario aplique.
             </p>
+            <Link
+                className="mt-5 inline-flex rounded-full bg-gradient-to-r from-primary to-primary-dim px-5 py-3 font-label text-xs font-extrabold uppercase tracking-widest text-on-primary shadow-[0_15px_40px_rgba(175,162,255,0.28)] transition-all duration-300 hover:-translate-y-1 active:scale-95"
+                to="/tasks/new"
+            >
+                Crear tarea
+            </Link>
         </section>
     );
+}
+
+function buildBuckets(tasks: TaskFeedItem[]): HourBucketData[] {
+    const scheduled = new Map<number, TaskFeedItem[]>();
+    const unscheduled: TaskFeedItem[] = [];
+
+    for (const task of tasks) {
+        if (!task.schedule_start_time) {
+            unscheduled.push(task);
+            continue;
+        }
+        const hour = Number(task.schedule_start_time.split(":")[0]);
+        scheduled.set(hour, [...(scheduled.get(hour) ?? []), task]);
+    }
+
+    const buckets: HourBucketData[] = [...scheduled.entries()]
+        .sort(([firstHour], [secondHour]) => firstHour - secondHour)
+        .map(([hour, hourTasks]) => ({
+            hour,
+            label: formatHour(hour),
+            tasks: hourTasks,
+        }));
+
+    if (unscheduled.length > 0) {
+        buckets.push({ hour: null, label: "Sin horario", tasks: unscheduled });
+    }
+
+    return buckets;
+}
+
+function nextPendingTask(tasks: TaskFeedItem[]) {
+    return tasks.find((task) => task.status_level !== "completed") ?? tasks[0];
+}
+
+function priorityBar(priority: TaskFeedItem["priority_level"]) {
+    switch (priority) {
+        case "urgent":
+            return "bg-error";
+        case "high":
+            return "bg-primary";
+        case "medium":
+            return "bg-tertiary";
+        case "low":
+        default:
+            return "bg-on-surface-variant";
+    }
+}
+
+function formatHour(hour: number) {
+    const date = new Date();
+    date.setHours(hour, 0, 0, 0);
+    return date
+        .toLocaleTimeString("en-US", { hour: "numeric", hour12: true })
+        .replace(":00", "");
 }

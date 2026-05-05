@@ -8,7 +8,7 @@ export const Route = createFileRoute("/profile")({
     beforeLoad: async () => {
         const isAuthenticated = await checkAuth();
         if (!isAuthenticated) {
-            throw redirect({ to: "/" });
+            throw redirect({ to: "/login" });
         }
     },
 });

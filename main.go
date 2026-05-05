@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"os"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -41,7 +42,11 @@ func main() {
 	go scheduler.Start()
 
 	router := routes.NewRouter()
-	err = router.Run()
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = DefaultPort
+	}
+	err = router.Run(":" + port)
 	if err != nil {
 		log.Fatalf("Could not start server: %v\n", err)
 	}

@@ -1,15 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { AppShell } from "@/components/layout/AppShell";
-import { WeeklyStatsPage } from "@/pages/WeeklyStatsPage";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/dashboard/stats")({
+    beforeLoad: async () => {
+        throw redirect({ to: "/stats" });
+    },
     component: RouteComponent,
 });
 
 function RouteComponent() {
-    return (
-        <AppShell topBarAlign="center">
-            <WeeklyStatsPage />
-        </AppShell>
-    );
+    return null;
 }

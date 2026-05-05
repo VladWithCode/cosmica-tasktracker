@@ -3,9 +3,11 @@ package db
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -31,7 +33,7 @@ func (u *User) ValidatePass(pw string) error {
 // HashPass hashes the provided password
 // and updates the user's password to the hashed value
 func (u *User) HashPass(pw string) error {
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(pw), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(pw), BcryptCost)
 
 	if err != nil {
 		return err
@@ -43,12 +45,26 @@ func (u *User) HashPass(pw string) error {
 }
 
 const (
+	BcryptCost     int    = 12
 	RoleSuperAdmin string = "superadmin"
 	RoleAdmin      string = "admin"
 	RoleUser       string = "user"
 )
 
 func CreateUser(ctx context.Context, user *User) error {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), BcryptCost)
+
+	if err != nil {
+		return err
+	}
+
+	userCopy := *user
+	userCopy.Password = string(hashedPassword)
+
+	return InsertUser(ctx, &userCopy)
+}
+
+func InsertUser(ctx context.Context, user *User) error {
 	conn, err := GetConn(ctx)
 	if err != nil {
 		return err
@@ -57,21 +73,15 @@ func CreateUser(ctx context.Context, user *User) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-
-	if err != nil {
-		return err
-	}
-
 	_, err = conn.Exec(
 		ctx,
 		"INSERT INTO users (id, fullname, password, username, role, email) VALUES ($1, $2, $3, $4, $5, $6)",
 		user.ID,
 		user.Fullname,
-		hashedPassword,
+		user.Password,
 		user.Username,
 		user.Role,
-		user.Email,
+		nullableText(user.Email),
 	)
 
 	return err
@@ -87,26 +97,12 @@ func GetUserByID(ctx context.Context, id string) (*User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	var user User
-
-	err = conn.QueryRow(
+	row := conn.QueryRow(
 		ctx,
 		"SELECT id, fullname, password, username, role, email FROM users WHERE id = $1",
 		id,
-	).Scan(
-		&user.ID,
-		&user.Fullname,
-		&user.Password,
-		&user.Username,
-		&user.Role,
-		&user.Email,
 	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &user, nil
+	return scanUser(row)
 }
 
 func GetUserByUsername(ctx context.Context, username string) (*User, error) {
@@ -119,26 +115,56 @@ func GetUserByUsername(ctx context.Context, username string) (*User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	var user User
-
-	err = conn.QueryRow(
+	row := conn.QueryRow(
 		ctx,
 		"SELECT id, fullname, password, username, role, email FROM users WHERE username = $1",
 		username,
-	).Scan(
-		&user.ID,
-		&user.Fullname,
-		&user.Password,
-		&user.Username,
-		&user.Role,
-		&user.Email,
 	)
+	return scanUser(row)
+}
 
+func UserExistsByUsername(ctx context.Context, username string) (bool, error) {
+	conn, err := GetConn(ctx)
 	if err != nil {
-		return nil, err
+		return false, err
+	}
+	defer conn.Release()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	var exists bool
+	err = conn.QueryRow(
+		ctx,
+		"SELECT EXISTS (SELECT 1 FROM users WHERE LOWER(username) = LOWER($1))",
+		username,
+	).Scan(&exists)
+
+	return exists, err
+}
+
+func UserExistsByEmail(ctx context.Context, email string) (bool, error) {
+	if strings.TrimSpace(email) == "" {
+		return false, nil
 	}
 
-	return &user, nil
+	conn, err := GetConn(ctx)
+	if err != nil {
+		return false, err
+	}
+	defer conn.Release()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	var exists bool
+	err = conn.QueryRow(
+		ctx,
+		"SELECT EXISTS (SELECT 1 FROM users WHERE email IS NOT NULL AND email <> '' AND LOWER(email) = LOWER($1))",
+		email,
+	).Scan(&exists)
+
+	return exists, err
 }
 
 func UpdateUser(ctx context.Context, user *User) error {
@@ -158,7 +184,7 @@ func UpdateUser(ctx context.Context, user *User) error {
 		user.Password,
 		user.Username,
 		user.Role,
-		user.Email,
+		nullableText(user.Email),
 		user.ID,
 	)
 
@@ -227,4 +253,37 @@ func DeleteUser(ctx context.Context, userID string) error {
 	_, err = conn.Exec(ctx, `DELETE FROM users WHERE id = $1`, userID)
 
 	return err
+}
+
+func nullableText(value string) interface{} {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return nil
+	}
+
+	return trimmed
+}
+
+func scanUser(row pgx.Row) (*User, error) {
+	var user User
+	var email pgtype.Text
+
+	err := row.Scan(
+		&user.ID,
+		&user.Fullname,
+		&user.Password,
+		&user.Username,
+		&user.Role,
+		&email,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if email.Valid {
+		user.Email = email.String
+	}
+
+	return &user, nil
 }

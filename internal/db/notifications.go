@@ -103,7 +103,7 @@ func DeleteSubscription(ctx context.Context, userID, endpoint string) error {
 	_, err = conn.Exec(
 		ctx,
 		`DELETE FROM push_subscriptions 
-		 WHERE user_id = @userId AND endpoint = @endpoint`,
+		 WHERE user_id = @userID AND endpoint = @endpoint`,
 		args,
 	)
 	return err

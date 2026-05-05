@@ -1,22 +1,12 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { checkAuth } from "@/auth/useAuth";
-import { AppShell } from "@/components/layout/AppShell";
-import { FocusModePage } from "@/pages/FocusModePage";
 
 export const Route = createFileRoute("/control")({
-    component: RouteComponent,
     beforeLoad: async () => {
-        const isAuthenticated = await checkAuth();
-        if (!isAuthenticated) {
-            throw redirect({ to: "/" });
-        }
+        throw redirect({ to: "/focus" });
     },
+    component: RouteComponent,
 });
 
 function RouteComponent() {
-    return (
-        <AppShell topBarAlign="center">
-            <FocusModePage />
-        </AppShell>
-    );
+    return null;
 }

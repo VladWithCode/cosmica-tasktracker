@@ -1,0 +1,156 @@
+package routes
+
+import (
+	"errors"
+	"log"
+	"net/http"
+	"sync"
+
+	"github.com/gin-gonic/gin"
+	"github.com/vladwithcode/tasktracker/internal/auth"
+	"github.com/vladwithcode/tasktracker/internal/db"
+	"github.com/vladwithcode/tasktracker/internal/httpx"
+)
+
+var legacyLoginWarning sync.Once
+
+type authCredentialsRequest struct {
+	Password string `json:"password" binding:"required"`
+	Username string `json:"username" binding:"required"`
+}
+
+type registerRequest struct {
+	Email    string `json:"email"`
+	Fullname string `json:"fullname"`
+	Password string `json:"password"`
+	Username string `json:"username"`
+}
+
+func registerAuthRoutes(router *gin.Engine) {
+	router.POST("/api/login", HandleLegacyLogin)
+	router.POST("/api/logout", HandleLogout)
+	router.POST("/api/v1/auth/login", HandleLogin)
+	router.POST("/api/v1/auth/register", HandleRegister)
+	router.POST("/api/v1/auth/logout", HandleLogout)
+	router.GET("/api/v1/auth/me", auth.AuthRequired(), CheckAuth)
+}
+
+func HandleLegacyLogin(c *gin.Context) {
+	c.Header("Deprecation", "true")
+	c.Header("Link", `</api/v1/auth/login>; rel="successor-version"`)
+	legacyLoginWarning.Do(func() {
+		log.Println("deprecated route invoked: POST /api/login; use POST /api/v1/auth/login")
+	})
+	HandleLogin(c)
+}
+
+func HandleLogin(c *gin.Context) {
+	var loginReq authCredentialsRequest
+
+	if err := c.ShouldBindJSON(&loginReq); err != nil {
+		httpx.BadRequest(c, "Información inválida")
+		return
+	}
+
+	authService := auth.NewService(auth.NewUserRepository())
+	result, err := authService.Login(c.Request.Context(), auth.LoginInput{
+		Username: loginReq.Username,
+		Password: loginReq.Password,
+	})
+	if err != nil {
+		if errors.Is(err, auth.ErrInvalidCredentials) {
+			httpx.Unauthorized(c, "Usuario o contraseña incorrectos")
+			return
+		}
+		httpx.ServerError(c, "Error inesperado")
+		log.Printf("failed to login: %v", err)
+		return
+	}
+
+	setAuthCookie(c, result.Token)
+	httpx.OK(c, gin.H{"user": userPayload(result.User)}, "Sesión iniciada")
+}
+
+func HandleRegister(c *gin.Context) {
+	var req registerRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.BadRequest(c, "Información inválida")
+		return
+	}
+
+	authService := auth.NewService(auth.NewUserRepository())
+	result, err := authService.Register(c.Request.Context(), auth.RegisterInput{
+		Email:    req.Email,
+		Fullname: req.Fullname,
+		Password: req.Password,
+		Username: req.Username,
+	})
+	if err != nil {
+		var validationError *auth.ValidationError
+		if errors.As(err, &validationError) {
+			httpx.Unprocessable(c, gin.H{"fields": validationError.Fields}, "validation_error", validationError.Message)
+			return
+		}
+		if errors.Is(err, auth.ErrUsernameTaken) {
+			httpx.Conflict(c, "username_taken", "El usuario ya existe")
+			return
+		}
+		if errors.Is(err, auth.ErrEmailTaken) {
+			httpx.Conflict(c, "email_taken", "El correo ya está registrado")
+			return
+		}
+		httpx.ServerError(c, "Error inesperado")
+		log.Printf("failed to register: %v", err)
+		return
+	}
+
+	setAuthCookie(c, result.Token)
+	httpx.Created(c, gin.H{"user": userPayload(result.User)}, "Cuenta creada")
+}
+
+func HandleLogout(c *gin.Context) {
+	clearAuthCookie(c)
+	httpx.OK(c, nil, "Sesión cerrada")
+}
+
+func setAuthCookie(c *gin.Context, token string) {
+	c.SetSameSite(http.SameSiteStrictMode)
+	c.SetCookie(
+		auth.DefaultCookieName,
+		token,
+		auth.DefaultCookieMaxAge,
+		"/",
+		"",
+		auth.UseSecureCookies,
+		auth.UseHTTPOnlyCookies,
+	)
+}
+
+func clearAuthCookie(c *gin.Context) {
+	c.SetSameSite(http.SameSiteStrictMode)
+	c.SetCookie(
+		auth.DefaultCookieName,
+		"",
+		-1,
+		"/",
+		"",
+		auth.UseSecureCookies,
+		auth.UseHTTPOnlyCookies,
+	)
+}
+
+func userPayload(user *db.User) gin.H {
+	payload := gin.H{
+		"id":       user.ID,
+		"username": user.Username,
+		"fullname": user.Fullname,
+		"role":     user.Role,
+	}
+
+	if user.Email != "" {
+		payload["email"] = user.Email
+	}
+
+	return payload
+}

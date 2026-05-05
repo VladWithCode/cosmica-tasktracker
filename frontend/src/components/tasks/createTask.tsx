@@ -28,7 +28,7 @@ const taskSchema = z
         startTime: z.iso.time(),
         endTime: z.iso.time(),
         duration: z.union([z.number().positive(), z.nan()]).optional(),
-        priority: z.number().min(1).max(5),
+        priority: z.enum(["urgent", "high", "medium", "low"]),
         required: z.boolean(),
         repeating: z.boolean(),
         repeatFrequency: z.union([z.string().optional(), z.literal("")]),
@@ -78,7 +78,7 @@ export function NewTask() {
             description: "",
             startTime: "",
             endTime: "",
-            priority: 3,
+            priority: "medium",
             required: false,
             repeating: false,
             repeatFrequency: "",
@@ -125,9 +125,17 @@ export function NewTask() {
         const end = new Date();
         start.setHours(parseInt(startH), parseInt(startM), 0, 0);
         end.setHours(parseInt(endH), parseInt(endM), 0, 0);
-        data.startTime = start.toISOString();
-        data.endTime = end.toISOString();
-        createTask.mutate(data, {
+        const payload = {
+            ...data,
+            startTime: start.toISOString(),
+            endTime: end.toISOString(),
+            isRequired: data.required,
+            frequency: data.repeating ? "daily" : "custom",
+            frequencyConfig: data.repeating
+                ? { legacyRepeatFrequency: data.repeatFrequency }
+                : { singleInstance: true },
+        };
+        createTask.mutate(payload, {
             onSuccess: () => {
                 toast.success("La tarea se creó correctamente");
                 setDialogOpen(false);

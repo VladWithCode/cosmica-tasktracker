@@ -21,10 +21,10 @@ const categoryOptions: Record<TaskCategory, { label: string; icon: string }> = {
 };
 
 const priorityOptions: Record<TaskPriorityValue, { label: string; dotClassName: string }> = {
-    0: { label: "Low", dotClassName: "bg-tertiary" },
-    1: { label: "Medium", dotClassName: "bg-primary" },
-    2: { label: "High", dotClassName: "bg-error" },
-    3: { label: "Urgent", dotClassName: "bg-error-dim" },
+    low: { label: "Low", dotClassName: "bg-tertiary" },
+    medium: { label: "Medium", dotClassName: "bg-primary" },
+    high: { label: "High", dotClassName: "bg-error" },
+    urgent: { label: "Urgent", dotClassName: "bg-error-dim" },
 };
 
 const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -33,7 +33,7 @@ const taskConfigSchema = z
     .object({
         title: z.string().trim().min(1, "Escribe el nombre de la tarea").max(255),
         category: z.enum(["focus", "wellness", "movement", "admin"]),
-        priority: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]),
+        priority: z.enum(["urgent", "high", "medium", "low"]),
         startTime: z.string().regex(timePattern, "Selecciona una hora de inicio"),
         endTime: z.string().regex(timePattern, "Selecciona una hora de fin"),
     })
@@ -61,7 +61,7 @@ export function RoutineConfigurationPage() {
         defaultValues: {
             title: "",
             category: "focus",
-            priority: 2,
+            priority: "high",
             startTime: defaultTimes.startTime,
             endTime: defaultTimes.endTime,
         },
@@ -217,7 +217,7 @@ export function RoutineConfigurationPage() {
                                     <select
                                         className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
                                         id="task-priority"
-                                        {...form.register("priority", { valueAsNumber: true })}
+                                        {...form.register("priority")}
                                     >
                                         {Object.entries(priorityOptions).map(([value, option]) => (
                                             <option key={value} value={value}>
@@ -502,12 +502,19 @@ function buildCreateTaskPayload(values: TaskConfigForm, repeating: boolean): Cre
         description: "",
         startTime: timeToDate(values.startTime).toISOString(),
         endTime: timeToDate(values.endTime).toISOString(),
+        durationMinutes: timeToMinutes(values.endTime) - timeToMinutes(values.startTime),
         priority: values.priority,
-        required: values.priority >= 2,
+        required: values.priority === "urgent" || values.priority === "high",
+        isRequired: values.priority === "urgent" || values.priority === "high",
         repeating,
         repeatFrequency: repeating ? "daily" : "",
         repeatWeekdays: [],
         repeatInterval: repeating ? 1 : 0,
+        frequency: repeating ? "daily" : "custom",
+        frequencyConfig: repeating
+            ? { legacyRepeatFrequency: "daily", repeatInterval: 1, repeatWeekdays: [] }
+            : { singleInstance: true },
+        category: values.category,
     };
 }
 

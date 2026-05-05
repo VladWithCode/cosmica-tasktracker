@@ -2,18 +2,19 @@ package routes
 
 import (
 	"log"
-	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/vladwithcode/tasktracker/internal/auth"
 	"github.com/vladwithcode/tasktracker/internal/db"
+	"github.com/vladwithcode/tasktracker/internal/httpx"
 	"github.com/vladwithcode/tasktracker/internal/notifications"
 )
 
 // Add these routes to your router
 func registerNotificationRoutes(router *gin.RouterGroup) {
 	router.GET("/vapid-key", GetVAPIDPublicKey)
+	router.GET("/notifications/vapid-key", GetVAPIDPublicKey)
 	router.POST("/notifications/subscribe", SubscribeToPush)
 	router.POST("/notifications/unsubscribe", UnsubscribeFromPush)
 	router.POST("/notifications/test", SendTestNotification)
@@ -22,56 +23,42 @@ func registerNotificationRoutes(router *gin.RouterGroup) {
 func GetVAPIDPublicKey(c *gin.Context) {
 	publicKey := os.Getenv("VAPID_PUBLIC_KEY")
 	if publicKey == "" {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "VAPID public key not configured",
-		})
+		httpx.ServerError(c, "VAPID public key not configured")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"publicKey": publicKey,
-	})
+	httpx.OK(c, gin.H{"publicKey": publicKey}, "VAPID public key retrieved")
 }
 
 func SubscribeToPush(c *gin.Context) {
 	authData, err := auth.GetAuth(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		httpx.Unauthorized(c, "unauthorized")
 		log.Printf("unauthorized: %v", err)
 		return
 	}
 
 	var subscription db.PushSubscription
 	if err := c.ShouldBindJSON(&subscription); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		httpx.BadRequest(c, "invalid request")
 		log.Printf("invalid request: %v", err)
 		return
 	}
 
-	conn, err := db.GetConn(c.Request.Context())
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
-		log.Printf("database error: %v", err)
-		return
-	}
-	defer conn.Release()
-
 	err = db.SaveSubscription(c.Request.Context(), authData.ID, &subscription)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save subscription"})
+		httpx.ServerError(c, "failed to save subscription")
 		log.Printf("failed to save subscription: %v", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "subscription saved",
-	})
+	httpx.OK(c, gin.H{}, "subscription saved")
 }
 
 func UnsubscribeFromPush(c *gin.Context) {
 	authData, err := auth.GetAuth(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		httpx.Unauthorized(c, "unauthorized")
 		return
 	}
 
@@ -80,41 +67,25 @@ func UnsubscribeFromPush(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		httpx.BadRequest(c, "invalid request")
 		return
 	}
-
-	conn, err := db.GetConn(c.Request.Context())
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
-		return
-	}
-	defer conn.Release()
 
 	err = db.DeleteSubscription(c.Request.Context(), authData.ID, request.Endpoint)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to remove subscription"})
+		httpx.ServerError(c, "failed to remove subscription")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "subscription removed",
-	})
+	httpx.OK(c, gin.H{}, "subscription removed")
 }
 
 func SendTestNotification(c *gin.Context) {
 	authData, err := auth.GetAuth(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		httpx.Unauthorized(c, "unauthorized")
 		return
 	}
-
-	conn, err := db.GetConn(c.Request.Context())
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
-		return
-	}
-	defer conn.Release()
 
 	payload := &notifications.NotificationPayload{
 		Title:              "Test Notification",
@@ -143,11 +114,9 @@ func SendTestNotification(c *gin.Context) {
 	)
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to send notification"})
+		httpx.ServerError(c, "failed to send notification")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "test notification sent",
-	})
+	httpx.OK(c, gin.H{}, "test notification sent")
 }

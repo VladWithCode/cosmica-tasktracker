@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { RoutineConfigurationPage } from "@/pages/RoutineConfigurationPage";
+import { TaskNewPage } from "@/pages/TaskNewPage";
 
 export const Route = createFileRoute("/tasks/new")({
     component: RouteComponent,
 });
 
 function RouteComponent() {
-    return <RoutineConfigurationPage />;
+    return <TaskNewPage />;
 }

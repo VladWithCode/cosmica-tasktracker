@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRouter } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -7,9 +7,11 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import { queryClient } from "@/queries/queryClient";
+import { AuthApiError, loginUser } from "@/services/auth";
 
 const loginSchema = z.object({
-    username: z.string().min(4, "El usuario debe tener al menos 4 caracteres"),
+    username: z.string().min(3, "El usuario debe tener al menos 3 caracteres"),
     password: z.string().min(1, "La contraseña es requerida"),
 });
 
@@ -35,26 +37,21 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
         setIsLoading(true);
 
         try {
-            const response = await fetch("/api/login", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(data),
-                credentials: "include",
+            await loginUser({
+                password: data.password,
+                username: data.username.trim().toLowerCase(),
             });
-
-            const result = await response.json();
-
-            if (response.ok) {
-                toast.success(result.message || "Inicio de sesión exitoso");
-                onLoginSuccess?.();
-                void router.navigate({ to: "/dashboard" });
+            toast.success("Sesión iniciada");
+            onLoginSuccess?.();
+            void queryClient.invalidateQueries({ queryKey: ["session"] });
+            void queryClient.invalidateQueries({ queryKey: ["auth"] });
+            void router.navigate({ to: "/tasks" });
+        } catch (error) {
+            if (error instanceof AuthApiError) {
+                toast.error(error.message);
             } else {
-                toast.error(result.error || "Error al iniciar sesión");
+                toast.error("Error de conexión. Por favor intenta nuevamente.");
             }
-        } catch {
-            toast.error("Error de conexión. Por favor intenta nuevamente.");
         } finally {
             setIsLoading(false);
         }
@@ -138,7 +135,7 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
 
                     <Button
                         type="submit"
-                        className="h-14 w-full rounded-full bg-gradient-to-r from-primary to-primary-dim font-label text-sm font-extrabold uppercase tracking-widest text-on-primary shadow-[0_15px_40px_rgba(175,162,255,0.28)] transition-all duration-300 hover:opacity-90 active:scale-[0.98]"
+                        className="h-14 w-full rounded-full bg-gradient-to-r from-primary to-primary-dim font-label text-sm font-extrabold uppercase tracking-widest text-on-primary shadow-[0_15px_40px_rgba(175,162,255,0.28)] transition-all duration-300 hover:-translate-y-1 hover:opacity-95 active:scale-95"
                         disabled={isLoading}
                     >
                         {isLoading ? (
@@ -153,6 +150,16 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
                             "Iniciar sesión"
                         )}
                     </Button>
+
+                    <p className="text-center text-sm text-on-surface-variant">
+                        ¿No tenés cuenta?{" "}
+                        <Link
+                            className="font-bold text-primary transition-colors hover:text-tertiary"
+                            to="/register"
+                        >
+                            Crear cuenta
+                        </Link>
+                    </p>
                 </form>
             </main>
         </div>

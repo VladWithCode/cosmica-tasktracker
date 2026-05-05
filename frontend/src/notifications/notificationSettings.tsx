@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
+import type { ApiResponse } from "@/types/api";
 import { useNotificationSubscription, useNotifications } from "./notifications";
+
+interface VapidKeyData {
+    publicKey: string;
+}
 
 // Component for notification settings
 export function NotificationSettings() {
@@ -11,7 +16,7 @@ export function NotificationSettings() {
         // Fetch VAPID public key from your backend
         fetch('/api/v1/notifications/vapid-key')
             .then(res => res.json())
-            .then(data => setVapidKey(data.publicKey))
+            .then((data: ApiResponse<VapidKeyData>) => setVapidKey(data.data?.publicKey ?? ''))
             .catch(console.error);
     }, []);
 

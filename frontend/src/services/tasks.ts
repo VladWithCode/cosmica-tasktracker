@@ -1,12 +1,12 @@
+import type { ApiResponse } from "@/types/api";
+import { getApiError } from "@/types/api";
 import type { CreateTaskPayload } from "@/types/task-config";
 
-export interface CreateTaskResponse {
+interface CreatedTaskData {
     task?: unknown;
-    message?: string;
-    error?: string;
 }
 
-export async function createTask(payload: CreateTaskPayload): Promise<CreateTaskResponse> {
+export async function createTask(payload: CreateTaskPayload): Promise<ApiResponse<CreatedTaskData>> {
     const response = await fetch("/api/v1/tasks", {
         method: "POST",
         headers: {
@@ -15,10 +15,10 @@ export async function createTask(payload: CreateTaskPayload): Promise<CreateTask
         body: JSON.stringify(payload),
         credentials: "include",
     });
-    const data = (await response.json()) as CreateTaskResponse;
+    const data = (await response.json()) as ApiResponse<CreatedTaskData>;
 
     if (!response.ok) {
-        throw new Error(data.error || "Error al crear tarea");
+        throw new Error(getApiError(data, "Error al crear tarea"));
     }
 
     return data;

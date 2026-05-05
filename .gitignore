@@ -1,5 +1,9 @@
 .env*
 tmp/
+.claude/
+*.exe
+*.exe~
+cookies.txt
 
 # Local
 .DS_Store

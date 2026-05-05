@@ -62,7 +62,7 @@ export function ProfilePage() {
         mutationFn: logoutProfile,
         onSuccess: () => {
             queryClient.clear();
-            void router.navigate({ to: "/" });
+            void router.navigate({ to: "/login" });
         },
         onError: (error) => {
             toast.error(error.message || "No se pudo cerrar sesión");
