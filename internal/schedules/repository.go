@@ -12,6 +12,7 @@ type Repository interface {
 	GetByID(ctx context.Context, id string) (*db.ScheduleTask, error)
 	ListByUser(ctx context.Context, userID string) ([]*db.ScheduleTask, error)
 	SetStatus(ctx context.Context, id string, userID string, status db.ScheduleTaskStatus) error
+	UserHasTaskPermission(ctx context.Context, ownerUserID string, granteeUserID string, permission string) (bool, error)
 	Update(ctx context.Context, schedule *db.ScheduleTask) error
 }
 
@@ -39,6 +40,10 @@ func (r *DBRepository) ListByUser(ctx context.Context, userID string) ([]*db.Sch
 
 func (r *DBRepository) SetStatus(ctx context.Context, id string, userID string, status db.ScheduleTaskStatus) error {
 	return db.SetScheduleTaskStatus(ctx, id, userID, status)
+}
+
+func (r *DBRepository) UserHasTaskPermission(ctx context.Context, ownerUserID string, granteeUserID string, permission string) (bool, error) {
+	return db.UserHasTaskPermission(ctx, ownerUserID, granteeUserID, permission)
 }
 
 func (r *DBRepository) Update(ctx context.Context, schedule *db.ScheduleTask) error {

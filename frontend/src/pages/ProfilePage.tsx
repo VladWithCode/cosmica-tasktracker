@@ -9,6 +9,7 @@ import { getProfile, logoutProfile, updateProfile } from "@/services/profile";
 import type { UserProfile } from "@/types/profile";
 import { cn } from "@/lib/utils";
 import { NotificationSettings } from "@/notifications/notificationSettings";
+import { SharingSettings } from "@/components/profile/SharingSettings";
 
 interface ProfileFormState {
     email: string;
@@ -176,6 +177,8 @@ export function ProfilePage() {
                     </section>
 
                     <NotificationSettings />
+
+                    <SharingSettings />
 
                     <section className="pt-2">
                         <button

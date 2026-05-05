@@ -7,6 +7,7 @@ import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { cn, formatStartTime } from "@/lib/utils";
 import type { TTask, TTaskStatus } from "@/lib/schemas/task";
 import { getTaskByIdOpts, updateTaskOpts } from "@/queries/tasks";
+import { pingTaskOpts } from "@/queries/sharing";
 import type { Priority } from "@/types/task";
 
 const taskStatuses: Array<{
@@ -83,6 +84,7 @@ function TaskDetailContent({ task }: { task: TTask }) {
     const [applyToSchedule, setApplyToSchedule] = useState(false);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const updateTaskMutation = useMutation(updateTaskOpts);
+    const pingMutation = useMutation(pingTaskOpts);
     const titleInputId = useId();
     const descriptionInputId = useId();
     const dateInputId = useId();
@@ -171,6 +173,28 @@ function TaskDetailContent({ task }: { task: TTask }) {
         );
     }
 
+    function sendPing() {
+        pingMutation.mutate(
+            { taskId: task.id },
+            {
+                onError: (mutationError) => {
+                    toast.error(
+                        mutationError instanceof Error
+                            ? mutationError.message
+                            : "No se pudo enviar el ping",
+                    );
+                },
+                onSuccess: (result) => {
+                    toast.success(
+                        result.notification_sent
+                            ? "Ping enviado con notificación"
+                            : "Ping registrado sin notificación push",
+                    );
+                },
+            },
+        );
+    }
+
     return (
         <>
             <section className="overflow-hidden rounded-xl border border-outline-variant/10 bg-surface-container-low p-6 shadow-[0_20px_60px_rgba(0,0,0,0.28)]">
@@ -197,6 +221,18 @@ function TaskDetailContent({ task }: { task: TTask }) {
                         <MaterialIcon name={statusMeta.icon} filled className="text-base" />
                         {statusMeta.label}
                     </span>
+                </div>
+
+                <div className="mt-5 flex justify-end">
+                    <button
+                        className="inline-flex items-center rounded-full border border-outline-variant/15 bg-surface-container-highest px-4 py-3 text-sm font-bold text-primary transition-all duration-300 hover:-translate-y-1 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={pingMutation.isPending}
+                        onClick={sendPing}
+                        type="button"
+                    >
+                        <MaterialIcon name="notifications_active" className="mr-2 text-base" />
+                        {pingMutation.isPending ? "Enviando..." : "Enviar ping"}
+                    </button>
                 </div>
 
                 <div className="mt-6 grid gap-3 sm:grid-cols-3">

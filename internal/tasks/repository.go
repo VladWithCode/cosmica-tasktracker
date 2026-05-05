@@ -23,6 +23,7 @@ type Repository interface {
 	GetUserTaskHistory(ctx context.Context, userID string, from time.Time, to time.Time) (*db.TaskHistoryRange, error)
 	GetUserTaskMetrics(ctx context.Context, userID string, from time.Time, to time.Time) (*db.TaskMetricsRange, error)
 	GetUserTodayDetailedTasks(ctx context.Context, userID string) ([]*db.DetailedTask, error)
+	UserHasTaskPermission(ctx context.Context, ownerUserID string, granteeUserID string, permission string) (bool, error)
 	UpdateTask(ctx context.Context, task *db.Task) error
 	UpdateTaskAndSchedule(ctx context.Context, task *db.Task, schedule *db.ScheduleTask) error
 }
@@ -91,6 +92,10 @@ func (r *DBRepository) GetUserTaskMetrics(ctx context.Context, userID string, fr
 
 func (r *DBRepository) GetUserTodayDetailedTasks(ctx context.Context, userID string) ([]*db.DetailedTask, error) {
 	return db.GetUserTodayDetailedTasks(ctx, userID)
+}
+
+func (r *DBRepository) UserHasTaskPermission(ctx context.Context, ownerUserID string, granteeUserID string, permission string) (bool, error) {
+	return db.UserHasTaskPermission(ctx, ownerUserID, granteeUserID, permission)
 }
 
 func (r *DBRepository) UpdateTask(ctx context.Context, task *db.Task) error {

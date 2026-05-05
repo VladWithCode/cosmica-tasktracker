@@ -23,6 +23,7 @@ type scheduleRequest struct {
 	Frequency       string          `json:"frequency"`
 	FrequencyConfig json.RawMessage `json:"frequency_config"`
 	IsRequired      bool            `json:"is_required"`
+	OwnerUserID     string          `json:"owner_user_id"`
 	Priority        string          `json:"priority_level"`
 	RepeatFrequency string          `json:"repeatFrequency"`
 	RepeatInterval  int             `json:"repeatInterval"`
@@ -59,15 +60,32 @@ func GetSchedules(c *gin.Context) {
 		return
 	}
 
+	ownerUserID := strings.TrimSpace(c.Query("owner_user_id"))
+	if ownerUserID == "" {
+		ownerUserID = sessionAuth.ID
+	}
+	if ownerUserID != sessionAuth.ID && !sessionAuth.HasAccess(auth.AccessLevelAdmin) {
+		allowed, err := db.UserHasTaskPermission(c.Request.Context(), ownerUserID, sessionAuth.ID, db.SharingPermissionView)
+		if err != nil {
+			httpx.ServerError(c, "Error al validar permisos compartidos")
+			log.Printf("failed to validate shared schedules access: %v\n", err)
+			return
+		}
+		if !allowed {
+			sharingPermissionDenied(c)
+			return
+		}
+	}
+
 	service := schedulesvc.NewService(schedulesvc.NewRepository())
-	schedules, err := service.List(c.Request.Context(), sessionAuth.ID)
+	schedules, err := service.List(c.Request.Context(), ownerUserID)
 	if err != nil {
 		httpx.ServerError(c, "Error al recuperar rutinas")
 		log.Printf("failed to get schedules: %v\n", err)
 		return
 	}
 
-	httpx.OK(c, gin.H{"schedules": schedules}, "Rutinas recuperadas")
+	httpx.OK(c, gin.H{"schedules": schedules, "owner_user_id": ownerUserID}, "Rutinas recuperadas")
 }
 
 func CreateSchedule(c *gin.Context) {
@@ -91,8 +109,25 @@ func CreateSchedule(c *gin.Context) {
 		return
 	}
 
+	ownerUserID := strings.TrimSpace(req.OwnerUserID)
+	if ownerUserID == "" {
+		ownerUserID = sessionAuth.ID
+	}
+	if ownerUserID != sessionAuth.ID && !sessionAuth.HasAccess(auth.AccessLevelAdmin) {
+		allowed, err := db.UserHasTaskPermission(c.Request.Context(), ownerUserID, sessionAuth.ID, db.SharingPermissionCreate)
+		if err != nil {
+			httpx.ServerError(c, "Error al validar permisos compartidos")
+			log.Printf("failed to validate shared schedule creation: %v\n", err)
+			return
+		}
+		if !allowed {
+			sharingPermissionDenied(c)
+			return
+		}
+	}
+
 	service := schedulesvc.NewService(schedulesvc.NewRepository())
-	createdSchedule, err := service.Create(c.Request.Context(), sessionAuth.ID, schedule)
+	createdSchedule, err := service.CreateForOwner(c.Request.Context(), ownerUserID, sessionAuth.ID, schedule)
 	if err != nil {
 		httpx.ServerError(c, "Error al crear rutina")
 		log.Printf("failed to create schedule: %v\n", err)

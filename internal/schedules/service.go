@@ -26,8 +26,13 @@ func NewService(repo Repository) *Service {
 }
 
 func (s *Service) Create(ctx context.Context, userID string, schedule *db.ScheduleTask) (*db.ScheduleTask, error) {
+	return s.CreateForOwner(ctx, userID, userID, schedule)
+}
+
+func (s *Service) CreateForOwner(ctx context.Context, ownerUserID string, creatorUserID string, schedule *db.ScheduleTask) (*db.ScheduleTask, error) {
 	schedule.ID = uuid.Must(uuid.NewV7()).String()
-	schedule.UserID = userID
+	schedule.UserID = ownerUserID
+	schedule.CreatedBy = creatorUserID
 	if schedule.Status == "" {
 		schedule.Status = db.ScheduleTaskStatusActive
 	}
@@ -60,7 +65,13 @@ func (s *Service) Get(ctx context.Context, authData *auth.Auth, id string) (*db.
 		return nil, normalizeNotFound(err)
 	}
 	if !canAccessSchedule(authData, schedule.UserID) {
-		return nil, ErrForbidden
+		allowed, err := s.repo.UserHasTaskPermission(ctx, schedule.UserID, authData.ID, db.SharingPermissionView)
+		if err != nil {
+			return nil, err
+		}
+		if !allowed {
+			return nil, ErrForbidden
+		}
 	}
 
 	return schedule, nil

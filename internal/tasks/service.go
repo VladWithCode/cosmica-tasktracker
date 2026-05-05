@@ -76,10 +76,32 @@ func (s *Service) GetDetails(ctx context.Context, authData *auth.Auth, id string
 	}
 
 	if !canAccessTask(authData, task.UserID) {
-		return nil, ErrForbidden
+		allowed, err := s.repo.UserHasTaskPermission(ctx, task.UserID, authData.ID, db.SharingPermissionView)
+		if err != nil {
+			return nil, err
+		}
+		if !allowed {
+			return nil, ErrForbidden
+		}
 	}
 
 	return task, nil
+}
+
+func (s *Service) CanViewOwner(ctx context.Context, authData *auth.Auth, ownerUserID string) error {
+	if canAccessTask(authData, ownerUserID) {
+		return nil
+	}
+
+	allowed, err := s.repo.UserHasTaskPermission(ctx, ownerUserID, authData.ID, db.SharingPermissionView)
+	if err != nil {
+		return err
+	}
+	if !allowed {
+		return ErrForbidden
+	}
+
+	return nil
 }
 
 func (s *Service) ListByUser(ctx context.Context, userID string) ([]*db.DetailedTask, error) {

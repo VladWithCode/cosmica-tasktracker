@@ -34,6 +34,7 @@ func NewRouter() *gin.Engine {
 	registerPublicNotificationRoutes(apiRoutes)
 	apiRoutes.Use(auth.AuthRequired())
 	apiRoutes.GET("/check-auth", CheckAuth)
+	registerSharingRoutes(apiRoutes)
 	registerScheduleRoutes(apiRoutes)
 	registerTaskRoutes(apiRoutes)
 	registerNotificationRoutes(apiRoutes)
