@@ -163,3 +163,102 @@ Applied -- 20260430205100_expand_schedule_tasks_domain.sql
 Applied -- 20260430205200_expand_tasks_domain.sql
 Applied -- 20260430205300_add_task_completions.sql
 ```
+
+## Migrations added after the FASE 2 cleanup
+
+The following migrations were committed after the cleanup section above and
+should be considered part of the canonical schema. They are listed here so the
+history document stays consistent with the contents of `sql/migrations/`.
+
+### `20260503090000_normalize_users_email_optional.sql`
+
+Purpose: relax the `users.email` constraint introduced by the original users
+table so that an account can be created without supplying an email.
+
+What it does:
+
+- Drops the legacy `users_email_key` UNIQUE constraint.
+- Drops the `NOT NULL` requirement on `users.email`.
+- Lower-cases existing non-empty emails for consistency.
+- Adds a partial unique index `users_email_unique` on `LOWER(email)` that only
+  applies when email is non-null and non-empty.
+
+The down migration restores the previous shape, backfilling any newly-empty
+emails with `<username>@local.invalid` so the unique constraint can be
+re-applied without conflict.
+
+### `20260503091000_add_task_instance_overrides.sql`
+
+Purpose: allow a single `tasks` row to override `title` and `description`
+without rewriting the parent `schedule_tasks` row. Used by the FASE 6
+"edit instance only" flow.
+
+What it does:
+
+- Drops `detailed_tasks` view (necessary because the view referenced the
+  original `tasks` columns).
+- Adds nullable `title TEXT` and `description TEXT` columns to `tasks`.
+- Recreates `detailed_tasks` so it surfaces `COALESCE(NULLIF(t.title, ''),
+  st.title)` and `COALESCE(t.description, st.description)`. The other
+  canonical fields (`status_level AS status`, `priority_level AS priority`,
+  etc.) keep the same semantics as before.
+
+The down migration restores the previous view shape and drops the new task
+columns.
+
+### `20260505090000_add_sharing_permissions_and_pings.sql`
+
+Purpose: introduces the FASE 9 sharing model.
+
+What it does:
+
+- Creates `task_access_grants` with columns `id`, `owner_user_id`,
+  `grantee_user_id`, `access_level`, `created_at`, `updated_at`, `revoked_at`.
+- Adds a `CHECK (access_level IN ('view','manage','ping_only'))` constraint
+  and a `CHECK (owner_user_id <> grantee_user_id)` constraint.
+- Adds a partial UNIQUE index on `(owner_user_id, grantee_user_id) WHERE
+  revoked_at IS NULL` so a single live grant can exist per pair.
+- Adds the `update_task_access_grants_updated_at` trigger that calls the
+  shared `update_updated_at_column()` function.
+- Creates `task_pings` with `id`, `task_id`, `sender_user_id`,
+  `recipient_user_id`, `message`, `notification_sent`, `created_at`, plus
+  indexes for sender, recipient, task and `created_at` for the rate-limit
+  lookups in `db.RecentTaskPingExists`.
+
+All foreign keys cascade on delete so removing a user/task cleans the
+related grants and pings.
+
+## Hand-fix to `20250903233441_add_tasks_table.sql`
+
+The original migration had a trailing comma in the `CREATE TABLE tasks`
+column list (after `updated_at TIMESTAMPTZ NOT NULL DEFAULT
+CURRENT_TIMESTAMP,`). PostgreSQL refuses to parse that during a clean
+`goose up`, so a fresh database setup would fail at this version with a
+syntax error.
+
+Fix applied: removed the trailing comma so the migration is valid SQL.
+
+```diff
+-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+ );
+```
+
+Why touch an old migration despite the usual rule of "do not edit
+migrations that are already applied somewhere":
+
+- The previously-applied database in development was created tolerantly
+  enough that the original syntax went through. Re-running `goose up` on a
+  brand-new database (CI, staging, fresh dev clone) would fail at this
+  version.
+- The fix is a pure syntactic correction. The semantics of the migration
+  (resulting `tasks` table shape) are identical before and after the fix.
+- No constraint, default, type, name, or column was changed.
+
+Risk: if any environment's `goose_db_version` already records this version
+as applied, that environment will keep working unchanged because Goose will
+not re-run an already-applied migration. New environments now pass the
+syntax check.
+
+This is the only modification ever made to a previously-applied migration in
+this repo. Future schema changes should always be additive new migrations.

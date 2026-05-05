@@ -3,6 +3,7 @@ package routes
 import (
 	"errors"
 	"log"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/vladwithcode/tasktracker/internal/auth"
@@ -101,9 +102,17 @@ func CreateUser(c *gin.Context) {
 	httpx.Created(c, gin.H{"user": profile}, "Usuario creado")
 }
 
+// UpdateUser is intentionally left unimplemented. The endpoint is reserved
+// for the future admin user-management feature, but the previous stub returned
+// 200 OK with no actual update which was misleading. Clients (today only the
+// admin role can hit this route) should treat 501 as "not yet available".
 func UpdateUser(c *gin.Context) {
-	userID := c.Param("id")
-	httpx.OK(c, gin.H{"id": userID}, "User "+userID+" updated")
+	httpx.ErrorCode(
+		c,
+		http.StatusNotImplemented,
+		"not_implemented",
+		"Actualización administrativa de usuarios aún no implementada",
+	)
 }
 
 func DeleteUser(c *gin.Context) {

@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
@@ -190,51 +189,6 @@ func UpdateUser(ctx context.Context, user *User) error {
 
 	if err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func TxVerifyUserEmail(ctx context.Context, tx pgx.Tx, userID string) error {
-	tag, err := tx.Exec(
-		ctx,
-		"UPDATE users SET email_verified = TRUE WHERE id = $1",
-		userID,
-	)
-
-	if err != nil {
-		return err
-	}
-
-	if tag.RowsAffected() == 0 {
-		return fmt.Errorf("no se encontró usuario con id %v", userID)
-	}
-
-	return nil
-}
-
-func VerifyUserEmail(ctx context.Context, userID string) error {
-	conn, err := GetConn(ctx)
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	tag, err := conn.Exec(
-		ctx,
-		"UPDATE users SET email_verified = TRUE WHERE id = $1",
-		userID,
-	)
-
-	if err != nil {
-		return err
-	}
-
-	if tag.RowsAffected() == 0 {
-		return fmt.Errorf("no se encontró usuario con id %v", userID)
 	}
 
 	return nil
