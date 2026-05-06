@@ -4,15 +4,12 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"sync"
 
 	"github.com/gin-gonic/gin"
 	"github.com/vladwithcode/tasktracker/internal/auth"
 	"github.com/vladwithcode/tasktracker/internal/db"
 	"github.com/vladwithcode/tasktracker/internal/httpx"
 )
-
-var legacyLoginWarning sync.Once
 
 type authCredentialsRequest struct {
 	Password string `json:"password" binding:"required"`
@@ -27,29 +24,16 @@ type registerRequest struct {
 }
 
 func registerAuthRoutes(router *gin.Engine) {
-	// Legacy auth endpoints kept for backwards compatibility only. The
-	// canonical paths are `/api/v1/auth/*`. The frontend already targets the
-	// canonical paths; these legacy routes emit a `Deprecation: true` header
-	// and a one-shot warning log, and exist solely to avoid breaking external
-	// clients that might still hit the old paths. Plan to remove after a
-	// telemetry window confirms no callers remain.
-	router.POST("/api/login", HandleLegacyLogin)
-	router.POST("/api/logout", HandleLogout)
-
-	// Canonical auth endpoints.
+	// Canonical auth endpoints. The legacy `/api/login` / `/api/logout`
+	// pre-versioned routes were removed in the post-MVP hardening pass once
+	// the frontend was confirmed to be using only `/api/v1/auth/*` and a
+	// Deprecation header window had elapsed. External callers hitting the old
+	// paths now receive 404; document the breaking change before announcing
+	// the new release.
 	router.POST("/api/v1/auth/login", HandleLogin)
 	router.POST("/api/v1/auth/register", HandleRegister)
 	router.POST("/api/v1/auth/logout", HandleLogout)
 	router.GET("/api/v1/auth/me", auth.AuthRequired(), CheckAuth)
-}
-
-func HandleLegacyLogin(c *gin.Context) {
-	c.Header("Deprecation", "true")
-	c.Header("Link", `</api/v1/auth/login>; rel="successor-version"`)
-	legacyLoginWarning.Do(func() {
-		log.Println("deprecated route invoked: POST /api/login; use POST /api/v1/auth/login")
-	})
-	HandleLogin(c)
 }
 
 func HandleLogin(c *gin.Context) {

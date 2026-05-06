@@ -82,21 +82,20 @@ func TestAuthRoutes(t *testing.T) {
 		t.Fatalf("expected cleared cookie, got %#v", cookies)
 	}
 
-	status, body, cookies, headers := performJSON(router, http.MethodPost, "/api/login", map[string]string{
+	// Legacy `/api/login` and `/api/logout` were removed in the post-MVP
+	// hardening pass. Hitting them now must return 404 so callers migrate to
+	// the canonical `/api/v1/auth/*` paths.
+	status, _, _, _ = performJSON(router, http.MethodPost, "/api/login", map[string]string{
 		"password": password,
 		"username": username,
 	}, nil)
-	if status != http.StatusOK || !strings.Contains(body, `"message":"Sesión iniciada"`) {
-		t.Fatalf("legacy login status = %d body = %s", status, body)
+	if status != http.StatusNotFound {
+		t.Fatalf("expected legacy /api/login to return 404, got %d", status)
 	}
-	if headers.Get("Deprecation") != "true" {
-		t.Fatalf("expected Deprecation header, got %q", headers.Get("Deprecation"))
-	}
-	if headers.Get("Link") != `</api/v1/auth/login>; rel="successor-version"` {
-		t.Fatalf("unexpected Link header %q", headers.Get("Link"))
-	}
-	if findCookie(cookies, auth.DefaultCookieName) == nil {
-		t.Fatalf("expected legacy login cookie, got %#v", cookies)
+
+	status, _, _, _ = performJSON(router, http.MethodPost, "/api/logout", nil, nil)
+	if status != http.StatusNotFound {
+		t.Fatalf("expected legacy /api/logout to return 404, got %d", status)
 	}
 }
 
