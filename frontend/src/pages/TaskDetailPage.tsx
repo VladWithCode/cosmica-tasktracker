@@ -98,12 +98,20 @@ function TaskDetailContent({ task }: { task: TTask }) {
     const statusMeta = getStatusMeta(task.status);
     const scheduledRange = formatScheduledRange(task);
     const durationLabel = formatDuration(task.duration);
+    const canEdit = task.canEdit !== false;
+    const canApplyToSchedule = canEdit && task.canApplyToSchedule !== false;
 
     useEffect(() => {
         setFormState(toFormState(task));
         setApplyToSchedule(false);
         setShowConfirmModal(false);
     }, [task]);
+
+    useEffect(() => {
+        if (!canApplyToSchedule) {
+            setApplyToSchedule(false);
+        }
+    }, [canApplyToSchedule]);
 
     const hasChanges = useMemo(() => {
         const original = toFormState(task);
@@ -129,6 +137,15 @@ function TaskDetailContent({ task }: { task: TTask }) {
 
     function onSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
+        if (!canEdit) {
+            toast.error("No tienes permiso para editar esta tarea");
+            return;
+        }
+        if (applyToSchedule && !canApplyToSchedule) {
+            toast.error("Sólo el owner puede aplicar cambios a la rutina");
+            setApplyToSchedule(false);
+            return;
+        }
         if (applyToSchedule) {
             setShowConfirmModal(true);
             return;
@@ -255,6 +272,15 @@ function TaskDetailContent({ task }: { task: TTask }) {
                 ) : null}
             </section>
 
+            {!canEdit ? (
+                <section className="rounded-xl border border-tertiary/20 bg-tertiary/10 p-4 text-sm text-tertiary">
+                    <div className="flex items-center gap-2">
+                        <MaterialIcon name="visibility" className="text-base" />
+                        <p>Esta tarea compartida está en modo lectura. Necesitas permiso Gestionar para editarla.</p>
+                    </div>
+                </section>
+            ) : null}
+
             <form
                 className="rounded-xl border border-outline-variant/10 bg-surface-container-low p-6"
                 onSubmit={onSubmit}
@@ -276,6 +302,8 @@ function TaskDetailContent({ task }: { task: TTask }) {
                             >
                                 {applyToSchedule
                                     ? "Los cambios actualizarán la rutina y futuras instancias."
+                                    : canEdit && !canApplyToSchedule
+                                      ? "Puedes editar esta instancia compartida, pero no la rutina base."
                                     : "Los cambios afectarán solo esta instancia."}
                             </p>
                         </div>
@@ -287,6 +315,7 @@ function TaskDetailContent({ task }: { task: TTask }) {
                                     ? "justify-end border-primary/40 bg-primary/20"
                                     : "justify-start border-outline-variant/15 bg-surface-container-lowest",
                             )}
+                            disabled={!canApplyToSchedule}
                             onClick={() => setApplyToSchedule((current) => !current)}
                             type="button"
                         >
@@ -295,6 +324,7 @@ function TaskDetailContent({ task }: { task: TTask }) {
                     </div>
                 </div>
 
+                <fieldset className="contents" disabled={!canEdit || updateTaskMutation.isPending}>
                 <div className="grid gap-4">
                     <label className="space-y-2" htmlFor={titleInputId}>
                         <span className="block font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant">
@@ -487,11 +517,12 @@ function TaskDetailContent({ task }: { task: TTask }) {
                         />
                     </button>
                 </div>
+                </fieldset>
 
                 <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
                     <button
                         className="rounded-full border border-outline-variant/15 bg-surface-container-highest px-5 py-3 text-sm font-bold text-on-surface transition-all duration-300 hover:-translate-y-1 active:scale-95"
-                        disabled={updateTaskMutation.isPending || !hasChanges}
+                        disabled={!canEdit || updateTaskMutation.isPending || !hasChanges}
                         onClick={() => {
                             setFormState(toFormState(task));
                             setApplyToSchedule(false);
@@ -502,7 +533,7 @@ function TaskDetailContent({ task }: { task: TTask }) {
                     </button>
                     <button
                         className="rounded-full bg-gradient-to-r from-primary to-primary-dim px-6 py-3 text-sm font-extrabold uppercase tracking-widest text-on-primary shadow-[0_15px_40px_rgba(175,162,255,0.28)] transition-all duration-300 hover:-translate-y-1 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-                        disabled={updateTaskMutation.isPending || !hasChanges}
+                        disabled={!canEdit || updateTaskMutation.isPending || !hasChanges}
                         type="submit"
                     >
                         {updateTaskMutation.isPending

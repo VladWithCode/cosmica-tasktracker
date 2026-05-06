@@ -28,6 +28,8 @@ export interface Task {
     category: string | null;
     required: boolean;
     isRequired: boolean;
+    canEdit?: boolean;
+    canApplyToSchedule?: boolean;
     createdAt: Date;
     updatedAt: Date;
 }

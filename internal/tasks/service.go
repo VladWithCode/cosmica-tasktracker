@@ -75,15 +75,25 @@ func (s *Service) GetDetails(ctx context.Context, authData *auth.Auth, id string
 		return nil, normalizeNotFound(err)
 	}
 
-	if !canAccessTask(authData, task.UserID) {
-		allowed, err := s.repo.UserHasTaskPermission(ctx, task.UserID, authData.ID, db.SharingPermissionView)
-		if err != nil {
-			return nil, err
-		}
-		if !allowed {
-			return nil, ErrForbidden
-		}
+	if canAccessTask(authData, task.UserID) {
+		task.CanEdit = true
+		task.CanApplyToSchedule = true
+		return task, nil
 	}
+
+	allowed, err := s.repo.UserHasTaskPermission(ctx, task.UserID, authData.ID, db.SharingPermissionView)
+	if err != nil {
+		return nil, err
+	}
+	if !allowed {
+		return nil, ErrForbidden
+	}
+	canEdit, err := s.repo.UserHasTaskPermission(ctx, task.UserID, authData.ID, db.SharingPermissionEdit)
+	if err != nil {
+		return nil, err
+	}
+	task.CanEdit = canEdit
+	task.CanApplyToSchedule = false
 
 	return task, nil
 }
@@ -133,8 +143,15 @@ func (s *Service) Update(ctx context.Context, authData *auth.Auth, id string, in
 	}
 
 	if !canAccessTask(authData, task.UserID) {
-		return nil, ErrForbidden
+		allowed, err := s.repo.UserHasTaskPermission(ctx, task.UserID, authData.ID, db.SharingPermissionEdit)
+		if err != nil {
+			return nil, err
+		}
+		if !allowed || input.ApplyToSchedule {
+			return nil, ErrForbidden
+		}
 	}
+	canApplyToSchedule := canAccessTask(authData, task.UserID)
 
 	previousStatus := task.Status
 	if input.Status != "" {
@@ -263,6 +280,8 @@ func (s *Service) Update(ctx context.Context, authData *auth.Auth, id string, in
 	if err != nil {
 		return nil, err
 	}
+	detailedTask.CanEdit = true
+	detailedTask.CanApplyToSchedule = canApplyToSchedule
 
 	return detailedTask, nil
 }

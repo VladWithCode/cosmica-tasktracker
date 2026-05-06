@@ -22,7 +22,7 @@ const accessOptions: Array<{
         value: "view",
     },
     {
-        description: "Puede crear rutinas para ti y enviar pings.",
+        description: "Puede crear rutinas, editar tareas y enviar pings.",
         label: "Gestionar",
         value: "manage",
     },

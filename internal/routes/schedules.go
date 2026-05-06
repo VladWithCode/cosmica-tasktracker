@@ -346,5 +346,5 @@ func DeleteSchedule(c *gin.Context) {
 		return
 	}
 
-	httpx.OK(c, gin.H{}, "Rutina borrada")
+	httpx.OK(c, gin.H{}, "Rutina cancelada")
 }

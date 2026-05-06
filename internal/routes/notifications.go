@@ -32,6 +32,8 @@ func registerPublicNotificationRoutes(router *gin.RouterGroup) {
 }
 
 func registerNotificationRoutes(router *gin.RouterGroup) {
+	router.GET("/notifications/inbox", GetNotificationInbox)
+	router.POST("/notifications/inbox/:id/read", MarkNotificationInboxItemRead)
 	router.POST("/notifications/subscriptions", SubscribeToPush)
 	router.DELETE("/notifications/subscriptions", UnsubscribeFromPush)
 	router.POST("/notifications/test", SendTestNotification)
@@ -155,6 +157,47 @@ func SendTestNotification(c *gin.Context) {
 	}
 
 	httpx.OK(c, gin.H{"sent_count": sentCount}, "Notificación de prueba enviada")
+}
+
+func GetNotificationInbox(c *gin.Context) {
+	authData, err := auth.GetAuth(c)
+	if err != nil {
+		httpx.Unauthorized(c, "No autorizado")
+		return
+	}
+
+	items, err := db.ListNotificationInbox(c.Request.Context(), authData.ID)
+	if err != nil {
+		httpx.ServerError(c, "No se pudo cargar la bandeja")
+		log.Printf("failed to list notification inbox: %v", err)
+		return
+	}
+	if items == nil {
+		items = []*db.NotificationInboxItem{}
+	}
+
+	httpx.OK(c, gin.H{"items": items}, "Bandeja recuperada")
+}
+
+func MarkNotificationInboxItemRead(c *gin.Context) {
+	authData, err := auth.GetAuth(c)
+	if err != nil {
+		httpx.Unauthorized(c, "No autorizado")
+		return
+	}
+
+	ok, err := db.MarkNotificationInboxItemRead(c.Request.Context(), authData.ID, c.Param("id"))
+	if err != nil {
+		httpx.ServerError(c, "No se pudo marcar como leído")
+		log.Printf("failed to mark inbox item read: %v", err)
+		return
+	}
+	if !ok {
+		httpx.NotFound(c, "Notificación no encontrada")
+		return
+	}
+
+	httpx.OK(c, gin.H{}, "Notificación marcada como leída")
 }
 
 func (r pushSubscriptionRequest) toDBSubscription() (*db.PushSubscription, error) {

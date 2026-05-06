@@ -22,6 +22,7 @@ const (
 const (
 	SharingPermissionView   = "view"
 	SharingPermissionCreate = "create"
+	SharingPermissionEdit   = "edit"
 	SharingPermissionPing   = "ping"
 )
 
@@ -41,6 +42,7 @@ type TaskAccessGrant struct {
 	AccessLevel     SharingAccessLevel `json:"access_level"`
 	CanView         bool               `json:"can_view"`
 	CanCreate       bool               `json:"can_create"`
+	CanEditTasks    bool               `json:"can_edit_tasks"`
 	CanPing         bool               `json:"can_ping"`
 	OwnerUsername   string             `json:"owner_username,omitempty"`
 	OwnerFullname   string             `json:"owner_fullname,omitempty"`
@@ -54,13 +56,27 @@ type TaskAccessGrant struct {
 }
 
 type TaskPing struct {
-	ID               string    `json:"id"`
-	TaskID           string    `json:"task_id"`
-	SenderUserID     string    `json:"sender_user_id"`
-	RecipientUserID  string    `json:"recipient_user_id"`
-	Message          string    `json:"message,omitempty"`
-	NotificationSent bool      `json:"notification_sent"`
-	CreatedAt        time.Time `json:"created_at"`
+	ID               string     `json:"id"`
+	TaskID           string     `json:"task_id"`
+	SenderUserID     string     `json:"sender_user_id"`
+	RecipientUserID  string     `json:"recipient_user_id"`
+	Message          string     `json:"message,omitempty"`
+	NotificationSent bool       `json:"notification_sent"`
+	CreatedAt        time.Time  `json:"created_at"`
+	ReadAt           *time.Time `json:"read_at,omitempty"`
+}
+
+type NotificationInboxItem struct {
+	ID               string     `json:"id"`
+	TaskID           string     `json:"task_id"`
+	TaskTitle        string     `json:"task_title"`
+	SenderUserID     string     `json:"sender_user_id"`
+	SenderUsername   string     `json:"sender_username"`
+	SenderFullname   string     `json:"sender_fullname"`
+	Message          string     `json:"message,omitempty"`
+	NotificationSent bool       `json:"notification_sent"`
+	CreatedAt        time.Time  `json:"created_at"`
+	ReadAt           *time.Time `json:"read_at,omitempty"`
 }
 
 func NormalizeSharingAccessLevel(value string) (SharingAccessLevel, error) {
@@ -81,14 +97,17 @@ func ApplySharingAccessLevel(grant *TaskAccessGrant) {
 	case SharingAccessLevelManage:
 		grant.CanView = true
 		grant.CanCreate = true
+		grant.CanEditTasks = true
 		grant.CanPing = true
 	case SharingAccessLevelPingOnly:
 		grant.CanView = false
 		grant.CanCreate = false
+		grant.CanEditTasks = false
 		grant.CanPing = true
 	case SharingAccessLevelView:
 		grant.CanView = true
 		grant.CanCreate = false
+		grant.CanEditTasks = false
 		grant.CanPing = false
 	}
 }
@@ -313,6 +332,7 @@ func UserHasTaskPermission(ctx context.Context, ownerUserID string, granteeUserI
 			  AND CASE $3
 				WHEN 'view' THEN can_view
 				WHEN 'create' THEN can_create
+				WHEN 'edit' THEN access_level = 'manage'
 				WHEN 'ping' THEN can_ping
 				ELSE FALSE
 			  END
@@ -387,6 +407,81 @@ func CreateTaskPing(ctx context.Context, ping *TaskPing) error {
 		},
 	)
 	return err
+}
+
+func ListNotificationInbox(ctx context.Context, recipientUserID string) ([]*NotificationInboxItem, error) {
+	conn, err := GetConn(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	rows, err := conn.Query(
+		ctx,
+		`SELECT
+			p.id,
+			p.task_id,
+			COALESCE(NULLIF(t.title, ''), st.title, 'Tarea') AS task_title,
+			p.sender_user_id,
+			u.username,
+			u.fullname,
+			p.message,
+			p.notification_sent,
+			p.created_at,
+			p.read_at
+		 FROM task_pings p
+		 INNER JOIN users u ON u.id = p.sender_user_id
+		 INNER JOIN tasks t ON t.id = p.task_id
+		 INNER JOIN schedule_tasks st ON st.id = t.schedule_task_id
+		 WHERE p.recipient_user_id = $1
+		 ORDER BY p.read_at IS NOT NULL ASC, p.created_at DESC
+		 LIMIT 50`,
+		recipientUserID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	items := []*NotificationInboxItem{}
+	for rows.Next() {
+		item, err := scanNotificationInboxItem(rows)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func MarkNotificationInboxItemRead(ctx context.Context, recipientUserID string, pingID string) (bool, error) {
+	conn, err := GetConn(ctx)
+	if err != nil {
+		return false, err
+	}
+	defer conn.Release()
+
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	tag, err := conn.Exec(
+		ctx,
+		`UPDATE task_pings
+		 SET read_at = COALESCE(read_at, CURRENT_TIMESTAMP)
+		 WHERE id = $1 AND recipient_user_id = $2`,
+		pingID,
+		recipientUserID,
+	)
+	if err != nil {
+		return false, err
+	}
+	return tag.RowsAffected() > 0, nil
 }
 
 func CountTaskPings(ctx context.Context, taskID string, senderUserID string) (int, error) {
@@ -470,5 +565,36 @@ func scanTaskAccessGrant(scanner interface {
 	if revokedAt.Valid {
 		grant.RevokedAt = &revokedAt.Time
 	}
+	grant.CanEditTasks = grant.AccessLevel == SharingAccessLevelManage
 	return &grant, nil
+}
+
+func scanNotificationInboxItem(scanner interface {
+	Scan(dest ...interface{}) error
+}) (*NotificationInboxItem, error) {
+	var item NotificationInboxItem
+	var message sql.NullString
+	var readAt sql.NullTime
+	err := scanner.Scan(
+		&item.ID,
+		&item.TaskID,
+		&item.TaskTitle,
+		&item.SenderUserID,
+		&item.SenderUsername,
+		&item.SenderFullname,
+		&message,
+		&item.NotificationSent,
+		&item.CreatedAt,
+		&readAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if message.Valid {
+		item.Message = message.String
+	}
+	if readAt.Valid {
+		item.ReadAt = &readAt.Time
+	}
+	return &item, nil
 }

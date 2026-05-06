@@ -25,6 +25,10 @@ interface TasksData {
 type RawTaskResponse = Partial<TTask> &
     Partial<TaskFeedItem> & {
         completed_at?: string | null;
+        canApplyToSchedule?: boolean;
+        canEdit?: boolean;
+        can_apply_to_schedule?: boolean;
+        can_edit?: boolean;
         created_at?: string;
         current_count?: number;
         duration_minutes?: number | null;
@@ -511,6 +515,8 @@ export function hydrateTask(task: Partial<TTask>): TTask {
         category: task.category ?? null,
         isRequired: task.isRequired ?? task.required ?? raw.is_required ?? false,
         required: task.required ?? task.isRequired ?? raw.is_required ?? false,
+        canEdit: raw.canEdit ?? raw.can_edit ?? true,
+        canApplyToSchedule: raw.canApplyToSchedule ?? raw.can_apply_to_schedule ?? true,
         duration: task.duration ?? raw.duration_minutes ?? null,
         createdAt: new Date(createdAt),
         updatedAt: new Date(updatedAt),

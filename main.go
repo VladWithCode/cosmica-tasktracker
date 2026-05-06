@@ -11,6 +11,7 @@ import (
 	"github.com/vladwithcode/tasktracker/internal/db"
 	"github.com/vladwithcode/tasktracker/internal/notifications"
 	"github.com/vladwithcode/tasktracker/internal/routes"
+	tasksvc "github.com/vladwithcode/tasktracker/internal/tasks"
 )
 
 const (
@@ -40,6 +41,13 @@ func main() {
 
 	scheduler := notifications.NewTaskScheduler(globalCtx)
 	go scheduler.Start()
+
+	if enabled, interval := tasksvc.TaskGeneratorConfigFromEnv(); enabled {
+		generator := tasksvc.NewTaskGenerator(globalCtx, interval)
+		go generator.Start()
+	} else {
+		log.Println("scheduled task generator disabled by ENABLE_TASK_GENERATOR")
+	}
 
 	router := routes.NewRouter()
 	port := os.Getenv("PORT")

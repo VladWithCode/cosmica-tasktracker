@@ -49,31 +49,33 @@ type Task struct {
 }
 
 type DetailedTask struct {
-	ID             string                `db:"id" json:"id,omitempty"`
-	UserID         string                `db:"user_id" json:"userId,omitempty"`
-	ScheduleTaskID string                `db:"schedule_task_id" json:"scheduleTaskId,omitempty"`
-	Title          string                `db:"title" json:"title,omitempty"`
-	Description    string                `db:"description" json:"description,omitempty"`
-	Date           time.Time             `db:"date" json:"date,omitzero"`
-	Status         TaskStatus            `db:"status" json:"status,omitempty"`
-	Priority       ScheduleTaskPriority  `db:"priority" json:"priority,omitempty"`
-	Required       bool                  `db:"required" json:"required,omitempty"`
-	IsRequired     bool                  `db:"is_required" json:"isRequired,omitempty"`
-	CompletedAt    time.Time             `db:"completed_at" json:"completedAt,omitzero"`
-	ActualStart    time.Time             `db:"actual_start" json:"actualStart,omitzero"`
-	ActualEnd      time.Time             `db:"actual_end" json:"actualEnd,omitzero"`
-	StartTime      time.Time             `db:"start_time" json:"startTime,omitzero"`
-	EndTime        time.Time             `db:"end_time" json:"endTime,omitzero"`
-	StartDate      time.Time             `db:"start_date" json:"startDate,omitzero"`
-	EndDate        time.Time             `db:"end_date" json:"endDate,omitzero"`
-	Duration       int                   `db:"duration" json:"duration,omitempty"`
-	CurrentCount   int                   `db:"current_count" json:"currentCount"`
-	TargetCount    *int                  `db:"target_count" json:"targetCount,omitempty"`
-	Notes          string                `db:"notes" json:"notes,omitempty"`
-	Frequency      ScheduleTaskFrequency `db:"frequency" json:"frequency,omitempty"`
-	Category       string                `db:"category" json:"category,omitempty"`
-	CreatedAt      time.Time             `db:"created_at" json:"createdAt"`
-	UpdatedAt      time.Time             `db:"updated_at" json:"updatedAt"`
+	ID                 string                `db:"id" json:"id,omitempty"`
+	UserID             string                `db:"user_id" json:"userId,omitempty"`
+	ScheduleTaskID     string                `db:"schedule_task_id" json:"scheduleTaskId,omitempty"`
+	Title              string                `db:"title" json:"title,omitempty"`
+	Description        string                `db:"description" json:"description,omitempty"`
+	Date               time.Time             `db:"date" json:"date,omitzero"`
+	Status             TaskStatus            `db:"status" json:"status,omitempty"`
+	Priority           ScheduleTaskPriority  `db:"priority" json:"priority,omitempty"`
+	Required           bool                  `db:"required" json:"required,omitempty"`
+	IsRequired         bool                  `db:"is_required" json:"isRequired,omitempty"`
+	CompletedAt        time.Time             `db:"completed_at" json:"completedAt,omitzero"`
+	ActualStart        time.Time             `db:"actual_start" json:"actualStart,omitzero"`
+	ActualEnd          time.Time             `db:"actual_end" json:"actualEnd,omitzero"`
+	StartTime          time.Time             `db:"start_time" json:"startTime,omitzero"`
+	EndTime            time.Time             `db:"end_time" json:"endTime,omitzero"`
+	StartDate          time.Time             `db:"start_date" json:"startDate,omitzero"`
+	EndDate            time.Time             `db:"end_date" json:"endDate,omitzero"`
+	Duration           int                   `db:"duration" json:"duration,omitempty"`
+	CurrentCount       int                   `db:"current_count" json:"currentCount"`
+	TargetCount        *int                  `db:"target_count" json:"targetCount,omitempty"`
+	Notes              string                `db:"notes" json:"notes,omitempty"`
+	Frequency          ScheduleTaskFrequency `db:"frequency" json:"frequency,omitempty"`
+	Category           string                `db:"category" json:"category,omitempty"`
+	CreatedAt          time.Time             `db:"created_at" json:"createdAt"`
+	UpdatedAt          time.Time             `db:"updated_at" json:"updatedAt"`
+	CanEdit            bool                  `json:"canEdit"`
+	CanApplyToSchedule bool                  `json:"canApplyToSchedule"`
 }
 
 type TaskCompletion struct {
@@ -189,6 +191,58 @@ func CreateUsersTodayTasks(ctx context.Context, userID string) ([]*DetailedTask,
 	log.Printf("lazy task generation user_id=%s generated=%d", userID, generatedCount)
 
 	return todayTasks, nil
+}
+
+func GetActiveScheduleOwnerIDs(ctx context.Context) ([]string, error) {
+	conn, err := GetConn(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	rows, err := conn.Query(
+		ctx,
+		`SELECT DISTINCT user_id
+		 FROM schedule_tasks
+		 WHERE status_level = 'active'
+		 ORDER BY user_id`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	userIDs := []string{}
+	for rows.Next() {
+		var userID string
+		if err := rows.Scan(&userID); err != nil {
+			return nil, err
+		}
+		userIDs = append(userIDs, userID)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return userIDs, nil
+}
+
+func GenerateTodayTasksForActiveUsers(ctx context.Context) (int, error) {
+	userIDs, err := GetActiveScheduleOwnerIDs(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	processedUsers := 0
+	for _, userID := range userIDs {
+		if _, err := CreateUsersTodayTasks(ctx, userID); err != nil {
+			return processedUsers, err
+		}
+		processedUsers++
+	}
+	return processedUsers, nil
 }
 
 func shouldCreateTaskForToday(scheduleTask *ScheduleTask, today time.Time) bool {
