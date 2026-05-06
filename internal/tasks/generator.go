@@ -28,9 +28,13 @@ func NewTaskGenerator(ctx context.Context, interval time.Duration) *TaskGenerato
 }
 
 func TaskGeneratorConfigFromEnv() (bool, time.Duration) {
-	enabled := true
 	if value := strings.TrimSpace(os.Getenv("ENABLE_TASK_GENERATOR")); value != "" {
-		enabled = !strings.EqualFold(value, "false") && value != "0"
+		enabled := strings.EqualFold(value, "true") || value == "1"
+		if !enabled {
+			return false, defaultGeneratorInterval
+		}
+	} else {
+		return false, defaultGeneratorInterval
 	}
 
 	interval := defaultGeneratorInterval
@@ -41,7 +45,7 @@ func TaskGeneratorConfigFromEnv() (bool, time.Duration) {
 		}
 	}
 
-	return enabled, interval
+	return true, interval
 }
 
 func (g *TaskGenerator) Start() {

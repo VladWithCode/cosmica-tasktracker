@@ -127,6 +127,8 @@ The full list of variables the backend reads from the environment is:
 | `USE_SECURE_COOKIES` | Production hardening | Set to `true` over HTTPS |
 | `USE_HTTP_ONLY_COOKIES` | Cookie hardening | Defaults to `true` |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | Web Push (Phase 8) | Production needs real VAPID keypair generated via `webpush-go` |
+| `ENABLE_TASK_GENERATOR` | Scheduled task generation | Defaults to off; set to `true` or `1` on exactly one backend instance |
+| `TASK_GENERATOR_INTERVAL_MINUTES` | Scheduled task generation | Optional; defaults to 60 minutes when the generator is enabled |
 
 The CI workflow injects dummy values for all of these. Tests that exercise
 Web Push behaviour (`internal/routes/notifications_phase8_test.go`) override
