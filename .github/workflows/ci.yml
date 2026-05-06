@@ -1,0 +1,155 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - prueba-para-bladi
+      - main
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  forbidden-files:
+    name: Forbidden files guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect forbidden tracked files
+        shell: bash
+        run: |
+          set -e
+          # Look for files that should never be tracked. The pattern is intentionally
+          # narrow: it must match a real path component, never a substring inside
+          # legitimate filenames.
+          forbidden=$(git ls-files \
+            | grep -E '(^|/)(\.env(\.[^/]+)?|cookies\.txt)$|(^|/)tmp/|(^|/)\.claude/|(^|/)frontend/node_modules/|(^|/)frontend/dist/|(^|/)dist/|\.log$|\.exe$' \
+            || true)
+          if [ -n "$forbidden" ]; then
+            echo "::error::Forbidden tracked files detected. Remove them and update .gitignore:"
+            echo "$forbidden"
+            exit 1
+          fi
+          echo "No forbidden tracked files found."
+
+  backend:
+    name: Backend (Go + PostgreSQL + Goose)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tasktracker
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # All values in this block are dummy CI credentials. They never match the
+      # real local development credentials and they are not valid in any
+      # production environment. Real secrets MUST come from GitHub Actions
+      # secrets, never from this file.
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:55432/tasktracker?sslmode=disable
+      PORT: "8081"
+      JWT_SECRET: ci-test-secret-change-me
+      CORS_ALLOW_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: admin123
+      VAPID_PUBLIC_KEY: dummy-public-key
+      VAPID_PRIVATE_KEY: dummy-private-key
+      VAPID_SUBJECT: mailto:test@example.com
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.5"
+          cache: true
+
+      - name: Wait for PostgreSQL
+        run: |
+          for attempt in $(seq 1 30); do
+            if pg_isready -h 127.0.0.1 -p 55432 -U postgres -d tasktracker; then
+              echo "PostgreSQL is ready."
+              exit 0
+            fi
+            echo "PostgreSQL not ready yet (attempt $attempt/30). Retrying in 2s..."
+            sleep 2
+          done
+          echo "::error::PostgreSQL did not become ready in time."
+          exit 1
+        env:
+          PGPASSWORD: postgres
+
+      - name: Install Goose
+        run: go install github.com/pressly/goose/v3/cmd/goose@v3.27.1
+
+      - name: Apply migrations from scratch
+        run: |
+          goose -dir sql/migrations postgres "$DATABASE_URL" up
+
+      - name: Verify Goose status
+        run: |
+          goose -dir sql/migrations postgres "$DATABASE_URL" status
+
+      - name: Go vet
+        run: go vet ./...
+
+      - name: Go test
+        run: go test -count=1 ./...
+
+  frontend:
+    name: Frontend (Vite + Vitest)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Detect lockfile
+        id: lockfile
+        shell: bash
+        working-directory: frontend
+        run: |
+          if [ -f package-lock.json ]; then
+            echo "type=npm-ci" >> "$GITHUB_OUTPUT"
+          else
+            echo "type=npm-install" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install dependencies (npm ci)
+        if: steps.lockfile.outputs.type == 'npm-ci'
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install dependencies (npm install)
+        if: steps.lockfile.outputs.type == 'npm-install'
+        working-directory: frontend
+        run: npm install --no-audit --no-fund
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+      - name: Test
+        working-directory: frontend
+        run: npm run test
