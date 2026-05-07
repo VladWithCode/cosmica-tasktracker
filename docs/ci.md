@@ -98,17 +98,80 @@ cd ..
 goose -dir sql/migrations postgres "$DATABASE_URL" status
 ```
 
-If you do not have PostgreSQL running, the integration tests in
-`internal/routes/*_test.go` are designed to `t.Skip` gracefully. Unit tests
-under `internal/auth` will still run.
+## Running integration tests locally
 
-For a temporary local cluster you can rely on the `tmp/phase5-pgdata`
-folder used in earlier phases:
+The integration tests in `internal/routes/*_test.go` connect to a real
+PostgreSQL database. When no database is available they **skip gracefully**
+with `t.Skip("DATABASE_URL is not set")`. This is by design — you can
+always run the unit tests (`internal/auth`, `internal/tasks`,
+`internal/notifications`) without any external dependencies.
+
+When you see output like this, everything is working correctly:
+
+```
+--- SKIP: TestAuthRoutes (0.00s)
+--- SKIP: TestSharedManageCanEditTaskButViewCannot (0.00s)
+    ...24 SKIP...
+ok  	github.com/vladwithcode/tasktracker/internal/routes	0.2s
+```
+
+The CI pipeline runs these same tests with a real PostgreSQL 16 service
+container, so they always execute in the PR checks. If CI is green, the
+integration tests passed.
+
+### Option A — Use an existing local PostgreSQL
+
+If you already have PostgreSQL running locally, point `DATABASE_URL` at it
+and run migrations before testing:
+
+```powershell
+# PowerShell
+$env:DATABASE_URL = "postgres://postgres:yourpassword@127.0.0.1:55432/tasktracker?sslmode=disable"
+$env:JWT_SECRET   = "local-dev-secret-at-least-32-chars!!"
+goose -dir sql/migrations postgres $env:DATABASE_URL up
+go test -count=1 ./...
+```
+
+```bash
+# Bash / Linux / macOS
+export DATABASE_URL="postgres://postgres:yourpassword@127.0.0.1:55432/tasktracker?sslmode=disable"
+export JWT_SECRET="local-dev-secret-at-least-32-chars!!"
+goose -dir sql/migrations postgres "$DATABASE_URL" up
+go test -count=1 ./...
+```
+
+### Option B — Spin up a temporary PostgreSQL with Docker
+
+```bash
+docker run --rm -d \
+  --name tasktracker-test-db \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=tasktracker \
+  -p 55432:5432 \
+  postgres:16
+
+# Wait a few seconds for startup, then:
+export DATABASE_URL="postgres://postgres:postgres@127.0.0.1:55432/tasktracker?sslmode=disable"
+export JWT_SECRET="local-dev-secret-at-least-32-chars!!"
+goose -dir sql/migrations postgres "$DATABASE_URL" up
+go test -count=1 ./...
+
+# Clean up
+docker stop tasktracker-test-db
+```
+
+### Option C — Use a local data directory (Windows)
+
+For the `tmp/phase5-pgdata` cluster used in earlier phases:
 
 ```powershell
 & 'C:\Program Files\PostgreSQL\18\bin\pg_ctl.exe' -D 'tmp\phase5-pgdata' -l 'tmp\local-pg.log' -o '-p 55432' start
 
-# ... run tests ...
+$env:DATABASE_URL = "postgres://postgres:yourpassword@127.0.0.1:55432/tasktracker?sslmode=disable"
+$env:JWT_SECRET   = "local-dev-secret-at-least-32-chars!!"
+goose -dir sql/migrations postgres $env:DATABASE_URL up
+go test -count=1 ./...
 
 & 'C:\Program Files\PostgreSQL\18\bin\pg_ctl.exe' -D 'tmp\phase5-pgdata' stop
 ```

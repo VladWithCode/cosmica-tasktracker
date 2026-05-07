@@ -89,6 +89,20 @@ func GetSubscriptionsByUserID(ctx context.Context, userID string) ([]*PushSubscr
 	return subscriptions, nil
 }
 
+// DeleteSubscriptionByID removes a push subscription by its primary key. Used
+// when a push service permanently rejects a subscription (HTTP 404 / 410) so
+// we stop retrying dead endpoints.
+func DeleteSubscriptionByID(ctx context.Context, id string) error {
+	conn, err := GetConn(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	_, err = conn.Exec(ctx, `DELETE FROM push_subscriptions WHERE id = $1`, id)
+	return err
+}
+
 func DeleteSubscription(ctx context.Context, userID, endpoint string) error {
 	conn, err := GetConn(ctx)
 	if err != nil {

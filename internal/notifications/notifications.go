@@ -13,7 +13,14 @@ import (
 	"github.com/vladwithcode/tasktracker/internal/db"
 )
 
-var ErrWebPushNotConfigured = errors.New("web push is not configured")
+var (
+	ErrWebPushNotConfigured = errors.New("web push is not configured")
+
+	// ErrSubscriptionExpired indicates that the push service rejected the
+	// subscription permanently (HTTP 404 or 410). The caller should remove
+	// the subscription so that future sends do not retry a dead endpoint.
+	ErrSubscriptionExpired = errors.New("push subscription expired or not found")
+)
 
 type Config struct {
 	PublicKey  string
@@ -106,11 +113,12 @@ func SendNotificationWithConfig(subscription *db.PushSubscription, payload *Noti
 	}
 	defer resp.Body.Close()
 
-	// Handle expired subscriptions (410 Gone)
-	if resp.StatusCode == 410 {
-		// TODO: handle expired subscriptions
-		log.Println("expired subscriptions")
-		return nil
+	// 404 and 410 are permanent rejections from the push service — the
+	// subscription no longer exists on the provider side. Return a typed
+	// error so the caller can clean up the local record.
+	if resp.StatusCode == 404 || resp.StatusCode == 410 {
+		log.Printf("push subscription expired (HTTP %d): %s", resp.StatusCode, subscription.Endpoint)
+		return fmt.Errorf("%w: HTTP %d for endpoint %s", ErrSubscriptionExpired, resp.StatusCode, subscription.Endpoint)
 	}
 	if resp.StatusCode >= 400 {
 		return fmt.Errorf("web push provider returned status %d", resp.StatusCode)
@@ -144,8 +152,19 @@ func SendNotificationToUserWithConfig(ctx context.Context, userID string, payloa
 		// Send to each subscription (each device)
 		err := SendNotificationWithConfig(sub, payload, config)
 		if err != nil {
-			// Log error but continue with other subscriptions
-			log.Printf("Error sending notification to %s\n", err)
+			if errors.Is(err, ErrSubscriptionExpired) {
+				// The push service permanently rejected this subscription.
+				// Remove it so we stop retrying on every future send.
+				if delErr := db.DeleteSubscriptionByID(ctx, sub.ID); delErr != nil {
+					log.Printf("failed to remove expired subscription %s: %v", sub.ID, delErr)
+				} else {
+					log.Printf("removed expired push subscription %s (endpoint %s) for user %s",
+						sub.ID, sub.Endpoint, userID)
+				}
+			} else {
+				// Transient error — log but keep the subscription for next time.
+				log.Printf("Error sending notification to %s\n", err)
+			}
 			continue
 		}
 		sentCount++
