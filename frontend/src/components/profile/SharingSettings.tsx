@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
@@ -253,9 +254,14 @@ function ReceivedGrantRow({ grant }: { grant: SharingGrant }) {
                     @{grant.owner_username} · {formatAccessLevel(grant.access_level)}
                 </p>
             </div>
-            <span className="shrink-0 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 font-label text-[10px] font-bold uppercase tracking-widest text-primary">
-                Recibido
-            </span>
+            <Link
+                className="shrink-0 inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 font-label text-[10px] font-bold uppercase tracking-widest text-primary transition-all duration-300 hover:bg-primary/20 active:scale-95"
+                params={{ userId: grant.owner_user_id }}
+                to="/shared/$userId"
+            >
+                <MaterialIcon name="open_in_new" className="text-xs" />
+                Ver tareas
+            </Link>
         </article>
     );
 }

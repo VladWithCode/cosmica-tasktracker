@@ -94,6 +94,30 @@ export const getTodayProgressOpts = queryOptions({
     staleTime: 60 * 1000,
 });
 
+export function getSharedTodayTasksOpts(ownerUserId: string) {
+    return queryOptions({
+        queryKey: [...TasksQueryKeys.today(), "shared", ownerUserId] as const,
+        queryFn: () => getSharedTodayTasks(ownerUserId),
+        enabled: ownerUserId.length > 0,
+    });
+}
+
+export async function getSharedTodayTasks(ownerUserId: string) {
+    const params = new URLSearchParams({ owner_user_id: ownerUserId });
+    const response = await fetch(`/api/v1/tasks/today?${params.toString()}`, {
+        method: "GET",
+        credentials: "include",
+    });
+    const data = (await response.json()) as ApiResponse<TasksData>;
+    if (!response.ok) {
+        throw new Error(getApiError(data, "Error al obtener tareas compartidas"));
+    }
+    const rawTasks = data.data?.tasks ?? [];
+    const tasks: TTask[] = rawTasks.map(hydrateTask);
+    const feedItems: TaskFeedItem[] = rawTasks.map(toTaskFeedItem);
+    return { feedItems, tasks };
+}
+
 export function getTaskHistoryOpts(range: TaskStatsRangeInput) {
     return queryOptions({
         queryKey: [...TasksQueryKeys.history(), range.from, range.to] as const,

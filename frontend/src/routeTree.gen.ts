@@ -17,12 +17,14 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as FocusRouteImport } from './routes/focus'
 import { Route as ControlRouteImport } from './routes/control'
 import { Route as TasksRouteRouteImport } from './routes/tasks/route'
+import { Route as SharedRouteRouteImport } from './routes/shared/route'
 import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TasksIndexRouteImport } from './routes/tasks/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as TasksNewRouteImport } from './routes/tasks/new'
 import { Route as TasksIdRouteImport } from './routes/tasks/$id'
+import { Route as SharedUserIdRouteImport } from './routes/shared/$userId'
 import { Route as DashboardStatsRouteImport } from './routes/dashboard/stats'
 
 const WellnessRoute = WellnessRouteImport.update({
@@ -65,6 +67,11 @@ const TasksRouteRoute = TasksRouteRouteImport.update({
   path: '/tasks',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SharedRouteRoute = SharedRouteRouteImport.update({
+  id: '/shared',
+  path: '/shared',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardRouteRoute = DashboardRouteRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -95,6 +102,11 @@ const TasksIdRoute = TasksIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => TasksRouteRoute,
 } as any)
+const SharedUserIdRoute = SharedUserIdRouteImport.update({
+  id: '/$userId',
+  path: '/$userId',
+  getParentRoute: () => SharedRouteRoute,
+} as any)
 const DashboardStatsRoute = DashboardStatsRouteImport.update({
   id: '/stats',
   path: '/stats',
@@ -104,6 +116,7 @@ const DashboardStatsRoute = DashboardStatsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/shared': typeof SharedRouteRouteWithChildren
   '/tasks': typeof TasksRouteRouteWithChildren
   '/control': typeof ControlRoute
   '/focus': typeof FocusRoute
@@ -113,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/stats': typeof StatsRoute
   '/wellness': typeof WellnessRoute
   '/dashboard/stats': typeof DashboardStatsRoute
+  '/shared/$userId': typeof SharedUserIdRoute
   '/tasks/$id': typeof TasksIdRoute
   '/tasks/new': typeof TasksNewRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -120,6 +134,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/shared': typeof SharedRouteRouteWithChildren
   '/control': typeof ControlRoute
   '/focus': typeof FocusRoute
   '/login': typeof LoginRoute
@@ -128,6 +143,7 @@ export interface FileRoutesByTo {
   '/stats': typeof StatsRoute
   '/wellness': typeof WellnessRoute
   '/dashboard/stats': typeof DashboardStatsRoute
+  '/shared/$userId': typeof SharedUserIdRoute
   '/tasks/$id': typeof TasksIdRoute
   '/tasks/new': typeof TasksNewRoute
   '/dashboard': typeof DashboardIndexRoute
@@ -137,6 +153,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/shared': typeof SharedRouteRouteWithChildren
   '/tasks': typeof TasksRouteRouteWithChildren
   '/control': typeof ControlRoute
   '/focus': typeof FocusRoute
@@ -146,6 +163,7 @@ export interface FileRoutesById {
   '/stats': typeof StatsRoute
   '/wellness': typeof WellnessRoute
   '/dashboard/stats': typeof DashboardStatsRoute
+  '/shared/$userId': typeof SharedUserIdRoute
   '/tasks/$id': typeof TasksIdRoute
   '/tasks/new': typeof TasksNewRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -156,6 +174,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/dashboard'
+    | '/shared'
     | '/tasks'
     | '/control'
     | '/focus'
@@ -165,6 +184,7 @@ export interface FileRouteTypes {
     | '/stats'
     | '/wellness'
     | '/dashboard/stats'
+    | '/shared/$userId'
     | '/tasks/$id'
     | '/tasks/new'
     | '/dashboard/'
@@ -172,6 +192,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/shared'
     | '/control'
     | '/focus'
     | '/login'
@@ -180,6 +201,7 @@ export interface FileRouteTypes {
     | '/stats'
     | '/wellness'
     | '/dashboard/stats'
+    | '/shared/$userId'
     | '/tasks/$id'
     | '/tasks/new'
     | '/dashboard'
@@ -188,6 +210,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/dashboard'
+    | '/shared'
     | '/tasks'
     | '/control'
     | '/focus'
@@ -197,6 +220,7 @@ export interface FileRouteTypes {
     | '/stats'
     | '/wellness'
     | '/dashboard/stats'
+    | '/shared/$userId'
     | '/tasks/$id'
     | '/tasks/new'
     | '/dashboard/'
@@ -206,6 +230,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRouteRoute: typeof DashboardRouteRouteWithChildren
+  SharedRouteRoute: typeof SharedRouteRouteWithChildren
   TasksRouteRoute: typeof TasksRouteRouteWithChildren
   ControlRoute: typeof ControlRoute
   FocusRoute: typeof FocusRoute
@@ -274,6 +299,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TasksRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/shared': {
+      id: '/shared'
+      path: '/shared'
+      fullPath: '/shared'
+      preLoaderRoute: typeof SharedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
@@ -316,6 +348,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TasksIdRouteImport
       parentRoute: typeof TasksRouteRoute
     }
+    '/shared/$userId': {
+      id: '/shared/$userId'
+      path: '/$userId'
+      fullPath: '/shared/$userId'
+      preLoaderRoute: typeof SharedUserIdRouteImport
+      parentRoute: typeof SharedRouteRoute
+    }
     '/dashboard/stats': {
       id: '/dashboard/stats'
       path: '/stats'
@@ -340,6 +379,18 @@ const DashboardRouteRouteWithChildren = DashboardRouteRoute._addFileChildren(
   DashboardRouteRouteChildren,
 )
 
+interface SharedRouteRouteChildren {
+  SharedUserIdRoute: typeof SharedUserIdRoute
+}
+
+const SharedRouteRouteChildren: SharedRouteRouteChildren = {
+  SharedUserIdRoute: SharedUserIdRoute,
+}
+
+const SharedRouteRouteWithChildren = SharedRouteRoute._addFileChildren(
+  SharedRouteRouteChildren,
+)
+
 interface TasksRouteRouteChildren {
   TasksIdRoute: typeof TasksIdRoute
   TasksNewRoute: typeof TasksNewRoute
@@ -359,6 +410,7 @@ const TasksRouteRouteWithChildren = TasksRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRouteRoute: DashboardRouteRouteWithChildren,
+  SharedRouteRoute: SharedRouteRouteWithChildren,
   TasksRouteRoute: TasksRouteRouteWithChildren,
   ControlRoute: ControlRoute,
   FocusRoute: FocusRoute,
