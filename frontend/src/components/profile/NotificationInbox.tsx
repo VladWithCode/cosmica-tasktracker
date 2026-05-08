@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -6,25 +7,37 @@ import { cn } from "@/lib/utils";
 import { getNotificationInboxOpts, markNotificationReadOpts } from "@/queries/notifications";
 import type { NotificationInboxItem } from "@/types/sharing";
 
+const INBOX_PREVIEW_LIMIT = 2;
+
 export function NotificationInbox() {
     const inboxQuery = useQuery(getNotificationInboxOpts);
     const markReadMutation = useMutation(markNotificationReadOpts);
-    const items = inboxQuery.data ?? [];
+    const [showAll, setShowAll] = useState(false);
+    const allItems = inboxQuery.data ?? [];
+    const items = showAll ? allItems : allItems.slice(0, INBOX_PREVIEW_LIMIT);
+    const hasMore = allItems.length > INBOX_PREVIEW_LIMIT;
 
     return (
         <section className="rounded-xl border border-outline-variant/10 bg-surface-container-low p-6 shadow-[0_15px_40px_rgba(0,0,0,0.24)]">
-            <div className="mb-6 flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-tertiary/10 text-tertiary">
-                    <MaterialIcon name="inbox" />
+            <div className="mb-6 flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-tertiary/10 text-tertiary">
+                        <MaterialIcon name="inbox" />
+                    </div>
+                    <div>
+                        <h3 className="font-headline text-lg font-bold text-on-surface">
+                            Bandeja de pings
+                        </h3>
+                        <p className="mt-1 text-sm leading-6 text-on-surface-variant">
+                            Revisa recordatorios recibidos y márcalos como leídos.
+                        </p>
+                    </div>
                 </div>
-                <div>
-                    <h3 className="font-headline text-lg font-bold text-on-surface">
-                        Bandeja de pings
-                    </h3>
-                    <p className="mt-1 text-sm leading-6 text-on-surface-variant">
-                        Revisa recordatorios recibidos y márcalos como leídos.
-                    </p>
-                </div>
+                {allItems.length > 0 ? (
+                    <span className="shrink-0 rounded-full bg-tertiary/10 px-2 py-1 font-label text-[10px] font-bold uppercase tracking-widest text-tertiary">
+                        {allItems.length}
+                    </span>
+                ) : null}
             </div>
 
             {inboxQuery.isLoading ? <InboxSkeleton /> : null}
@@ -33,7 +46,7 @@ export function NotificationInbox() {
                     No se pudo cargar la bandeja.
                 </div>
             ) : null}
-            {!inboxQuery.isLoading && !inboxQuery.isError && items.length === 0 ? (
+            {!inboxQuery.isLoading && !inboxQuery.isError && allItems.length === 0 ? (
                 <div className="rounded-lg border border-outline-variant/10 bg-surface-container-lowest p-4 text-sm text-on-surface-variant">
                     No tienes pings pendientes.
                 </div>
@@ -55,6 +68,16 @@ export function NotificationInbox() {
                         />
                     ))}
                 </div>
+            ) : null}
+            {hasMore ? (
+                <button
+                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-full border border-outline-variant/15 bg-surface-container-highest px-4 py-2 font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant transition-all duration-300 hover:text-primary active:scale-95"
+                    onClick={() => setShowAll((v) => !v)}
+                    type="button"
+                >
+                    <MaterialIcon name={showAll ? "expand_less" : "expand_more"} className="text-sm" />
+                    {showAll ? "Ver menos" : `Ver todos (${allItems.length})`}
+                </button>
             ) : null}
         </section>
     );

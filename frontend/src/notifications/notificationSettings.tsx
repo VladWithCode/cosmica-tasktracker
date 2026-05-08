@@ -32,7 +32,11 @@ export function NotificationSettings() {
         return () => {
             isMounted = false;
         };
-    }, [notifications]);
+        // Run once on mount. `notifications` is the full Zustand store object and
+        // changes reference on every state update — listing it as a dep would cause
+        // an infinite loop of checkSubscription() calls.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const status = useMemo(() => getStatusCopy(notifications), [notifications]);
     const canSendTest = notifications.isSubscribed && notifications.permission === "granted";

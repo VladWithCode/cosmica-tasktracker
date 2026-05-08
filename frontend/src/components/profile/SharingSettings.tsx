@@ -5,6 +5,7 @@ import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { cn } from "@/lib/utils";
 import {
     createSharingGrantOpts,
+    getSharedWithMeOpts,
     getSharingGrantsOpts,
     revokeSharingGrantOpts,
     searchSharingUsersOpts,
@@ -38,6 +39,7 @@ export function SharingSettings() {
     const [accessLevel, setAccessLevel] = useState<SharingAccessLevel>("view");
     const trimmedRecipient = recipient.trim();
     const grantsQuery = useQuery(getSharingGrantsOpts);
+    const sharedWithMeQuery = useQuery(getSharedWithMeOpts);
     const usersQuery = useQuery(searchSharingUsersOpts(trimmedRecipient));
     const createMutation = useMutation(createSharingGrantOpts);
     const revokeMutation = useMutation(revokeSharingGrantOpts);
@@ -153,9 +155,10 @@ export function SharingSettings() {
                 </button>
             </div>
 
+            {/* Permisos que yo otorgué */}
             <div className="mt-6 space-y-3">
                 <p className="font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant">
-                    Accesos activos
+                    Accesos que yo otorgué
                 </p>
                 {grantsQuery.isLoading ? <SharingListSkeleton /> : null}
                 {grantsQuery.isError ? (
@@ -181,6 +184,27 @@ export function SharingSettings() {
                             })
                         }
                     />
+                ))}
+            </div>
+
+            {/* Permisos que yo recibí */}
+            <div className="mt-6 space-y-3">
+                <p className="font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant">
+                    Accesos que recibí
+                </p>
+                {sharedWithMeQuery.isLoading ? <SharingListSkeleton /> : null}
+                {sharedWithMeQuery.isError ? (
+                    <div className="rounded-lg border border-error/20 bg-error/10 p-4 text-sm text-error">
+                        No se pudieron cargar los accesos recibidos.
+                    </div>
+                ) : null}
+                {!sharedWithMeQuery.isLoading && !sharedWithMeQuery.isError && (sharedWithMeQuery.data ?? []).length === 0 ? (
+                    <div className="rounded-lg border border-outline-variant/10 bg-surface-container-lowest p-4 text-sm text-on-surface-variant">
+                        Nadie te ha compartido acceso a sus tareas.
+                    </div>
+                ) : null}
+                {(sharedWithMeQuery.data ?? []).map((grant) => (
+                    <ReceivedGrantRow grant={grant} key={grant.id} />
                 ))}
             </div>
         </section>
@@ -214,6 +238,24 @@ function SharingGrantRow({
             >
                 Revocar
             </button>
+        </article>
+    );
+}
+
+function ReceivedGrantRow({ grant }: { grant: SharingGrant }) {
+    return (
+        <article className="flex items-center justify-between gap-4 rounded-lg border border-outline-variant/10 bg-surface-container-lowest p-4">
+            <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-on-surface">
+                    {grant.owner_fullname || grant.owner_username}
+                </p>
+                <p className="mt-1 truncate text-xs text-on-surface-variant">
+                    @{grant.owner_username} · {formatAccessLevel(grant.access_level)}
+                </p>
+            </div>
+            <span className="shrink-0 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 font-label text-[10px] font-bold uppercase tracking-widest text-primary">
+                Recibido
+            </span>
         </article>
     );
 }

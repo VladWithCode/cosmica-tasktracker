@@ -173,8 +173,13 @@ func CreateUsersTodayTasks(ctx context.Context, userID string) ([]*DetailedTask,
 				task = existingTask
 			}
 
-			nextStatus := determineTaskStatus(scheduleTask, today)
-			if task.Status != TaskStatusCompleted && task.Status != TaskStatusSkipped {
+			// Only apply status transitions that make sense at serve-time.
+			// A pending task whose time window has passed becomes "skipped" (missed),
+			// not "failed" — failed should require explicit user action.
+			// In-progress tasks that have blown past their end window become failed.
+			// Completed/skipped tasks are never overwritten.
+			if task.Status != TaskStatusCompleted && task.Status != TaskStatusSkipped && task.Status != TaskStatusFailed {
+				nextStatus := determineTaskStatus(scheduleTask, today)
 				task.Status = nextStatus
 			}
 			if existingTask != nil {
@@ -314,6 +319,13 @@ func shouldRepeatToday(scheduleTask *ScheduleTask, today time.Time) bool {
 	}
 }
 
+// determineTaskStatus infers a task's status from the current time relative to
+// the schedule's time window. It only returns one of two values:
+//   - TaskStatusPending — the window hasn't closed yet (or no window defined).
+//   - TaskStatusSkipped — the task's end time has passed and it was never started.
+//
+// Callers are responsible for NOT applying this to tasks that are already
+// completed, skipped, or failed (explicit user actions).
 func determineTaskStatus(scheduleTask *ScheduleTask, now time.Time) TaskStatus {
 	if scheduleTask.StartTime.IsZero() && scheduleTask.EndTime.IsZero() {
 		return TaskStatusPending
@@ -325,8 +337,10 @@ func determineTaskStatus(scheduleTask *ScheduleTask, now time.Time) TaskStatus {
 		return TaskStatusPending
 	}
 
+	// End time passed and task was never started → treat as skipped (missed),
+	// not failed. "Failed" requires explicit action (e.g. started but not done).
 	if !scheduleTask.EndTime.IsZero() && util.AfterTime(currentTime, scheduleTask.EndTime) {
-		return TaskStatusFailed
+		return TaskStatusSkipped
 	}
 
 	return TaskStatusPending

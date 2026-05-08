@@ -35,6 +35,12 @@ export const getSharingGrantsOpts = queryOptions({
     queryFn: getSharingGrants,
 });
 
+export const getSharedWithMeOpts = queryOptions({
+    queryKey: SharingQueryKeys.sharedWithMe(),
+    queryFn: getSharedWithMe,
+    staleTime: 30 * 1000,
+});
+
 export function searchSharingUsersOpts(query: string) {
     return queryOptions({
         enabled: query.trim().length >= 2,
@@ -70,6 +76,18 @@ export async function getSharingGrants(): Promise<SharingGrant[]> {
     const data = (await response.json()) as ApiResponse<GrantsData>;
     if (!response.ok) {
         throw new Error(getApiError(data, "No se pudieron cargar los permisos"));
+    }
+    return data.data?.grants ?? [];
+}
+
+export async function getSharedWithMe(): Promise<SharingGrant[]> {
+    const response = await fetch("/api/v1/sharing/shared-with-me", {
+        credentials: "include",
+        method: "GET",
+    });
+    const data = (await response.json()) as ApiResponse<GrantsData>;
+    if (!response.ok) {
+        throw new Error(getApiError(data, "No se pudieron cargar los accesos compartidos"));
     }
     return data.data?.grants ?? [];
 }

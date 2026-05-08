@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { TTask } from "@/lib/schemas/task";
 import { useProfileStats } from "@/hooks/useProfileStats";
-import { getTodayTasksOpts, markAsCompletedOpts } from "@/queries/tasks";
+import { getTodayTasksOpts, useCompleteTask } from "@/queries/tasks";
 
 interface FocusTimerState {
     isRunning: boolean;
@@ -25,7 +25,9 @@ export function FocusModePage() {
     const tasks = data?.tasks ?? [];
     const focusTask = useMemo(() => selectFocusTask(tasks, new Date()), [tasks]);
     const timer = useFocusTimer(focusTask);
-    const markAsCompletedMut = useMutation(markAsCompletedOpts);
+    // Use the optimistic variant so the task disappears from the list immediately
+    // after clicking "Complete" without waiting for the server round-trip.
+    const markAsCompletedMut = useMutation(useCompleteTask());
     const todayFocusMinutes = useMemo(() => getTodayFocusMinutes(tasks), [tasks]);
 
     const completeTask = () => {
@@ -36,7 +38,7 @@ export function FocusModePage() {
         markAsCompletedMut.mutate(
             { taskId: focusTask.id },
             {
-                onSuccess: (data) => toast.success(data.message || "Tarea completada"),
+                onSuccess: () => toast.success("Tarea completada"),
                 onError: (error) => toast.error(error.message || "No se pudo completar la tarea"),
             },
         );
