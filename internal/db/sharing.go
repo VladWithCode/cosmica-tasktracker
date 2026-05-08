@@ -100,7 +100,7 @@ func ApplySharingAccessLevel(grant *TaskAccessGrant) {
 		grant.CanEditTasks = true
 		grant.CanPing = true
 	case SharingAccessLevelPingOnly:
-		grant.CanView = false
+		grant.CanView = true
 		grant.CanCreate = false
 		grant.CanEditTasks = false
 		grant.CanPing = true

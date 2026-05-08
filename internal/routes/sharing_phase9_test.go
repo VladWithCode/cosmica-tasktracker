@@ -277,6 +277,67 @@ func getPhase9ScheduleOwnership(t *testing.T, title string) (string, string) {
 	return ownerID, createdBy.String
 }
 
+func TestPingOnlyCanViewSharedTasksAndPing(t *testing.T) {
+	router := setupAuthRouteTest(t)
+	ownerUsername := fmt.Sprintf("phase9po_owner_%d", time.Now().UnixNano()%1_000_000_000)
+	granteeUsername := fmt.Sprintf("phase9po_grantee_%d", time.Now().UnixNano()%1_000_000_000)
+	password := "Test1234"
+	cleanupTaskRouteUser(t, ownerUsername)
+	cleanupTaskRouteUser(t, granteeUsername)
+	t.Cleanup(func() {
+		cleanupTaskRouteUser(t, ownerUsername)
+		cleanupTaskRouteUser(t, granteeUsername)
+	})
+
+	ownerCookie := registerPhase5User(t, router, ownerUsername, password)
+	granteeCookie := registerPhase5User(t, router, granteeUsername, password)
+	ownerID := getPhase9UserID(t, ownerUsername)
+
+	// Owner creates a schedule so there's a task to view/ping
+	schedule := createRouteSchedule(t, router, ownerCookie, "PingOnly shared task", "09:00", "10:00")
+	task := findTaskBySchedule(t, getRouteTodayTasks(t, router, ownerCookie).Data.Tasks, schedule.Data.Schedule.ID)
+
+	// Before grant: grantee cannot view shared tasks
+	status, body, _, _ := performJSONPayload(router, http.MethodGet, "/api/v1/tasks/today?owner_user_id="+ownerID, nil, []*http.Cookie{granteeCookie})
+	if status != http.StatusForbidden {
+		t.Fatalf("expected 403 before grant, got %d body = %s", status, body)
+	}
+
+	// Create ping_only grant
+	createPhase9Grant(t, router, ownerCookie, granteeUsername, "ping_only")
+
+	// ping_only grantee CAN view shared tasks
+	status, body, _, _ = performJSONPayload(router, http.MethodGet, "/api/v1/tasks/today?owner_user_id="+ownerID, nil, []*http.Cookie{granteeCookie})
+	if status != http.StatusOK {
+		t.Fatalf("expected ping_only shared feed OK, got %d body = %s", status, body)
+	}
+	if !strings.Contains(body, "PingOnly shared task") {
+		t.Fatalf("ping_only shared feed did not include owner task: %s", body)
+	}
+
+	// ping_only grantee CAN ping
+	status, body, _, _ = performJSONPayload(router, http.MethodPost, "/api/v1/tasks/"+task.ID+"/ping", map[string]string{
+		"message": "reminder from ping_only",
+	}, []*http.Cookie{granteeCookie})
+	if status != http.StatusOK {
+		t.Fatalf("expected ping_only ping OK, got %d body = %s", status, body)
+	}
+
+	// ping_only grantee CANNOT edit the task
+	status, body, _, _ = performJSONPayload(router, http.MethodPut, "/api/v1/tasks/"+task.ID, map[string]interface{}{
+		"status": "completed",
+	}, []*http.Cookie{granteeCookie})
+	if status != http.StatusForbidden {
+		t.Fatalf("expected ping_only edit 403, got %d body = %s", status, body)
+	}
+
+	// ping_only grantee CANNOT create schedules for the owner
+	status, body, _, _ = performJSONPayload(router, http.MethodPost, "/api/v1/schedules", phase9SchedulePayload("Forbidden ping_only create", ownerID), []*http.Cookie{granteeCookie})
+	if status != http.StatusForbidden {
+		t.Fatalf("expected ping_only schedule create 403, got %d body = %s", status, body)
+	}
+}
+
 func countPhase9Pings(t *testing.T, taskID string, senderUserID string) int {
 	t.Helper()
 
