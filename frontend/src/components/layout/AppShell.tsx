@@ -7,6 +7,7 @@ interface AppShellProps {
     children: ReactNode;
     className?: string;
     contentClassName?: string;
+    showBackButton?: boolean;
     showBottomNav?: boolean;
     topBarAlign?: "left" | "center";
     title?: string;
@@ -16,6 +17,7 @@ export function AppShell({
     children,
     className,
     contentClassName,
+    showBackButton = false,
     showBottomNav = true,
     topBarAlign,
     title,
@@ -27,7 +29,7 @@ export function AppShell({
                 className,
             )}
         >
-            <TopAppBar align={topBarAlign} title={title} />
+            <TopAppBar align={topBarAlign} showBackButton={showBackButton} title={title} />
             <div className={cn("relative min-h-0 overflow-y-auto", contentClassName)}>
                 {children}
             </div>

@@ -34,7 +34,7 @@ function RouteComponent() {
     const grantNotFound = !grantsQuery.isLoading && grant === null;
 
     return (
-        <AppShell showBottomNav title={`Tareas de ${ownerName}`} topBarAlign="left">
+        <AppShell showBackButton showBottomNav={false} title={`Tareas de ${ownerName}`} topBarAlign="left">
             <main className="relative mx-auto min-h-full max-w-4xl px-6 pb-36 pt-8">
                 <div className="pointer-events-none absolute left-1/2 top-16 h-64 w-64 -translate-x-1/2 rounded-full bg-primary/5 blur-[120px]" />
 

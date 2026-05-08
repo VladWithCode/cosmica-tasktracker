@@ -1,6 +1,5 @@
 import { useEffect, useId, useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/AppShell";
 import { CounterTaskProgress } from "@/components/tasks/CounterTaskProgress";
@@ -56,19 +55,10 @@ export function TaskDetailPage({ taskId }: TaskDetailPageProps) {
     const { data, error, isError, isLoading } = useQuery(getTaskByIdOpts(taskId));
 
     return (
-        <AppShell showBottomNav={false} title="Detalle de tarea" topBarAlign="center">
+        <AppShell showBackButton showBottomNav={false} title="Detalle de tarea" topBarAlign="center">
             <main className="relative min-h-full bg-surface px-6 pb-12 pt-8 text-on-surface">
                 <div className="pointer-events-none absolute left-1/2 top-16 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/5 blur-[120px]" />
                 <div className="relative mx-auto flex max-w-3xl flex-col gap-6">
-                    <Link
-                        aria-label="Volver a tareas"
-                        className="inline-flex w-fit items-center gap-2 rounded-full border border-outline-variant/15 bg-surface-container-highest px-4 py-2 text-sm font-bold text-on-surface-variant transition-all duration-300 hover:-translate-y-1 hover:text-primary active:scale-95"
-                        to="/tasks"
-                    >
-                        <MaterialIcon name="arrow_back" className="text-base" />
-                        Tareas
-                    </Link>
-
                     {isLoading ? <TaskDetailLoading /> : null}
                     {isError ? <TaskDetailError error={error} /> : null}
                     {!isLoading && !isError && data?.task ? (
