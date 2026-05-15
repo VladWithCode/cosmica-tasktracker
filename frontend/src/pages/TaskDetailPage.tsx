@@ -148,7 +148,7 @@ function TaskDetailContent({ task }: { task: TTask }) {
             {
                 apply_to_schedule: nextApplyToSchedule,
                 currentCount: toOptionalNumber(formState.currentCount),
-                date: toApiDate(formState.date),
+                date: formState.date,
                 description: formState.description,
                 duration_minutes: toOptionalNumber(formState.durationMinutes),
                 is_required: formState.isRequired,
@@ -755,10 +755,6 @@ function toTimeInputValue(date: Date | null) {
         return "";
     }
     return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
-}
-
-function toApiDate(date: string) {
-    return `${date}T12:00:00Z`;
 }
 
 function toOptionalNumber(value: string) {

@@ -256,14 +256,14 @@ func (r scheduleRequest) toSchedule() (*db.ScheduleTask, error) {
 		schedule.Duration = time.Duration(*durationMinutes) * time.Minute
 	}
 	if r.StartDate != "" {
-		parsed, err := time.Parse("2006-01-02", r.StartDate)
+		parsed, err := parseDateOnly(r.StartDate)
 		if err != nil {
 			return nil, err
 		}
 		schedule.StartDate = parsed
 	}
 	if r.EndDate != "" {
-		parsed, err := time.Parse("2006-01-02", r.EndDate)
+		parsed, err := parseDateOnly(r.EndDate)
 		if err != nil {
 			return nil, err
 		}

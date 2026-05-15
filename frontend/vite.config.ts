@@ -5,7 +5,7 @@ import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import { VitePWA } from 'vite-plugin-pwa';
 import { resolve } from 'node:path'
 
-const backendUrl = process.env.BACKEND_URL ?? 'http://127.0.0.1:8081'
+const backendUrl = process.env.BACKEND_URL ?? 'http://127.0.0.1:8080'
 
 // https://vitejs.dev/config/
 export default defineConfig({

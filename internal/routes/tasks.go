@@ -244,7 +244,7 @@ func parseFlexibleTime(value string) (time.Time, error) {
 		return parsed, nil
 	}
 	if parsed, err := time.Parse("2006-01-02", value); err == nil {
-		return time.Date(parsed.Year(), parsed.Month(), parsed.Day(), 12, 0, 0, 0, time.UTC), nil
+		return time.Date(parsed.Year(), parsed.Month(), parsed.Day(), 12, 0, 0, 0, time.Local), nil
 	}
 	return time.Parse("2006-01-02T15:04:05Z", value)
 }
@@ -382,7 +382,7 @@ func GetTaskMetrics(c *gin.Context) {
 
 func parseTaskRange(c *gin.Context) (time.Time, time.Time, error) {
 	now := time.Now()
-	to := time.Date(now.Year(), now.Month(), now.Day(), 12, 0, 0, 0, time.UTC)
+	to := time.Date(now.Year(), now.Month(), now.Day(), 12, 0, 0, 0, time.Local)
 	from := to.AddDate(0, 0, -6)
 
 	if fromValue := strings.TrimSpace(c.Query("from")); fromValue != "" {
@@ -414,7 +414,7 @@ func parseDateOnly(value string) (time.Time, error) {
 	if err != nil {
 		return time.Time{}, err
 	}
-	return time.Date(parsed.Year(), parsed.Month(), parsed.Day(), 12, 0, 0, 0, time.UTC), nil
+	return time.Date(parsed.Year(), parsed.Month(), parsed.Day(), 12, 0, 0, 0, time.Local), nil
 }
 
 func GenerateTodaysTasks(c *gin.Context) {

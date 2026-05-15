@@ -250,7 +250,7 @@ func assertPhase7BadRequest(t *testing.T, router *gin.Engine, authCookie *http.C
 
 func phase7Date(offsetDays int) time.Time {
 	now := time.Now().UTC().AddDate(0, 0, offsetDays)
-	return time.Date(now.Year(), now.Month(), now.Day(), 12, 0, 0, 0, time.UTC)
+	return time.Date(now.Year(), now.Month(), now.Day(), 12, 0, 0, 0, time.Local)
 }
 
 func mapPhase7Days(days []phase7HistoryDay) map[string]phase7HistoryDay {
