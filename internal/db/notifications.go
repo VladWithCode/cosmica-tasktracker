@@ -13,7 +13,7 @@ type PushSubscription struct {
 	UserID   string    `json:"user_id" db:"user_id"`
 	Endpoint string    `json:"endpoint" db:"endpoint"`
 	Keys     Keys      `json:"keys" db:"keys"`
-	Created  time.Time `json:"created" db:"created"`
+	Created  time.Time `json:"created_at" db:"created_at"`
 }
 
 type Keys struct {
@@ -69,7 +69,7 @@ func GetSubscriptionsByUserID(ctx context.Context, userID string) ([]*PushSubscr
 	}
 	defer rows.Close()
 
-	var subscriptions []*PushSubscription
+	subscriptions := []*PushSubscription{}
 	for rows.Next() {
 		var sub PushSubscription
 		var keysJSON []byte
@@ -89,6 +89,20 @@ func GetSubscriptionsByUserID(ctx context.Context, userID string) ([]*PushSubscr
 	return subscriptions, nil
 }
 
+// DeleteSubscriptionByID removes a push subscription by its primary key. Used
+// when a push service permanently rejects a subscription (HTTP 404 / 410) so
+// we stop retrying dead endpoints.
+func DeleteSubscriptionByID(ctx context.Context, id string) error {
+	conn, err := GetConn(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	_, err = conn.Exec(ctx, `DELETE FROM push_subscriptions WHERE id = $1`, id)
+	return err
+}
+
 func DeleteSubscription(ctx context.Context, userID, endpoint string) error {
 	conn, err := GetConn(ctx)
 	if err != nil {
@@ -103,7 +117,7 @@ func DeleteSubscription(ctx context.Context, userID, endpoint string) error {
 	_, err = conn.Exec(
 		ctx,
 		`DELETE FROM push_subscriptions 
-		 WHERE user_id = @userId AND endpoint = @endpoint`,
+		 WHERE user_id = @userID AND endpoint = @endpoint`,
 		args,
 	)
 	return err

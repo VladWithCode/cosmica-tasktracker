@@ -9,14 +9,67 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WellnessRouteImport } from './routes/wellness'
+import { Route as StatsRouteImport } from './routes/stats'
+import { Route as RegisterRouteImport } from './routes/register'
+import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as FocusRouteImport } from './routes/focus'
+import { Route as ControlRouteImport } from './routes/control'
 import { Route as TasksRouteRouteImport } from './routes/tasks/route'
+import { Route as SharedRouteRouteImport } from './routes/shared/route'
 import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TasksIndexRouteImport } from './routes/tasks/index'
+import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
+import { Route as TasksNewRouteImport } from './routes/tasks/new'
+import { Route as TasksIdRouteImport } from './routes/tasks/$id'
+import { Route as SharedUserIdRouteImport } from './routes/shared/$userId'
+import { Route as DashboardStatsRouteImport } from './routes/dashboard/stats'
 
+const WellnessRoute = WellnessRouteImport.update({
+  id: '/wellness',
+  path: '/wellness',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StatsRoute = StatsRouteImport.update({
+  id: '/stats',
+  path: '/stats',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FocusRoute = FocusRouteImport.update({
+  id: '/focus',
+  path: '/focus',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ControlRoute = ControlRouteImport.update({
+  id: '/control',
+  path: '/control',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TasksRouteRoute = TasksRouteRouteImport.update({
   id: '/tasks',
   path: '/tasks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SharedRouteRoute = SharedRouteRouteImport.update({
+  id: '/shared',
+  path: '/shared',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRouteRoute = DashboardRouteRouteImport.update({
@@ -34,46 +87,223 @@ const TasksIndexRoute = TasksIndexRouteImport.update({
   path: '/',
   getParentRoute: () => TasksRouteRoute,
 } as any)
+const DashboardIndexRoute = DashboardIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
+const TasksNewRoute = TasksNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => TasksRouteRoute,
+} as any)
+const TasksIdRoute = TasksIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => TasksRouteRoute,
+} as any)
+const SharedUserIdRoute = SharedUserIdRouteImport.update({
+  id: '/$userId',
+  path: '/$userId',
+  getParentRoute: () => SharedRouteRoute,
+} as any)
+const DashboardStatsRoute = DashboardStatsRouteImport.update({
+  id: '/stats',
+  path: '/stats',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRouteRoute
+  '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/shared': typeof SharedRouteRouteWithChildren
   '/tasks': typeof TasksRouteRouteWithChildren
+  '/control': typeof ControlRoute
+  '/focus': typeof FocusRoute
+  '/login': typeof LoginRoute
+  '/profile': typeof ProfileRoute
+  '/register': typeof RegisterRoute
+  '/stats': typeof StatsRoute
+  '/wellness': typeof WellnessRoute
+  '/dashboard/stats': typeof DashboardStatsRoute
+  '/shared/$userId': typeof SharedUserIdRoute
+  '/tasks/$id': typeof TasksIdRoute
+  '/tasks/new': typeof TasksNewRoute
+  '/dashboard/': typeof DashboardIndexRoute
   '/tasks/': typeof TasksIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRouteRoute
+  '/shared': typeof SharedRouteRouteWithChildren
+  '/control': typeof ControlRoute
+  '/focus': typeof FocusRoute
+  '/login': typeof LoginRoute
+  '/profile': typeof ProfileRoute
+  '/register': typeof RegisterRoute
+  '/stats': typeof StatsRoute
+  '/wellness': typeof WellnessRoute
+  '/dashboard/stats': typeof DashboardStatsRoute
+  '/shared/$userId': typeof SharedUserIdRoute
+  '/tasks/$id': typeof TasksIdRoute
+  '/tasks/new': typeof TasksNewRoute
+  '/dashboard': typeof DashboardIndexRoute
   '/tasks': typeof TasksIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRouteRoute
+  '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/shared': typeof SharedRouteRouteWithChildren
   '/tasks': typeof TasksRouteRouteWithChildren
+  '/control': typeof ControlRoute
+  '/focus': typeof FocusRoute
+  '/login': typeof LoginRoute
+  '/profile': typeof ProfileRoute
+  '/register': typeof RegisterRoute
+  '/stats': typeof StatsRoute
+  '/wellness': typeof WellnessRoute
+  '/dashboard/stats': typeof DashboardStatsRoute
+  '/shared/$userId': typeof SharedUserIdRoute
+  '/tasks/$id': typeof TasksIdRoute
+  '/tasks/new': typeof TasksNewRoute
+  '/dashboard/': typeof DashboardIndexRoute
   '/tasks/': typeof TasksIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard' | '/tasks' | '/tasks/'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/shared'
+    | '/tasks'
+    | '/control'
+    | '/focus'
+    | '/login'
+    | '/profile'
+    | '/register'
+    | '/stats'
+    | '/wellness'
+    | '/dashboard/stats'
+    | '/shared/$userId'
+    | '/tasks/$id'
+    | '/tasks/new'
+    | '/dashboard/'
+    | '/tasks/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/tasks'
-  id: '__root__' | '/' | '/dashboard' | '/tasks' | '/tasks/'
+  to:
+    | '/'
+    | '/shared'
+    | '/control'
+    | '/focus'
+    | '/login'
+    | '/profile'
+    | '/register'
+    | '/stats'
+    | '/wellness'
+    | '/dashboard/stats'
+    | '/shared/$userId'
+    | '/tasks/$id'
+    | '/tasks/new'
+    | '/dashboard'
+    | '/tasks'
+  id:
+    | '__root__'
+    | '/'
+    | '/dashboard'
+    | '/shared'
+    | '/tasks'
+    | '/control'
+    | '/focus'
+    | '/login'
+    | '/profile'
+    | '/register'
+    | '/stats'
+    | '/wellness'
+    | '/dashboard/stats'
+    | '/shared/$userId'
+    | '/tasks/$id'
+    | '/tasks/new'
+    | '/dashboard/'
+    | '/tasks/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  DashboardRouteRoute: typeof DashboardRouteRoute
+  DashboardRouteRoute: typeof DashboardRouteRouteWithChildren
+  SharedRouteRoute: typeof SharedRouteRouteWithChildren
   TasksRouteRoute: typeof TasksRouteRouteWithChildren
+  ControlRoute: typeof ControlRoute
+  FocusRoute: typeof FocusRoute
+  LoginRoute: typeof LoginRoute
+  ProfileRoute: typeof ProfileRoute
+  RegisterRoute: typeof RegisterRoute
+  StatsRoute: typeof StatsRoute
+  WellnessRoute: typeof WellnessRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/wellness': {
+      id: '/wellness'
+      path: '/wellness'
+      fullPath: '/wellness'
+      preLoaderRoute: typeof WellnessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stats': {
+      id: '/stats'
+      path: '/stats'
+      fullPath: '/stats'
+      preLoaderRoute: typeof StatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/focus': {
+      id: '/focus'
+      path: '/focus'
+      fullPath: '/focus'
+      preLoaderRoute: typeof FocusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/control': {
+      id: '/control'
+      path: '/control'
+      fullPath: '/control'
+      preLoaderRoute: typeof ControlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tasks': {
       id: '/tasks'
       path: '/tasks'
       fullPath: '/tasks'
       preLoaderRoute: typeof TasksRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shared': {
+      id: '/shared'
+      path: '/shared'
+      fullPath: '/shared'
+      preLoaderRoute: typeof SharedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -97,14 +327,79 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TasksIndexRouteImport
       parentRoute: typeof TasksRouteRoute
     }
+    '/dashboard/': {
+      id: '/dashboard/'
+      path: '/'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof DashboardIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/tasks/new': {
+      id: '/tasks/new'
+      path: '/new'
+      fullPath: '/tasks/new'
+      preLoaderRoute: typeof TasksNewRouteImport
+      parentRoute: typeof TasksRouteRoute
+    }
+    '/tasks/$id': {
+      id: '/tasks/$id'
+      path: '/$id'
+      fullPath: '/tasks/$id'
+      preLoaderRoute: typeof TasksIdRouteImport
+      parentRoute: typeof TasksRouteRoute
+    }
+    '/shared/$userId': {
+      id: '/shared/$userId'
+      path: '/$userId'
+      fullPath: '/shared/$userId'
+      preLoaderRoute: typeof SharedUserIdRouteImport
+      parentRoute: typeof SharedRouteRoute
+    }
+    '/dashboard/stats': {
+      id: '/dashboard/stats'
+      path: '/stats'
+      fullPath: '/dashboard/stats'
+      preLoaderRoute: typeof DashboardStatsRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
   }
 }
 
+interface DashboardRouteRouteChildren {
+  DashboardStatsRoute: typeof DashboardStatsRoute
+  DashboardIndexRoute: typeof DashboardIndexRoute
+}
+
+const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
+  DashboardStatsRoute: DashboardStatsRoute,
+  DashboardIndexRoute: DashboardIndexRoute,
+}
+
+const DashboardRouteRouteWithChildren = DashboardRouteRoute._addFileChildren(
+  DashboardRouteRouteChildren,
+)
+
+interface SharedRouteRouteChildren {
+  SharedUserIdRoute: typeof SharedUserIdRoute
+}
+
+const SharedRouteRouteChildren: SharedRouteRouteChildren = {
+  SharedUserIdRoute: SharedUserIdRoute,
+}
+
+const SharedRouteRouteWithChildren = SharedRouteRoute._addFileChildren(
+  SharedRouteRouteChildren,
+)
+
 interface TasksRouteRouteChildren {
+  TasksIdRoute: typeof TasksIdRoute
+  TasksNewRoute: typeof TasksNewRoute
   TasksIndexRoute: typeof TasksIndexRoute
 }
 
 const TasksRouteRouteChildren: TasksRouteRouteChildren = {
+  TasksIdRoute: TasksIdRoute,
+  TasksNewRoute: TasksNewRoute,
   TasksIndexRoute: TasksIndexRoute,
 }
 
@@ -114,8 +409,16 @@ const TasksRouteRouteWithChildren = TasksRouteRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  DashboardRouteRoute: DashboardRouteRoute,
+  DashboardRouteRoute: DashboardRouteRouteWithChildren,
+  SharedRouteRoute: SharedRouteRouteWithChildren,
   TasksRouteRoute: TasksRouteRouteWithChildren,
+  ControlRoute: ControlRoute,
+  FocusRoute: FocusRoute,
+  LoginRoute: LoginRoute,
+  ProfileRoute: ProfileRoute,
+  RegisterRoute: RegisterRoute,
+  StatsRoute: StatsRoute,
+  WellnessRoute: WellnessRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

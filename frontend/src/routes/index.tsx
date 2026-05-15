@@ -1,11 +1,10 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import LoginForm from "@/components/LoginForm";
 import { checkAuth } from "@/auth/useAuth";
 
 export const Route = createFileRoute("/")({
-    component: App,
+    component: IndexRoute,
     beforeLoad: async () => {
-        let isAuthenticated;
+        let isAuthenticated: boolean;
         try {
             isAuthenticated = await checkAuth();
         } catch (error) {
@@ -15,9 +14,10 @@ export const Route = createFileRoute("/")({
         if (isAuthenticated) {
             throw redirect({ to: "/tasks" });
         }
+        throw redirect({ to: "/login" });
     },
 });
 
-function App() {
-    return <LoginForm />;
+function IndexRoute() {
+    return null;
 }

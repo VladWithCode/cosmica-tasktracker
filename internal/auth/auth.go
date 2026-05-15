@@ -15,6 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/vladwithcode/tasktracker/internal/db"
+	"github.com/vladwithcode/tasktracker/internal/httpx"
 )
 
 var (
@@ -58,6 +59,7 @@ const (
 
 type Auth struct {
 	ID       string
+	Email    string
 	Username string
 	Fullname string
 	Role     string
@@ -141,7 +143,7 @@ func ParseToken(tokenStr string) (*jwt.Token, error) {
 // AuthRequired is the Gin middleware for protecting routes that require authentication
 func AuthRequired() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		cookieToken, err := c.Request.Cookie("auth_token")
+		cookieToken, err := c.Request.Cookie(DefaultCookieName)
 		if err != nil {
 			RejectUnauthenticated(c, "No se encontró token")
 			c.Abort()
@@ -180,7 +182,7 @@ func AuthRequired() gin.HandlerFunc {
 				return
 			}
 
-			_, err = db.GetUserByID(c.Request.Context(), id)
+			user, err := db.GetUserByID(c.Request.Context(), id)
 			if err != nil {
 				RejectUnauthenticated(c, "Usuario inexistente")
 				c.Abort()
@@ -190,6 +192,7 @@ func AuthRequired() gin.HandlerFunc {
 
 			a := &Auth{
 				ID:       id,
+				Email:    user.Email,
 				Username: username,
 				Role:     role,
 				Fullname: fullname,
@@ -229,10 +232,7 @@ func RequireAccessLevel(lv AccessLevel) gin.HandlerFunc {
 		}
 
 		if !authData.HasAccess(lv) {
-			c.JSON(http.StatusForbidden, gin.H{
-				"error":  "acceso denegado",
-				"reason": "Permiso insuficiente",
-			})
+			httpx.Forbidden(c, "Permiso insuficiente")
 			c.Abort()
 			return
 		}
@@ -244,7 +244,7 @@ func RequireAccessLevel(lv AccessLevel) gin.HandlerFunc {
 // OptionalAuth is a middleware that attempts to authenticate but doesn't reject if no auth is present
 func OptionalAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		cookieToken, err := c.Request.Cookie("auth_token")
+		cookieToken, err := c.Request.Cookie(DefaultCookieName)
 		if err != nil {
 			// No auth token, continue without auth
 			c.Next()
@@ -274,6 +274,7 @@ func OptionalAuth() gin.HandlerFunc {
 			if ok1 && ok2 && ok3 && ok4 {
 				a := &Auth{
 					ID:       id,
+					Email:    "",
 					Username: username,
 					Role:     role,
 					Fullname: fullname,
@@ -295,7 +296,7 @@ func OptionalAuth() gin.HandlerFunc {
 // PopulateAuth is kept for backward compatibility with non-Gin handlers
 func PopulateAuth(next AuthedHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		cookieToken, err := r.Cookie("auth_token")
+		cookieToken, err := r.Cookie(DefaultCookieName)
 		var auth = &Auth{}
 		authedReq := r.WithContext(context.WithValue(r.Context(), DefaultAuthCtxKey, auth))
 		defer next(w, authedReq, auth)
@@ -342,9 +343,10 @@ func PopulateAuth(next AuthedHandler) http.HandlerFunc {
 }
 
 func RejectUnauthenticated(c *gin.Context, reason string) {
-	c.JSON(http.StatusUnauthorized, gin.H{
-		"error":  "No autorizado",
-		"reason": reason,
+	c.JSON(http.StatusUnauthorized, httpx.Response{
+		Data:    gin.H{"reason": reason},
+		Error:   "No autorizado",
+		Message: "No autorizado",
 	})
 }
 

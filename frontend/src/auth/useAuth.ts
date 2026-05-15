@@ -1,14 +1,22 @@
 import { queryClient } from "@/queries/queryClient";
+import type { ApiResponse } from "@/types/api";
+import type { User } from "@/types/auth";
 import { useQuery } from "@tanstack/react-query";
+
+interface SessionData {
+    user: User;
+}
 
 export function useAuth() {
     return useQuery({
         queryKey: ["session"],
         queryFn: async () => {
-            return await (await fetch("/api/v1/check-auth", {
+            const response = await fetch("/api/v1/auth/me", {
                 method: "GET",
                 credentials: "include",
-            })).json();
+            });
+
+            return (await response.json()) as ApiResponse<SessionData>;
         },
         retry: false,
         staleTime: 5 * 60 * 1000, // 5 minutes
@@ -21,16 +29,20 @@ export async function checkAuth(): Promise<boolean> {
         const data = await queryClient.fetchQuery({
             queryKey: ["session"],
             queryFn: async () => {
-                const res = await fetch("/api/v1/check-auth", {
+                const res = await fetch("/api/v1/auth/me", {
                     method: "GET",
                     credentials: "include",
                 });
-                return await res.json();
+                const data = (await res.json()) as ApiResponse<SessionData>;
+                return {
+                    data,
+                    ok: res.ok,
+                };
             },
         });
 
-        return data.error === undefined;
-    } catch (error) {
-        return false
+        return data.ok && data.data.error === null;
+    } catch {
+        return false;
     }
 }

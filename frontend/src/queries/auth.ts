@@ -1,4 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
+import type { ApiResponse } from "@/types/api";
+import { getApiError } from "@/types/api";
+import type { User } from "@/types/auth";
 
 export const AuthQueryKeys = {
     auth: () => ["auth"] as const,
@@ -11,6 +14,10 @@ export type QKQueryCheckAuth = typeof AuthQueryKeys.checkAuth;
 export type QKQueryLogin = typeof AuthQueryKeys.login;
 export type QKQueryLogout = typeof AuthQueryKeys.logout;
 
+interface SessionData {
+    user: User;
+}
+
 export const checkAuthOpts = queryOptions({
     queryKey: AuthQueryKeys.checkAuth(),
     queryFn: checkAuth,
@@ -19,13 +26,13 @@ export const checkAuthOpts = queryOptions({
 });
 
 export async function checkAuth() {
-    const response = await fetch("/api/v1/check-auth", {
+    const response = await fetch("/api/v1/auth/me", {
         method: "GET",
         credentials: "include",
     });
-    const data = await response.json();
+    const data = (await response.json()) as ApiResponse<SessionData>;
     if (!response.ok) {
-        throw new Error(data.error || "Error al verificar autenticación");
+        throw new Error(getApiError(data, "Error al verificar autenticación"));
     }
     return data;
 }

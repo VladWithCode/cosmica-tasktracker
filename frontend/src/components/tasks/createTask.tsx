@@ -11,17 +11,15 @@ import {
     DialogTrigger,
 } from "../ui/dialog";
 import { Button } from "../ui/button";
-import { PlusIcon } from "lucide-react";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "../ui/form";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
-import { Collapsible } from "@radix-ui/react-collapsible";
-import { CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
 import { Switch } from "../ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { queryClient } from "@/queries/queryClient";
+import { MaterialIcon } from "../ui/MaterialIcon";
 
 const taskSchema = z
     .object({
@@ -29,10 +27,10 @@ const taskSchema = z
         description: z.string().max(512, "La descripción no puede exceder 512 caracteres"),
         startTime: z.iso.time(),
         endTime: z.iso.time(),
-        duration: z.union([z.number().positive(), z.nan()]).optional(), // Duration in minutes
-        priority: z.number().min(1).max(5).default(3),
-        required: z.boolean().default(false),
-        repeating: z.boolean().default(false),
+        duration: z.union([z.number().positive(), z.nan()]).optional(),
+        priority: z.enum(["urgent", "high", "medium", "low"]),
+        required: z.boolean(),
+        repeating: z.boolean(),
         repeatFrequency: z.union([z.string().optional(), z.literal("")]),
         repeatInterval: z.union([z.number(), z.nan()]).optional(),
         repeatWeekdays: z.union([z.array(z.number()), z.nan()]).optional(),
@@ -40,7 +38,6 @@ const taskSchema = z
     })
     .refine(
         (data) => {
-            // If repeating is true, repeatFrequency is required
             if (data.repeating && !data.repeatFrequency) {
                 return false;
             }
@@ -53,7 +50,6 @@ const taskSchema = z
     )
     .refine(
         (data) => {
-            // If both start and end times are provided, end should be after start
             if (data.startTime && data.endTime) {
                 const [startH, startM] = data.startTime.split(":");
                 const [endH, endM] = data.endTime.split(":");
@@ -82,7 +78,7 @@ export function NewTask() {
             description: "",
             startTime: "",
             endTime: "",
-            priority: 3,
+            priority: "medium",
             required: false,
             repeating: false,
             repeatFrequency: "",
@@ -92,7 +88,7 @@ export function NewTask() {
         },
     });
     const createTask = useMutation({
-        mutationFn: (data: TaskFormData) => fetch("http://localhost:8080/api/v1/tasks", {
+        mutationFn: (data: TaskFormData) => fetch("/api/v1/tasks", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -109,7 +105,6 @@ export function NewTask() {
     const startTime = form.watch("startTime");
     const endTime = form.watch("endTime");
 
-    // Calculate duration when both times are selected
     useEffect(() => {
         if (startTime && endTime) {
             const start = new Date(startTime);
@@ -130,9 +125,17 @@ export function NewTask() {
         const end = new Date();
         start.setHours(parseInt(startH), parseInt(startM), 0, 0);
         end.setHours(parseInt(endH), parseInt(endM), 0, 0);
-        data.startTime = start.toISOString();
-        data.endTime = end.toISOString();
-        createTask.mutate(data, {
+        const payload = {
+            ...data,
+            startTime: start.toISOString(),
+            endTime: end.toISOString(),
+            isRequired: data.required,
+            frequency: data.repeating ? "daily" : "custom",
+            frequencyConfig: data.repeating
+                ? { legacyRepeatFrequency: data.repeatFrequency }
+                : { singleInstance: true },
+        };
+        createTask.mutate(payload, {
             onSuccess: () => {
                 toast.success("La tarea se creó correctamente");
                 setDialogOpen(false);
@@ -146,13 +149,15 @@ export function NewTask() {
 
     return (
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-x-2 max-w-full">
-                <DialogTrigger asChild>
-                    <Button size="icon" className="bg-indigo-900 rounded-full p-6">
-                        <PlusIcon className="size-6" />
-                    </Button>
-                </DialogTrigger>
-            </div>
+            <DialogTrigger asChild>
+                <Button
+                    aria-label="Crear tarea"
+                    className="fixed bottom-24 right-6 z-40 h-14 w-14 rounded-full border border-primary-container/50 bg-gradient-to-br from-primary to-primary-dim text-on-primary shadow-[0_15px_40px_rgba(175,162,255,0.35)] transition-all duration-300 hover:scale-105 active:scale-95 md:bottom-10 md:right-10"
+                    size="icon"
+                >
+                    <MaterialIcon name="add" className="text-3xl" />
+                </Button>
+            </DialogTrigger>
             <DialogContent className="flex flex-col">
                 <DialogHeader>
                     <DialogTitle>Nueva tarea</DialogTitle>
@@ -296,19 +301,4 @@ export function NewTask() {
             </DialogContent>
         </Dialog>
     );
-}
-
-// @ts-ignore
-// not used yet
-function moreOptions() {
-    return (
-        <Collapsible open={true}>
-            <CollapsibleTrigger asChild>
-                <Button size="sm" variant="ghost" className="px-0">
-                    Más opciones
-                </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent></CollapsibleContent>
-        </Collapsible>
-    )
 }

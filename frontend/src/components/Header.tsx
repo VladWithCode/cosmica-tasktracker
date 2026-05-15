@@ -1,13 +1,5 @@
-import { Link } from "@tanstack/react-router";
+import { TopAppBar } from "@/components/layout/TopAppBar";
 
 export default function Header() {
-    return (
-        <header className="p-2 flex gap-2 bg-white text-black justify-between">
-            <nav className="flex flex-row">
-                <div className="px-2 font-bold">
-                    <Link to="/">Home</Link>
-                </div>
-            </nav>
-        </header>
-    );
+    return <TopAppBar />;
 }

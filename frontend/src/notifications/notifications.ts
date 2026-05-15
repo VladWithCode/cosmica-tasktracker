@@ -1,174 +1,236 @@
-import { useMutation } from "@tanstack/react-query";
 import { create } from "zustand";
+import type { ApiResponse } from "@/types/api";
+import { getApiError } from "@/types/api";
 
-type NotificationState = {
-    enabled: boolean;
+type NotificationPermissionState = NotificationPermission | "unsupported";
+
+interface VapidKeyData {
+    publicKey?: string;
+    public_key?: string;
+}
+
+interface NotificationState {
+    error: string | null;
+    isBusy: boolean;
     isSupported: boolean;
     isSubscribed: boolean;
+    permission: NotificationPermissionState;
     subscription: PushSubscription | null;
-    vapidKey: string;
-    subscribe: (publicKey: string) => Promise<PushSubscription>;
-    unsubscribe: () => Promise<void>;
+    checkSubscription: () => Promise<void>;
     requestPermission: () => Promise<NotificationPermission>;
-};
+    sendTestNotification: () => Promise<number>;
+    subscribe: () => Promise<PushSubscription>;
+    unsubscribe: () => Promise<void>;
+}
 
 export const useNotifications = create<NotificationState>((set, get) => {
-    const isSupported = "Notification" in window &&
-        'serviceWorker' in navigator &&
-        'PushManager' in window;
-
-    let permission: NotificationPermission | null = null
-
-    if (isSupported && permission !== "granted") {
-        Notification.requestPermission().then(newPerm => {
-            permission = newPerm;
-        });
-    }
+    const isSupported = canUsePushNotifications();
+    const permission: NotificationPermissionState = isSupported ? Notification.permission : "unsupported";
 
     return {
-        enabled: permission === "granted",
+        error: null,
+        isBusy: false,
         isSupported,
         isSubscribed: false,
+        permission,
         subscription: null,
-        vapidKey: import.meta.env.VITE_VAPID_PUBLIC_KEY,
         checkSubscription: async () => {
-            try {
-                const registration = await navigator.serviceWorker.ready;
-                const subscription = await registration.pushManager.getSubscription();
+            if (!canUsePushNotifications()) {
                 set({
-                    isSubscribed: !!subscription,
-                    subscription: subscription,
+                    isSupported: false,
+                    isSubscribed: false,
+                    permission: "unsupported",
+                    subscription: null,
                 });
-            } catch (error) {
-                console.error('Error checking subscription:', error);
-            }
-        },
-        subscribe: async (publicKey) => {
-            const state = get();
-            if (state.isSubscribed) {
                 return;
             }
 
-            if (!state.isSupported) {
-                throw new Error('Notifications not supported');
-            }
-            if (!state.enabled) {
-                const permission = await state.requestPermission();
-                if (permission !== 'granted') {
-                    throw new Error('Notification permission denied');
-                }
-            }
-
-            const registration = await navigator.serviceWorker.ready;
-
-            try {
-                const subscription = await registration.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: urlBase64ToUint8Array(publicKey),
-                });
-
-                set({
-                    isSubscribed: true,
-                    subscription,
-                });
-
-                fetch('/api/v1/notifications/subscribe', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify(subscription),
-                })
-                    .then(res => res.json())
-                    .then(data => console.log(data))
-                    .catch(console.error);
-
-                return subscription;
-            } catch (error) {
-                console.error('Error subscribing:', error);
-                return null;
-            }
-        },
-
-        unsubscribe: async (): Promise<void> => {
-            const state = get();
-            if (!state.subscription) {
-                throw new Error('No active subscription');
-            }
-
-            await state.subscription.unsubscribe();
-
+            const registration = await getServiceWorkerRegistration();
+            const subscription = await registration.pushManager.getSubscription();
             set({
-                isSubscribed: false,
-                subscription: null,
+                error: null,
+                isSupported: true,
+                isSubscribed: Boolean(subscription),
+                permission: Notification.permission,
+                subscription,
             });
         },
         requestPermission: async () => {
-            const state = get();
-            if (!state.isSupported) {
-                throw new Error('Notifications not supported');
+            if (!canUsePushNotifications()) {
+                set({ error: "Tu navegador no soporta notificaciones web", permission: "unsupported" });
+                throw new Error("Tu navegador no soporta notificaciones web");
             }
 
-            const permission = await Notification.requestPermission();
-            set({ enabled: permission === "granted" });
-            return permission;
+            const permissionResult = await Notification.requestPermission();
+            set({ permission: permissionResult });
+            return permissionResult;
+        },
+        sendTestNotification: async () => {
+            set({ error: null, isBusy: true });
+            try {
+                const response = await fetch("/api/v1/notifications/test", {
+                    credentials: "include",
+                    method: "POST",
+                });
+                const data = (await response.json()) as ApiResponse<{ sent_count: number }>;
+                if (!response.ok) {
+                    throw new Error(getApiError(data, "No se pudo enviar la notificación de prueba"));
+                }
+                return data.data?.sent_count ?? 0;
+            } catch (error) {
+                const message = toErrorMessage(error);
+                set({ error: message });
+                throw new Error(message);
+            } finally {
+                set({ isBusy: false });
+            }
+        },
+        subscribe: async () => {
+            set({ error: null, isBusy: true });
+            try {
+                const state = get();
+                if (!state.isSupported || !canUsePushNotifications()) {
+                    throw new Error("Tu navegador no soporta notificaciones web");
+                }
+
+                let permissionResult = Notification.permission;
+                if (permissionResult === "default") {
+                    permissionResult = await state.requestPermission();
+                }
+                if (permissionResult !== "granted") {
+                    throw new Error("El permiso de notificaciones fue denegado");
+                }
+
+                const publicKey = await fetchVapidPublicKey();
+                const registration = await getServiceWorkerRegistration();
+                const existingSubscription = await registration.pushManager.getSubscription();
+                const subscription =
+                    existingSubscription ??
+                    (await registration.pushManager.subscribe({
+                        applicationServerKey: urlBase64ToUint8Array(publicKey),
+                        userVisibleOnly: true,
+                    }));
+
+                await saveSubscription(subscription);
+                set({
+                    error: null,
+                    isSubscribed: true,
+                    permission: Notification.permission,
+                    subscription,
+                });
+
+                return subscription;
+            } catch (error) {
+                const message = toErrorMessage(error);
+                set({ error: message });
+                throw new Error(message);
+            } finally {
+                set({ isBusy: false });
+            }
+        },
+        unsubscribe: async () => {
+            set({ error: null, isBusy: true });
+            try {
+                const registration = canUsePushNotifications() ? await getServiceWorkerRegistration() : null;
+                const activeSubscription = get().subscription ?? (await registration?.pushManager.getSubscription()) ?? null;
+                if (!activeSubscription) {
+                    set({ isSubscribed: false, subscription: null });
+                    return;
+                }
+
+                await deleteSubscription(activeSubscription.endpoint);
+                await activeSubscription.unsubscribe();
+                set({
+                    error: null,
+                    isSubscribed: false,
+                    permission: canUsePushNotifications() ? Notification.permission : "unsupported",
+                    subscription: null,
+                });
+            } catch (error) {
+                const message = toErrorMessage(error);
+                set({ error: message });
+                throw new Error(message);
+            } finally {
+                set({ isBusy: false });
+            }
         },
     };
 });
 
-// Hook for managing subscription on the server
-export function useNotificationSubscription() {
-    const saveSubscription = useMutation({
-        mutationFn: async (subscription: PushSubscription) => {
-            const response = await fetch('/api/v1/notifications/subscribe', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify(subscription),
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to save subscription');
-            }
-
-            return response.json();
-        },
+async function fetchVapidPublicKey(): Promise<string> {
+    const response = await fetch("/api/v1/notifications/vapid-public-key", {
+        credentials: "include",
+        method: "GET",
     });
+    const data = (await response.json()) as ApiResponse<VapidKeyData>;
+    if (!response.ok) {
+        throw new Error(getApiError(data, "Web Push no está configurado"));
+    }
 
-    const removeSubscription = useMutation({
-        mutationFn: async (endpoint: string) => {
-            const response = await fetch('/api/v1/notifications/unsubscribe', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ endpoint }),
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to remove subscription');
-            }
-
-            return response.json();
-        },
-    });
-
-    return {
-        saveSubscription,
-        removeSubscription,
-    };
+    const publicKey = data.data?.publicKey ?? data.data?.public_key;
+    if (!publicKey) {
+        throw new Error("El servidor no devolvió la llave pública VAPID");
+    }
+    return publicKey;
 }
 
-// Convert VAPID public key to Uint8Array
-export function urlBase64ToUint8Array(base64String: string): Uint8Array {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding)
-        .replace(/\-/g, '+')
-        .replace(/_/g, '/');
-
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-
-    for (let i = 0; i < rawData.length; ++i) {
-        outputArray[i] = rawData.charCodeAt(i);
+async function saveSubscription(subscription: PushSubscription): Promise<void> {
+    const response = await fetch("/api/v1/notifications/subscriptions", {
+        body: JSON.stringify(subscription),
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+    });
+    const data = (await response.json()) as ApiResponse<unknown>;
+    if (!response.ok) {
+        throw new Error(getApiError(data, "No se pudo guardar la suscripción"));
     }
-    return outputArray;
+}
+
+async function deleteSubscription(endpoint: string): Promise<void> {
+    const response = await fetch("/api/v1/notifications/subscriptions", {
+        body: JSON.stringify({ endpoint }),
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        method: "DELETE",
+    });
+    const data = (await response.json()) as ApiResponse<unknown>;
+    if (!response.ok) {
+        throw new Error(getApiError(data, "No se pudo eliminar la suscripción"));
+    }
+}
+
+async function getServiceWorkerRegistration(): Promise<ServiceWorkerRegistration> {
+    const existingRegistration = await navigator.serviceWorker.getRegistration();
+    if (existingRegistration) {
+        return existingRegistration;
+    }
+
+    return navigator.serviceWorker.register("/notif_sw.js");
+}
+
+function canUsePushNotifications() {
+    return (
+        typeof window !== "undefined" &&
+        "Notification" in window &&
+        "serviceWorker" in navigator &&
+        "PushManager" in window
+    );
+}
+
+function toErrorMessage(error: unknown) {
+    return error instanceof Error ? error.message : "Error inesperado de notificaciones";
+}
+
+export function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
+    const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+    const rawData = window.atob(base64);
+    const buffer = new ArrayBuffer(rawData.length);
+    const outputArray = new Uint8Array(buffer);
+
+    for (let index = 0; index < rawData.length; index++) {
+        outputArray[index] = rawData.charCodeAt(index);
+    }
+    return buffer;
 }

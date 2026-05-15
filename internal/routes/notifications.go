@@ -1,153 +1,225 @@
 package routes
 
 import (
+	"errors"
 	"log"
 	"net/http"
-	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/vladwithcode/tasktracker/internal/auth"
 	"github.com/vladwithcode/tasktracker/internal/db"
+	"github.com/vladwithcode/tasktracker/internal/httpx"
 	"github.com/vladwithcode/tasktracker/internal/notifications"
 )
 
-// Add these routes to your router
-func registerNotificationRoutes(router *gin.RouterGroup) {
+type pushSubscriptionRequest struct {
+	Endpoint string `json:"endpoint"`
+	Keys     struct {
+		P256dh string `json:"p256dh"`
+		Auth   string `json:"auth"`
+	} `json:"keys"`
+}
+
+type unsubscribeRequest struct {
+	Endpoint string `json:"endpoint"`
+}
+
+func registerPublicNotificationRoutes(router *gin.RouterGroup) {
+	router.GET("/notifications/vapid-public-key", GetVAPIDPublicKey)
+	router.GET("/notifications/vapid-key", GetVAPIDPublicKey)
 	router.GET("/vapid-key", GetVAPIDPublicKey)
+}
+
+func registerNotificationRoutes(router *gin.RouterGroup) {
+	router.GET("/notifications/inbox", GetNotificationInbox)
+	router.POST("/notifications/inbox/:id/read", MarkNotificationInboxItemRead)
+	router.POST("/notifications/subscriptions", SubscribeToPush)
+	router.DELETE("/notifications/subscriptions", UnsubscribeFromPush)
+	router.POST("/notifications/test", SendTestNotification)
+
+	// Legacy aliases kept for the existing frontend code while the canonical
+	// `/notifications/subscriptions` path rolls out.
 	router.POST("/notifications/subscribe", SubscribeToPush)
 	router.POST("/notifications/unsubscribe", UnsubscribeFromPush)
-	router.POST("/notifications/test", SendTestNotification)
 }
 
 func GetVAPIDPublicKey(c *gin.Context) {
-	publicKey := os.Getenv("VAPID_PUBLIC_KEY")
-	if publicKey == "" {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "VAPID public key not configured",
-		})
+	config := notifications.LoadConfigFromEnv()
+	if !config.HasPublicKey() {
+		httpx.ErrorCode(c, http.StatusServiceUnavailable, "web_push_not_configured", "Web Push no está configurado")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"publicKey": publicKey,
-	})
+	httpx.OK(c, gin.H{
+		"publicKey":  config.PublicKey,
+		"public_key": config.PublicKey,
+	}, "VAPID public key retrieved")
 }
 
 func SubscribeToPush(c *gin.Context) {
 	authData, err := auth.GetAuth(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-		log.Printf("unauthorized: %v", err)
+		httpx.Unauthorized(c, "No autorizado")
+		log.Printf("unauthorized push subscribe: %v", err)
 		return
 	}
 
-	var subscription db.PushSubscription
-	if err := c.ShouldBindJSON(&subscription); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
-		log.Printf("invalid request: %v", err)
+	var request pushSubscriptionRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		httpx.BadRequest(c, "Payload de suscripción inválido")
+		log.Printf("invalid push subscribe request: %v", err)
 		return
 	}
 
-	conn, err := db.GetConn(c.Request.Context())
+	subscription, err := request.toDBSubscription()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
-		log.Printf("database error: %v", err)
-		return
-	}
-	defer conn.Release()
-
-	err = db.SaveSubscription(c.Request.Context(), authData.ID, &subscription)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save subscription"})
-		log.Printf("failed to save subscription: %v", err)
+		httpx.BadRequest(c, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "subscription saved",
-	})
+	if err := db.SaveSubscription(c.Request.Context(), authData.ID, subscription); err != nil {
+		httpx.ServerError(c, "No se pudo guardar la suscripción")
+		log.Printf("failed to save push subscription: %v", err)
+		return
+	}
+
+	httpx.OK(c, gin.H{"subscription": subscription}, "Suscripción guardada")
 }
 
 func UnsubscribeFromPush(c *gin.Context) {
 	authData, err := auth.GetAuth(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		httpx.Unauthorized(c, "No autorizado")
 		return
 	}
 
-	var request struct {
-		Endpoint string `json:"endpoint" binding:"required"`
-	}
-
+	var request unsubscribeRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		httpx.BadRequest(c, "Payload de desuscripción inválido")
+		return
+	}
+	endpoint := strings.TrimSpace(request.Endpoint)
+	if endpoint == "" {
+		httpx.BadRequest(c, "Endpoint requerido")
 		return
 	}
 
-	conn, err := db.GetConn(c.Request.Context())
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
-		return
-	}
-	defer conn.Release()
-
-	err = db.DeleteSubscription(c.Request.Context(), authData.ID, request.Endpoint)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to remove subscription"})
+	if err := db.DeleteSubscription(c.Request.Context(), authData.ID, endpoint); err != nil {
+		httpx.ServerError(c, "No se pudo eliminar la suscripción")
+		log.Printf("failed to remove push subscription: %v", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "subscription removed",
-	})
+	httpx.OK(c, gin.H{}, "Suscripción eliminada")
 }
 
 func SendTestNotification(c *gin.Context) {
 	authData, err := auth.GetAuth(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		httpx.Unauthorized(c, "No autorizado")
 		return
 	}
 
-	conn, err := db.GetConn(c.Request.Context())
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
+	config := notifications.LoadConfigFromEnv()
+	if !config.CanSend() {
+		httpx.ErrorCode(c, http.StatusServiceUnavailable, "web_push_not_configured", "Web Push no está configurado")
 		return
 	}
-	defer conn.Release()
 
 	payload := &notifications.NotificationPayload{
-		Title:              "Test Notification",
-		Body:               "This is a test notification from Task Tracker",
+		Title:              "Routine Ritual",
+		Body:               "Notificación de prueba activada correctamente.",
 		Icon:               "/icon-192x192.png",
 		Badge:              "/badge-72x72.png",
 		Tag:                "test-notification",
-		RequireInteraction: true,
+		RequireInteraction: false,
 		URL:                "/tasks",
 		Actions: []notifications.NotificationAction{
-			{Action: "view", Title: "View Tasks"},
+			{Action: "view", Title: "Ver tareas"},
 		},
 	}
 
-	vapidPrivateKey := os.Getenv("VAPID_PRIVATE_KEY")
-	vapidPublicKey := os.Getenv("VAPID_PUBLIC_KEY")
-	subscriberEmail := os.Getenv("VAPID_SUBSCRIBER_EMAIL")
-
-	err = notifications.SendNotificationToUser(
+	sentCount, err := notifications.SendNotificationToUserWithConfig(
 		c.Request.Context(),
 		authData.ID,
 		payload,
-		vapidPrivateKey,
-		vapidPublicKey,
-		subscriberEmail,
+		config,
 	)
-
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to send notification"})
+		if errors.Is(err, notifications.ErrWebPushNotConfigured) {
+			httpx.ErrorCode(c, http.StatusServiceUnavailable, "web_push_not_configured", "Web Push no está configurado")
+			return
+		}
+		httpx.ServerError(c, "No se pudo enviar la notificación de prueba")
+		log.Printf("failed to send test notification: %v", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "test notification sent",
-	})
+	httpx.OK(c, gin.H{"sent_count": sentCount}, "Notificación de prueba enviada")
+}
+
+func GetNotificationInbox(c *gin.Context) {
+	authData, err := auth.GetAuth(c)
+	if err != nil {
+		httpx.Unauthorized(c, "No autorizado")
+		return
+	}
+
+	items, err := db.ListNotificationInbox(c.Request.Context(), authData.ID)
+	if err != nil {
+		httpx.ServerError(c, "No se pudo cargar la bandeja")
+		log.Printf("failed to list notification inbox: %v", err)
+		return
+	}
+	if items == nil {
+		items = []*db.NotificationInboxItem{}
+	}
+
+	httpx.OK(c, gin.H{"items": items}, "Bandeja recuperada")
+}
+
+func MarkNotificationInboxItemRead(c *gin.Context) {
+	authData, err := auth.GetAuth(c)
+	if err != nil {
+		httpx.Unauthorized(c, "No autorizado")
+		return
+	}
+
+	ok, err := db.MarkNotificationInboxItemRead(c.Request.Context(), authData.ID, c.Param("id"))
+	if err != nil {
+		httpx.ServerError(c, "No se pudo marcar como leído")
+		log.Printf("failed to mark inbox item read: %v", err)
+		return
+	}
+	if !ok {
+		httpx.NotFound(c, "Notificación no encontrada")
+		return
+	}
+
+	httpx.OK(c, gin.H{}, "Notificación marcada como leída")
+}
+
+func (r pushSubscriptionRequest) toDBSubscription() (*db.PushSubscription, error) {
+	endpoint := strings.TrimSpace(r.Endpoint)
+	p256dh := strings.TrimSpace(r.Keys.P256dh)
+	authKey := strings.TrimSpace(r.Keys.Auth)
+
+	if endpoint == "" {
+		return nil, errors.New("Endpoint requerido")
+	}
+	if p256dh == "" {
+		return nil, errors.New("Key p256dh requerida")
+	}
+	if authKey == "" {
+		return nil, errors.New("Key auth requerida")
+	}
+
+	return &db.PushSubscription{
+		Endpoint: endpoint,
+		Keys: db.Keys{
+			Auth:   authKey,
+			P256dh: p256dh,
+		},
+	}, nil
 }
