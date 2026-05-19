@@ -155,7 +155,7 @@ func CreateSharingGrant(c *gin.Context) {
 	if invErr := db.CreateSharingInvitation(c.Request.Context(), createdGrant.ID, authData.ID, grantee.ID); invErr != nil {
 		log.Printf("failed to create sharing invitation for grant %s: %v", createdGrant.ID, invErr)
 	} else {
-		go sendSharingInvitationPush(c.Request.Context(), createdGrant)
+		go sendSharingInvitationPush(context.WithoutCancel(c.Request.Context()), createdGrant)
 	}
 
 	httpx.Created(c, gin.H{"grant": createdGrant}, "Permiso creado")
