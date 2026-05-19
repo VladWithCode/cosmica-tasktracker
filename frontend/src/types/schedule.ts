@@ -47,6 +47,8 @@ export interface CreateScheduleInput {
     description?: string;
     schedule_start_time?: string | null;
     schedule_end_time?: string | null;
+    start_date?: string | null;
+    end_date?: string | null;
     startDate?: string | null;
     endDate?: string | null;
     duration_minutes?: number | null;
