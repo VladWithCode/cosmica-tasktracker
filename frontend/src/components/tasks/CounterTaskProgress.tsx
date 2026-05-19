@@ -92,9 +92,12 @@ export function CounterTaskProgress({
     const taskCompleted = status === "completed" || safeCurrent >= normalizedTarget;
     const visualLimit = Math.min(normalizedTarget, MAX_VISUAL_UNITS);
 
+    const usesLitros = water && [description, title, category].some(
+        (field) => typeof field === "string" && field.toLowerCase().includes("litro"),
+    );
     const iconName = water ? "local_drink" : "circle";
-    const unitLabel = water ? "Botella" : "Unidad";
-    const summaryLabel = water ? "litros" : "unidades";
+    const unitLabel = water ? (usesLitros ? "Litro" : "Vaso") : "Unidad";
+    const summaryLabel = water ? (usesLitros ? "litros" : "vasos") : "unidades";
 
     return (
         <section

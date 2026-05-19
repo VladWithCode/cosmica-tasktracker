@@ -13,13 +13,22 @@ import (
 type mockUserRepository struct {
 	created       *db.User
 	emailTaken    bool
+	stubUser      *db.User
 	usernameTaken bool
+	updatedHash   string
 }
 
 func (m *mockUserRepository) CreateUser(_ context.Context, user *db.User) error {
 	userCopy := *user
 	m.created = &userCopy
 	return nil
+}
+
+func (m *mockUserRepository) GetByID(_ context.Context, _ string) (*db.User, error) {
+	if m.stubUser != nil {
+		return m.stubUser, nil
+	}
+	return nil, errors.New("not found")
 }
 
 func (m *mockUserRepository) GetByUsername(_ context.Context, _ string) (*db.User, error) {
@@ -32,6 +41,11 @@ func (m *mockUserRepository) IsEmailTaken(_ context.Context, _ string) (bool, er
 
 func (m *mockUserRepository) IsUsernameTaken(_ context.Context, _ string) (bool, error) {
 	return m.usernameTaken, nil
+}
+
+func (m *mockUserRepository) UpdatePassword(_ context.Context, _ string, hashedPassword string) error {
+	m.updatedHash = hashedPassword
+	return nil
 }
 
 func TestRegisterValidatesUsername(t *testing.T) {
@@ -183,5 +197,82 @@ func assertFieldError(t *testing.T, err error, field string) {
 	}
 	if validationError.Fields[field] == "" {
 		t.Fatalf("expected %s field error, got %#v", field, validationError.Fields)
+	}
+}
+
+func makeUserWithPassword(t *testing.T, rawPassword string) *db.User {
+	t.Helper()
+	hash, err := bcrypt.GenerateFromPassword([]byte(rawPassword), 4)
+	if err != nil {
+		t.Fatalf("bcrypt failed: %v", err)
+	}
+	return &db.User{ID: "user-1", Username: "tester", Password: string(hash)}
+}
+
+func TestChangePasswordRejectsWrongCurrentPassword(t *testing.T) {
+	repo := &mockUserRepository{stubUser: makeUserWithPassword(t, "Current1234")}
+	service := NewService(repo)
+
+	err := service.ChangePassword(context.Background(), ChangePasswordInput{
+		CurrentPassword: "WrongPass9",
+		NewPassword:     "NewPass5678",
+		UserID:          "user-1",
+	})
+	if !errors.Is(err, ErrWrongCurrentPassword) {
+		t.Fatalf("expected ErrWrongCurrentPassword, got %v", err)
+	}
+	if repo.updatedHash != "" {
+		t.Fatal("password should not be updated on wrong current password")
+	}
+}
+
+func TestChangePasswordRejectsWeakNewPassword(t *testing.T) {
+	repo := &mockUserRepository{stubUser: makeUserWithPassword(t, "Current1234")}
+	service := NewService(repo)
+
+	for _, bad := range []string{"short1", "alllowercase", strings.Repeat("a", 129) + "1"} {
+		err := service.ChangePassword(context.Background(), ChangePasswordInput{
+			CurrentPassword: "Current1234",
+			NewPassword:     bad,
+			UserID:          "user-1",
+		})
+		assertFieldError(t, err, "password")
+	}
+	if repo.updatedHash != "" {
+		t.Fatal("password should not be updated on validation failure")
+	}
+}
+
+func TestChangePasswordUpdatesHash(t *testing.T) {
+	repo := &mockUserRepository{stubUser: makeUserWithPassword(t, "Current1234")}
+	service := NewService(repo)
+
+	err := service.ChangePassword(context.Background(), ChangePasswordInput{
+		CurrentPassword: "Current1234",
+		NewPassword:     "NewPass5678",
+		UserID:          "user-1",
+	})
+	if err != nil {
+		t.Fatalf("ChangePassword() error = %v", err)
+	}
+	if repo.updatedHash == "" {
+		t.Fatal("expected password hash to be stored")
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(repo.updatedHash), []byte("NewPass5678")); err != nil {
+		t.Fatalf("stored hash does not match new password: %v", err)
+	}
+}
+
+func TestChangePasswordRejectsUnknownUser(t *testing.T) {
+	repo := &mockUserRepository{} // stubUser nil → GetByID returns error
+	service := NewService(repo)
+
+	err := service.ChangePassword(context.Background(), ChangePasswordInput{
+		CurrentPassword: "Current1234",
+		NewPassword:     "NewPass5678",
+		UserID:          "no-such-user",
+	})
+	if !errors.Is(err, ErrInvalidCredentials) {
+		t.Fatalf("expected ErrInvalidCredentials, got %v", err)
 	}
 }

@@ -213,6 +213,12 @@ function ScheduleCard({
                                 {schedule.category}
                             </span>
                         ) : null}
+                        {schedule.frequencyConfig?.waterReminder ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-tertiary/15 px-2 py-0.5 font-label text-[10px] font-extrabold uppercase tracking-widest text-tertiary">
+                                <MaterialIcon name="notifications_active" className="text-xs" />
+                                Recordatorio
+                            </span>
+                        ) : null}
                     </div>
                     <h3 className="mt-2 break-words font-headline text-lg font-bold text-on-surface">
                         {schedule.title || "(sin título)"}

@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useRouter } from "@tanstack/react-router";
 import { toast } from "sonner";
@@ -6,6 +6,7 @@ import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { useProfileStats } from "@/hooks/useProfileStats";
 import { queryClient } from "@/queries/queryClient";
 import { getProfile, logoutProfile, updateProfile } from "@/services/profile";
+import { changePassword } from "@/services/auth";
 import type { UserProfile } from "@/types/profile";
 import { cn } from "@/lib/utils";
 import { NotificationSettings } from "@/notifications/notificationSettings";
@@ -164,11 +165,7 @@ export function ProfilePage() {
                             Security
                         </h3>
                         <div className="space-y-4">
-                            <ProfileActionButton
-                                icon="lock"
-                                label="Change Password"
-                                onClick={() => toast.info("Cambio de contraseña pendiente de endpoint")}
-                            />
+                            <ChangePasswordForm />
                             <ProfileActionButton
                                 icon="notifications"
                                 label="Notification Preferences"
@@ -351,6 +348,145 @@ function ProfileErrorState({ error }: { error: Error | null }) {
                 <p>{error?.message || "No se pudo cargar el perfil"}</p>
             </div>
         </section>
+    );
+}
+
+function ChangePasswordForm() {
+    const [open, setOpen] = useState(false);
+    const [currentPassword, setCurrentPassword] = useState("");
+    const [newPassword, setNewPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [formError, setFormError] = useState("");
+    const currentRef = useRef<HTMLInputElement>(null);
+
+    const changePasswordMutation = useMutation({
+        mutationFn: changePassword,
+        onSuccess: () => {
+            toast.success("Contraseña actualizada");
+            setOpen(false);
+            setCurrentPassword("");
+            setNewPassword("");
+            setConfirmPassword("");
+            setFormError("");
+        },
+        onError: (error) => {
+            setFormError(error.message || "No se pudo actualizar la contraseña");
+        },
+    });
+
+    const handleSubmit = (event: React.FormEvent) => {
+        event.preventDefault();
+        setFormError("");
+        if (newPassword !== confirmPassword) {
+            setFormError("Las contraseñas nuevas no coinciden");
+            return;
+        }
+        if (newPassword.length < 8) {
+            setFormError("La nueva contraseña debe tener al menos 8 caracteres");
+            return;
+        }
+        changePasswordMutation.mutate({
+            current_password: currentPassword,
+            new_password: newPassword,
+        });
+    };
+
+    const toggle = () => {
+        setOpen((prev) => {
+            if (!prev) {
+                setTimeout(() => currentRef.current?.focus(), 50);
+            }
+            return !prev;
+        });
+        setFormError("");
+    };
+
+    return (
+        <div className="rounded-lg border border-outline-variant/15 bg-surface-container-lowest">
+            <button
+                className="group flex w-full items-center justify-between px-4 py-4 text-sm font-semibold text-on-surface transition-all duration-300 hover:bg-surface-container-high active:scale-[0.98]"
+                onClick={toggle}
+                type="button"
+            >
+                <span className="flex items-center">
+                    <MaterialIcon name="lock" className="mr-3 text-on-surface-variant transition-colors group-hover:text-primary" />
+                    Change Password
+                </span>
+                <MaterialIcon name={open ? "expand_less" : "chevron_right"} className="text-on-surface-variant" />
+            </button>
+
+            {open ? (
+                <form className="border-t border-outline-variant/10 px-4 pb-4 pt-3 space-y-3" onSubmit={handleSubmit}>
+                    {formError ? (
+                        <p className="rounded-lg bg-error-container/10 px-3 py-2 text-xs font-semibold text-error">
+                            {formError}
+                        </p>
+                    ) : null}
+                    <PasswordField
+                        inputRef={currentRef}
+                        label="Contraseña actual"
+                        value={currentPassword}
+                        onChange={setCurrentPassword}
+                    />
+                    <PasswordField
+                        label="Nueva contraseña"
+                        value={newPassword}
+                        onChange={setNewPassword}
+                    />
+                    <PasswordField
+                        label="Confirmar nueva contraseña"
+                        value={confirmPassword}
+                        onChange={setConfirmPassword}
+                    />
+                    <div className="flex gap-2 pt-1">
+                        <button
+                            className="flex-1 rounded-full border border-outline-variant/15 bg-surface-container-high px-4 py-2 text-sm font-bold text-on-surface transition-all duration-300 hover:-translate-y-0.5 active:scale-95"
+                            onClick={() => setOpen(false)}
+                            type="button"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            className="flex-1 rounded-full bg-gradient-to-r from-primary to-primary-dim px-4 py-2 text-sm font-bold text-on-primary shadow-[0_8px_20px_rgba(175,162,255,0.28)] transition-all duration-300 hover:-translate-y-0.5 active:scale-95 disabled:opacity-60"
+                            disabled={changePasswordMutation.isPending}
+                            type="submit"
+                        >
+                            {changePasswordMutation.isPending ? "Guardando..." : "Guardar"}
+                        </button>
+                    </div>
+                </form>
+            ) : null}
+        </div>
+    );
+}
+
+function PasswordField({
+    inputRef,
+    label,
+    onChange,
+    value,
+}: {
+    inputRef?: React.RefObject<HTMLInputElement | null>;
+    label: string;
+    onChange: (value: string) => void;
+    value: string;
+}) {
+    const id = useId();
+    return (
+        <label className="block space-y-1.5" htmlFor={id}>
+            <span className="font-label text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                {label}
+            </span>
+            <input
+                className="block w-full rounded-lg border border-outline-variant/15 bg-surface-container-lowest px-3 py-2.5 text-sm font-semibold text-on-surface outline-none transition-colors placeholder:text-on-surface-variant/50 focus:border-primary focus:ring-1 focus:ring-primary"
+                id={id}
+                onChange={(e) => onChange(e.target.value)}
+                ref={inputRef}
+                required
+                type="password"
+                value={value}
+            />
+        </label>
     );
 }
 

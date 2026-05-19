@@ -1,6 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { useCreateSchedule } from "@/hooks/useCreateSchedule";
@@ -81,12 +82,17 @@ export function TaskNewPage() {
     });
     const values = watch();
 
-    const applyWaterPreset = () => {
+    const [waterUnit, setWaterUnit] = useState<"vasos" | "litros">("vasos");
+    const [waterReminder, setWaterReminder] = useState(false);
+
+    const applyWaterPreset = (unit: "vasos" | "litros" = waterUnit) => {
+        const defaultTarget = unit === "litros" ? 2 : 8;
+        const desc = unit === "litros" ? "Meta: litros de agua al día" : "";
         setValue("title", "Tomar agua", { shouldDirty: true });
         setValue("category", "Hidratación", { shouldDirty: true });
-        setValue("description", "", { shouldDirty: true });
+        setValue("description", desc, { shouldDirty: true });
         setValue("scheduleType", "counter", { shouldDirty: true });
-        setValue("target_count", 8, { shouldDirty: true });
+        setValue("target_count", defaultTarget, { shouldDirty: true });
         setValue("repeat_pattern", "daily", { shouldDirty: true });
         setValue("priority_level", "medium", { shouldDirty: true });
         setValue("is_required", false, { shouldDirty: true });
@@ -100,8 +106,11 @@ export function TaskNewPage() {
         setValue("repeat_weekdays", next, { shouldDirty: true, shouldValidate: true });
     };
 
+    const isWaterPreset =
+        values.title === "Tomar agua" && values.category === "Hidratación";
+
     const submit = (data: ScheduleFormValues) => {
-        const payload = buildPayload(data);
+        const payload = buildPayload(data, isWaterPreset ? { unit: waterUnit, reminder: waterReminder } : undefined);
         createScheduleMutation.mutate(payload);
     };
 
@@ -129,32 +138,77 @@ export function TaskNewPage() {
                     <p className="mb-3 font-label text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
                         Presets rápidos
                     </p>
-                    <button
-                        className={cn(
-                            "group flex w-full items-center gap-3 rounded-xl border border-outline-variant/15 bg-surface-container-lowest px-4 py-3 text-left transition-all duration-300 hover:-translate-y-0.5 active:scale-95",
-                            values.title === "Tomar agua" &&
-                                values.category === "Hidratación" &&
-                                "border-tertiary/30 bg-tertiary/10 ring-1 ring-tertiary/20",
-                        )}
-                        onClick={applyWaterPreset}
-                        type="button"
-                    >
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-tertiary/15 text-tertiary">
-                            <MaterialIcon name="local_drink" filled className="text-xl" />
-                        </span>
-                        <span>
-                            <span className="block text-sm font-bold text-on-surface">
-                                Tomar agua
+                    <div className={cn(
+                        "rounded-xl border border-outline-variant/15 bg-surface-container-lowest transition-all duration-300",
+                        isWaterPreset && "border-tertiary/30 bg-tertiary/10 ring-1 ring-tertiary/20",
+                    )}>
+                        <button
+                            className="group flex w-full items-center gap-3 px-4 py-3 text-left"
+                            onClick={() => {
+                                applyWaterPreset(waterUnit);
+                            }}
+                            type="button"
+                        >
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-tertiary/15 text-tertiary">
+                                <MaterialIcon name="local_drink" filled className="text-xl" />
                             </span>
-                            <span className="block text-xs text-on-surface-variant">
-                                Contador diario · 8 vasos · Hidratación
+                            <span>
+                                <span className="block text-sm font-bold text-on-surface">
+                                    Tomar agua
+                                </span>
+                                <span className="block text-xs text-on-surface-variant">
+                                    Contador diario · {waterUnit === "litros" ? "2 litros" : "8 vasos"} · Hidratación
+                                </span>
                             </span>
-                        </span>
-                        <MaterialIcon
-                            name="arrow_forward"
-                            className="ml-auto text-on-surface-variant transition-colors group-hover:text-tertiary"
-                        />
-                    </button>
+                            <MaterialIcon
+                                name={isWaterPreset ? "check_circle" : "arrow_forward"}
+                                className={cn(
+                                    "ml-auto transition-colors",
+                                    isWaterPreset ? "text-tertiary" : "text-on-surface-variant group-hover:text-tertiary",
+                                )}
+                                filled={isWaterPreset}
+                            />
+                        </button>
+
+                        {isWaterPreset ? (
+                            <div className="border-t border-tertiary/15 px-4 pb-3 pt-2 space-y-2">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-label text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                                        Unidad:
+                                    </span>
+                                    {(["vasos", "litros"] as const).map((unit) => (
+                                        <button
+                                            className={cn(
+                                                "rounded-full border px-3 py-1 font-label text-[11px] font-bold uppercase tracking-widest transition-all duration-200",
+                                                waterUnit === unit
+                                                    ? "border-tertiary/40 bg-tertiary/15 text-tertiary"
+                                                    : "border-outline-variant/20 bg-surface-container-lowest text-on-surface-variant hover:text-tertiary",
+                                            )}
+                                            key={unit}
+                                            onClick={() => {
+                                                setWaterUnit(unit);
+                                                applyWaterPreset(unit);
+                                            }}
+                                            type="button"
+                                        >
+                                            {unit}
+                                        </button>
+                                    ))}
+                                </div>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        checked={waterReminder}
+                                        className="h-4 w-4 accent-tertiary"
+                                        onChange={(e) => setWaterReminder(e.target.checked)}
+                                        type="checkbox"
+                                    />
+                                    <span className="text-xs font-semibold text-on-surface-variant">
+                                        Recordarme tomar agua (notificación guardada)
+                                    </span>
+                                </label>
+                            </div>
+                        ) : null}
+                    </div>
                 </section>
 
                 {createScheduleMutation.isError ? (
@@ -351,7 +405,10 @@ export function TaskNewPage() {
     );
 }
 
-function buildPayload(data: ScheduleFormValues): CreateScheduleInput {
+function buildPayload(
+    data: ScheduleFormValues,
+    water?: { unit: "vasos" | "litros"; reminder: boolean },
+): CreateScheduleInput {
     const frequency: ScheduleFrequency = deriveFrequency(data.repeat_pattern);
     const { repeatFrequency, repeatInterval, repeating } = deriveRepeat(
         data.repeat_pattern,
@@ -372,6 +429,7 @@ function buildPayload(data: ScheduleFormValues): CreateScheduleInput {
             ...(data.repeat_pattern === "custom"
                 ? { customInterval: data.custom_interval, customUnit: data.custom_unit }
                 : {}),
+            ...(water ? { waterUnit: water.unit, waterReminder: water.reminder } : {}),
         },
         is_required: data.is_required,
         priority_level: data.priority_level,
