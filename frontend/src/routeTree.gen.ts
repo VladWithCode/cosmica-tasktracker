@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WellnessRouteImport } from './routes/wellness'
 import { Route as StatsRouteImport } from './routes/stats'
+import { Route as SchedulesRouteImport } from './routes/schedules'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LoginRouteImport } from './routes/login'
@@ -35,6 +36,11 @@ const WellnessRoute = WellnessRouteImport.update({
 const StatsRoute = StatsRouteImport.update({
   id: '/stats',
   path: '/stats',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SchedulesRoute = SchedulesRouteImport.update({
+  id: '/schedules',
+  path: '/schedules',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RegisterRoute = RegisterRouteImport.update({
@@ -123,6 +129,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
+  '/schedules': typeof SchedulesRoute
   '/stats': typeof StatsRoute
   '/wellness': typeof WellnessRoute
   '/dashboard/stats': typeof DashboardStatsRoute
@@ -140,6 +147,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
+  '/schedules': typeof SchedulesRoute
   '/stats': typeof StatsRoute
   '/wellness': typeof WellnessRoute
   '/dashboard/stats': typeof DashboardStatsRoute
@@ -160,6 +168,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
+  '/schedules': typeof SchedulesRoute
   '/stats': typeof StatsRoute
   '/wellness': typeof WellnessRoute
   '/dashboard/stats': typeof DashboardStatsRoute
@@ -181,6 +190,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/profile'
     | '/register'
+    | '/schedules'
     | '/stats'
     | '/wellness'
     | '/dashboard/stats'
@@ -198,6 +208,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/profile'
     | '/register'
+    | '/schedules'
     | '/stats'
     | '/wellness'
     | '/dashboard/stats'
@@ -217,6 +228,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/profile'
     | '/register'
+    | '/schedules'
     | '/stats'
     | '/wellness'
     | '/dashboard/stats'
@@ -237,6 +249,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ProfileRoute: typeof ProfileRoute
   RegisterRoute: typeof RegisterRoute
+  SchedulesRoute: typeof SchedulesRoute
   StatsRoute: typeof StatsRoute
   WellnessRoute: typeof WellnessRoute
 }
@@ -255,6 +268,13 @@ declare module '@tanstack/react-router' {
       path: '/stats'
       fullPath: '/stats'
       preLoaderRoute: typeof StatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/schedules': {
+      id: '/schedules'
+      path: '/schedules'
+      fullPath: '/schedules'
+      preLoaderRoute: typeof SchedulesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/register': {
@@ -417,6 +437,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ProfileRoute: ProfileRoute,
   RegisterRoute: RegisterRoute,
+  SchedulesRoute: SchedulesRoute,
   StatsRoute: StatsRoute,
   WellnessRoute: WellnessRoute,
 }

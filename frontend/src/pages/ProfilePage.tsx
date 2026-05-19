@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useRouter } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { useProfileStats } from "@/hooks/useProfileStats";
@@ -182,6 +182,24 @@ export function ProfilePage() {
                     <NotificationInbox />
 
                     <SharingSettings />
+
+                    <Link
+                        to="/schedules"
+                        className="group flex w-full items-center justify-between rounded-xl border border-outline-variant/10 bg-surface-container-low p-5 shadow-[0_15px_40px_rgba(0,0,0,0.24)] transition-all duration-300 hover:bg-surface-container-high active:scale-[0.98]"
+                    >
+                        <span className="flex items-center gap-3">
+                            <MaterialIcon name="event_repeat" filled className="text-primary" />
+                            <span>
+                                <span className="block font-headline text-sm font-bold text-on-surface">
+                                    Mis rutinas
+                                </span>
+                                <span className="block font-label text-xs text-on-surface-variant">
+                                    Ver y gestionar configuraciones de tareas
+                                </span>
+                            </span>
+                        </span>
+                        <MaterialIcon name="chevron_right" className="text-on-surface-variant transition-colors group-hover:text-primary" />
+                    </Link>
 
                     <section className="pt-2">
                         <button
