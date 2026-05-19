@@ -110,6 +110,10 @@ func (st *ScheduleTask) NormalizeDefaults() {
 	if st.Duration == 0 && st.DurationMinutes > 0 {
 		st.Duration = time.Duration(st.DurationMinutes) * time.Minute
 	}
+	if st.Repeating && st.StartDate.IsZero() {
+		st.StartDate = time.Now()
+	}
+
 	if st.DurationMinutes == 0 && !st.StartTime.IsZero() && !st.EndTime.IsZero() {
 		st.DurationMinutes = int(st.EndTime.Sub(st.StartTime).Minutes())
 		if st.DurationMinutes < 0 {
