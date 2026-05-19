@@ -5,12 +5,17 @@ import type {
     CreateSharingGrantInput,
     PingTaskResult,
     SharingGrant,
+    SharingInvitation,
     SharingUser,
 } from "@/types/sharing";
 import { queryClient } from "./queryClient";
 
 interface GrantsData {
     grants: SharingGrant[];
+}
+
+interface InvitationsData {
+    invitations: SharingInvitation[];
 }
 
 interface GrantData {
@@ -27,6 +32,7 @@ export const SharingQueryKeys = {
     all: () => ["sharing"] as const,
     grants: () => [...SharingQueryKeys.all(), "grants"] as const,
     sharedWithMe: () => [...SharingQueryKeys.all(), "shared-with-me"] as const,
+    invitations: () => [...SharingQueryKeys.all(), "invitations"] as const,
     users: (query: string) => [...SharingQueryKeys.all(), "users", query] as const,
 } as const;
 
@@ -61,6 +67,19 @@ export const revokeSharingGrantOpts = mutationOptions({
     mutationFn: revokeSharingGrant,
     onSuccess: () => {
         void queryClient.invalidateQueries({ queryKey: SharingQueryKeys.grants() });
+    },
+});
+
+export const getSharingInvitationsOpts = queryOptions({
+    queryKey: SharingQueryKeys.invitations(),
+    queryFn: getSharingInvitations,
+    staleTime: 30 * 1000,
+});
+
+export const markInvitationReadOpts = mutationOptions({
+    mutationFn: markInvitationRead,
+    onSuccess: () => {
+        void queryClient.invalidateQueries({ queryKey: SharingQueryKeys.invitations() });
     },
 });
 
@@ -134,6 +153,29 @@ export async function revokeSharingGrant(grantId: string): Promise<void> {
     const data = (await response.json()) as ApiResponse<Record<string, never>>;
     if (!response.ok) {
         throw new Error(getApiError(data, "No se pudo revocar el permiso"));
+    }
+}
+
+export async function getSharingInvitations(): Promise<SharingInvitation[]> {
+    const response = await fetch("/api/v1/sharing/invitations", {
+        credentials: "include",
+        method: "GET",
+    });
+    const data = (await response.json()) as ApiResponse<InvitationsData>;
+    if (!response.ok) {
+        throw new Error(getApiError(data, "No se pudieron cargar las invitaciones"));
+    }
+    return data.data?.invitations ?? [];
+}
+
+export async function markInvitationRead(invitationId: string): Promise<void> {
+    const response = await fetch(`/api/v1/sharing/invitations/${invitationId}/read`, {
+        credentials: "include",
+        method: "POST",
+    });
+    const data = (await response.json()) as ApiResponse<Record<string, never>>;
+    if (!response.ok) {
+        throw new Error(getApiError(data, "No se pudo marcar como leída"));
     }
 }
 

@@ -224,6 +224,94 @@ func decodePhase9GrantID(t *testing.T, body string) string {
 	return envelope.Data.Grant.ID
 }
 
+func TestSharingInvitationCreatedOnGrant(t *testing.T) {
+	router := setupAuthRouteTest(t)
+	ownerUsername := fmt.Sprintf("inv_owner_%d", time.Now().UnixNano()%1_000_000_000)
+	granteeUsername := fmt.Sprintf("inv_grantee_%d", time.Now().UnixNano()%1_000_000_000)
+	cleanupTaskRouteUser(t, ownerUsername)
+	cleanupTaskRouteUser(t, granteeUsername)
+	t.Cleanup(func() {
+		cleanupTaskRouteUser(t, ownerUsername)
+		cleanupTaskRouteUser(t, granteeUsername)
+	})
+
+	ownerCookie := registerPhase5User(t, router, ownerUsername, "Test1234")
+	granteeCookie := registerPhase5User(t, router, granteeUsername, "Test1234")
+
+	// Create grant — should create an invitation for grantee.
+	status, body, _, _ := performJSONPayload(router, http.MethodPost, "/api/v1/sharing/grants", map[string]string{
+		"access_level": "view",
+		"grantee":      granteeUsername,
+	}, []*http.Cookie{ownerCookie})
+	if status != http.StatusCreated {
+		t.Fatalf("create grant = %d body = %s", status, body)
+	}
+
+	// Grantee sees invitation.
+	status, body, _, _ = performJSONPayload(router, http.MethodGet, "/api/v1/sharing/invitations", nil, []*http.Cookie{granteeCookie})
+	if status != http.StatusOK {
+		t.Fatalf("list invitations = %d body = %s", status, body)
+	}
+	var invResp struct {
+		Data struct {
+			Invitations []struct {
+				ID            string `json:"id"`
+				OwnerUserID   string `json:"owner_user_id"`
+				OwnerUsername string `json:"owner_username"`
+				ReadAt        *string `json:"read_at"`
+			} `json:"invitations"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal([]byte(body), &invResp); err != nil {
+		t.Fatalf("decode invitations: %v body=%s", err, body)
+	}
+	if len(invResp.Data.Invitations) == 0 {
+		t.Fatal("grantee should have at least one invitation")
+	}
+	inv := invResp.Data.Invitations[0]
+	if inv.OwnerUsername != ownerUsername {
+		t.Errorf("invitation owner username = %q want %q", inv.OwnerUsername, ownerUsername)
+	}
+	if inv.ReadAt != nil {
+		t.Error("invitation should be unread initially")
+	}
+	if inv.OwnerUserID == "" {
+		t.Error("invitation missing owner_user_id (needed for /shared/<id> link)")
+	}
+
+	// Owner does NOT see grantee's invitations when listing their own.
+	status, body, _, _ = performJSONPayload(router, http.MethodGet, "/api/v1/sharing/invitations", nil, []*http.Cookie{ownerCookie})
+	if status != http.StatusOK {
+		t.Fatalf("owner list invitations = %d body = %s", status, body)
+	}
+	var ownerInvResp struct {
+		Data struct {
+			Invitations []interface{} `json:"invitations"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal([]byte(body), &ownerInvResp); err != nil {
+		t.Fatalf("decode owner invitations: %v body=%s", err, body)
+	}
+	if len(ownerInvResp.Data.Invitations) != 0 {
+		t.Errorf("owner should see 0 invitations (they're the granter), got %d", len(ownerInvResp.Data.Invitations))
+	}
+
+	// Mark invitation as read.
+	status, body, _, _ = performJSONPayload(router, http.MethodPost, "/api/v1/sharing/invitations/"+inv.ID+"/read", nil, []*http.Cookie{granteeCookie})
+	if status != http.StatusOK {
+		t.Fatalf("mark invitation read = %d body = %s", status, body)
+	}
+
+	// Duplicate grant is blocked — no duplicate invitation created.
+	status, _, _, _ = performJSONPayload(router, http.MethodPost, "/api/v1/sharing/grants", map[string]string{
+		"access_level": "view",
+		"grantee":      granteeUsername,
+	}, []*http.Cookie{ownerCookie})
+	if status != http.StatusConflict {
+		t.Fatalf("expected duplicate grant 409, got %d", status)
+	}
+}
+
 func phase9SchedulePayload(title string, ownerID string) map[string]interface{} {
 	return map[string]interface{}{
 		"frequency":           "daily",

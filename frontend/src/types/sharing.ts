@@ -43,6 +43,17 @@ export interface TaskPing {
     read_at?: string | null;
 }
 
+export interface SharingInvitation {
+    id: string;
+    grant_id: string;
+    owner_user_id: string;
+    owner_username: string;
+    owner_fullname: string;
+    access_level: string;
+    read_at?: string | null;
+    created_at: string;
+}
+
 export interface PingTaskResult {
     ping: TaskPing;
     notification_sent: boolean;

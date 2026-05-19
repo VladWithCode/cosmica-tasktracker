@@ -569,6 +569,121 @@ func scanTaskAccessGrant(scanner interface {
 	return &grant, nil
 }
 
+// ── Sharing Invitations ──────────────────────────────────────────────────────
+
+type SharingInvitation struct {
+	ID            string     `json:"id"`
+	GrantID       string     `json:"grant_id"`
+	OwnerUserID   string     `json:"owner_user_id"`
+	OwnerUsername string     `json:"owner_username"`
+	OwnerFullname string     `json:"owner_fullname"`
+	AccessLevel   string     `json:"access_level"`
+	ReadAt        *time.Time `json:"read_at,omitempty"`
+	CreatedAt     time.Time  `json:"created_at"`
+}
+
+func CreateSharingInvitation(ctx context.Context, grantID, ownerUserID, granteeUserID string) error {
+	conn, err := GetConn(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	_, err = conn.Exec(ctx, `
+		INSERT INTO sharing_invitations (grant_id, owner_user_id, grantee_user_id)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (grant_id) DO NOTHING`,
+		grantID, ownerUserID, granteeUserID,
+	)
+	return err
+}
+
+func ListSharingInvitations(ctx context.Context, granteeUserID string) ([]*SharingInvitation, error) {
+	conn, err := GetConn(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	rows, err := conn.Query(ctx, `
+		SELECT
+			si.id,
+			si.grant_id,
+			si.owner_user_id,
+			u.username,
+			u.fullname,
+			COALESCE(g.access_level::text, 'view'),
+			si.read_at,
+			si.created_at
+		FROM sharing_invitations si
+		INNER JOIN users u ON u.id = si.owner_user_id
+		INNER JOIN task_access_grants g ON g.id = si.grant_id
+		WHERE si.grantee_user_id = $1
+		  AND g.revoked_at IS NULL
+		ORDER BY si.read_at IS NOT NULL ASC, si.created_at DESC
+		LIMIT 50`,
+		granteeUserID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	items := []*SharingInvitation{}
+	for rows.Next() {
+		var item SharingInvitation
+		var readAt sql.NullTime
+		if err := rows.Scan(
+			&item.ID,
+			&item.GrantID,
+			&item.OwnerUserID,
+			&item.OwnerUsername,
+			&item.OwnerFullname,
+			&item.AccessLevel,
+			&readAt,
+			&item.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		if readAt.Valid {
+			item.ReadAt = &readAt.Time
+		}
+		items = append(items, &item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func MarkSharingInvitationRead(ctx context.Context, granteeUserID, invitationID string) (bool, error) {
+	conn, err := GetConn(ctx)
+	if err != nil {
+		return false, err
+	}
+	defer conn.Release()
+
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	tag, err := conn.Exec(ctx, `
+		UPDATE sharing_invitations
+		SET read_at = COALESCE(read_at, CURRENT_TIMESTAMP)
+		WHERE id = $1 AND grantee_user_id = $2`,
+		invitationID, granteeUserID,
+	)
+	if err != nil {
+		return false, err
+	}
+	return tag.RowsAffected() > 0, nil
+}
+
 func scanNotificationInboxItem(scanner interface {
 	Scan(dest ...interface{}) error
 }) (*NotificationInboxItem, error) {
