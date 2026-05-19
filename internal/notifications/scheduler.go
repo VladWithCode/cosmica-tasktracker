@@ -79,42 +79,43 @@ func (s *TaskScheduler) checkAndNotifyTasks() {
 		log.Printf("Error querying tasks: %v", err)
 		return
 	}
-	defer rows.Close()
 
+	type pendingTask struct {
+		id, title, description, userID string
+	}
+	var pending []pendingTask
 	for rows.Next() {
-		var taskID, title, description, userID string
-
-		if err := rows.Scan(&taskID, &title, &description, &userID); err != nil {
+		var t pendingTask
+		if err := rows.Scan(&t.id, &t.title, &t.description, &t.userID); err != nil {
 			log.Printf("Error scanning task: %v", err)
 			continue
 		}
+		pending = append(pending, t)
+	}
+	if err := rows.Err(); err != nil {
+		log.Printf("Error iterating notification tasks: %v", err)
+	}
+	rows.Close()
 
-		// Create notification payload
+	for _, t := range pending {
 		payload := &NotificationPayload{
-			Title:              "Tarea pendiente: " + title,
-			Body:               description,
+			Title:              "Tarea pendiente: " + t.title,
+			Body:               t.description,
 			Icon:               "/icon-192x192.png",
 			Badge:              "/badge-72x72.png",
-			Tag:                "task-" + taskID,
+			Tag:                "task-" + t.id,
 			RequireInteraction: true,
 			URL:                "/tasks",
-			TaskID:             taskID,
+			TaskID:             t.id,
 			Actions: []NotificationAction{
 				{Action: "view", Title: "View Task"},
 				{Action: "complete", Title: "Mark Complete"},
 			},
 		}
 
-		// Send notification
-		sentCount, err := SendNotificationToUserWithConfig(
-			s.ctx,
-			userID,
-			payload,
-			config,
-		)
-
+		sentCount, err := SendNotificationToUserWithConfig(s.ctx, t.userID, payload, config)
 		if err != nil {
-			log.Printf("Error sending notification for task %s: %v", taskID, err)
+			log.Printf("Error sending notification for task %s: %v", t.id, err)
 			continue
 		}
 		if sentCount == 0 {
@@ -125,14 +126,11 @@ func (s *TaskScheduler) checkAndNotifyTasks() {
 			`INSERT INTO task_notifications (task_id, sent_at)
 			 VALUES ($1, CURRENT_TIMESTAMP)
 			 ON CONFLICT (task_id) DO NOTHING`,
-			taskID,
+			t.id,
 		); err != nil {
-			log.Printf("Error marking task notification as sent for %s: %v", taskID, err)
+			log.Printf("Error marking task notification as sent for %s: %v", t.id, err)
 			continue
 		}
-		log.Printf("Sent notification for task: %s to user: %s", title, userID)
-	}
-	if err := rows.Err(); err != nil {
-		log.Printf("Error iterating notification tasks: %v", err)
+		log.Printf("Sent notification for task: %s to user: %s", t.title, t.userID)
 	}
 }
