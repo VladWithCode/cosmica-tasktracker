@@ -81,6 +81,17 @@ export function TaskNewPage() {
     });
     const values = watch();
 
+    const applyWaterPreset = () => {
+        setValue("title", "Tomar agua", { shouldDirty: true });
+        setValue("category", "Hidratación", { shouldDirty: true });
+        setValue("description", "", { shouldDirty: true });
+        setValue("scheduleType", "counter", { shouldDirty: true });
+        setValue("target_count", 8, { shouldDirty: true });
+        setValue("repeat_pattern", "daily", { shouldDirty: true });
+        setValue("priority_level", "medium", { shouldDirty: true });
+        setValue("is_required", false, { shouldDirty: true });
+    };
+
     const toggleWeekday = (day: number) => {
         const current = values.repeat_weekdays ?? [];
         const next = current.includes(day)
@@ -112,6 +123,38 @@ export function TaskNewPage() {
                     <p className="text-sm font-semibold">
                         Esta tarea se generará la próxima vez que su horario aplique.
                     </p>
+                </section>
+
+                <section className="rounded-xl border border-outline-variant/10 bg-surface-container-low p-4">
+                    <p className="mb-3 font-label text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                        Presets rápidos
+                    </p>
+                    <button
+                        className={cn(
+                            "group flex w-full items-center gap-3 rounded-xl border border-outline-variant/15 bg-surface-container-lowest px-4 py-3 text-left transition-all duration-300 hover:-translate-y-0.5 active:scale-95",
+                            values.title === "Tomar agua" &&
+                                values.category === "Hidratación" &&
+                                "border-tertiary/30 bg-tertiary/10 ring-1 ring-tertiary/20",
+                        )}
+                        onClick={applyWaterPreset}
+                        type="button"
+                    >
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-tertiary/15 text-tertiary">
+                            <MaterialIcon name="local_drink" filled className="text-xl" />
+                        </span>
+                        <span>
+                            <span className="block text-sm font-bold text-on-surface">
+                                Tomar agua
+                            </span>
+                            <span className="block text-xs text-on-surface-variant">
+                                Contador diario · 8 vasos · Hidratación
+                            </span>
+                        </span>
+                        <MaterialIcon
+                            name="arrow_forward"
+                            className="ml-auto text-on-surface-variant transition-colors group-hover:text-tertiary"
+                        />
+                    </button>
                 </section>
 
                 {createScheduleMutation.isError ? (

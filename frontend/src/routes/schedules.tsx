@@ -420,24 +420,52 @@ function SchedulesLoadingState() {
 
 function SchedulesEmptyState({ hasAny }: { hasAny: boolean }) {
     return (
-        <section className="rounded-xl border border-outline-variant/15 bg-surface-container-low p-8 text-center">
-            <MaterialIcon name="event_repeat" className="mx-auto mb-3 text-4xl text-tertiary" />
-            <h3 className="font-headline text-xl font-bold text-on-surface">
-                {hasAny ? "Sin rutinas en este filtro" : "Aún no tienes rutinas"}
-            </h3>
-            <p className="mx-auto mt-2 max-w-sm text-sm text-on-surface-variant">
-                {hasAny
-                    ? "Cambia el filtro o crea una nueva rutina."
-                    : "Crea tu primera rutina para empezar a generar tareas automáticamente."}
-            </p>
-            <Link
-                className="mt-5 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-primary-dim px-5 py-2.5 font-label text-xs font-extrabold uppercase tracking-widest text-on-primary shadow-[0_10px_25px_rgba(175,162,255,0.28)] transition-all duration-300 hover:-translate-y-0.5 active:scale-95"
-                to="/tasks/new"
-            >
-                <MaterialIcon name="add" className="text-base" />
-                Crear rutina
-            </Link>
+        <section className="space-y-4">
+            <div className="rounded-xl border border-outline-variant/15 bg-surface-container-low p-8 text-center">
+                <MaterialIcon name="event_repeat" className="mx-auto mb-3 text-4xl text-tertiary" />
+                <h3 className="font-headline text-xl font-bold text-on-surface">
+                    {hasAny ? "Sin rutinas en este filtro" : "Aún no tienes rutinas"}
+                </h3>
+                <p className="mx-auto mt-2 max-w-sm text-sm text-on-surface-variant">
+                    {hasAny
+                        ? "Cambia el filtro o crea una nueva rutina."
+                        : "Crea tu primera rutina para empezar a generar tareas automáticamente."}
+                </p>
+                <Link
+                    className="mt-5 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-primary-dim px-5 py-2.5 font-label text-xs font-extrabold uppercase tracking-widest text-on-primary shadow-[0_10px_25px_rgba(175,162,255,0.28)] transition-all duration-300 hover:-translate-y-0.5 active:scale-95"
+                    to="/tasks/new"
+                >
+                    <MaterialIcon name="add" className="text-base" />
+                    Crear rutina
+                </Link>
+            </div>
+            {!hasAny ? <WaterRoutineCTA /> : null}
         </section>
+    );
+}
+
+function WaterRoutineCTA() {
+    return (
+        <Link
+            to="/tasks/new"
+            className="group flex items-center gap-4 rounded-xl border border-tertiary/20 bg-tertiary/5 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:bg-tertiary/10 active:scale-[0.99]"
+        >
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-tertiary/15 text-tertiary">
+                <MaterialIcon name="local_drink" filled className="text-2xl" />
+            </span>
+            <span className="min-w-0 flex-1">
+                <span className="block font-headline text-sm font-bold text-on-surface">
+                    Comenzar con hidratación
+                </span>
+                <span className="block text-xs text-on-surface-variant">
+                    Preset: Tomar agua · 8 vasos · diario
+                </span>
+            </span>
+            <MaterialIcon
+                name="arrow_forward"
+                className="shrink-0 text-tertiary transition-transform duration-300 group-hover:translate-x-1"
+            />
+        </Link>
     );
 }
 
