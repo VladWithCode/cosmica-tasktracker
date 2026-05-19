@@ -2,9 +2,11 @@ package notifications
 
 import (
 	"context"
+	"errors"
 	"log"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/vladwithcode/tasktracker/internal/db"
 )
 
@@ -36,6 +38,7 @@ func (s *TaskScheduler) Start() {
 			return
 		case <-ticker.C:
 			s.checkAndNotifyTasks()
+			s.checkAndNotifyHydration()
 		}
 	}
 }
@@ -132,5 +135,115 @@ func (s *TaskScheduler) checkAndNotifyTasks() {
 			continue
 		}
 		log.Printf("Sent notification for task: %s to user: %s", t.title, t.userID)
+	}
+}
+
+// checkAndNotifyHydration sends a one-per-task-per-day push reminder for water
+// routines that have waterReminder=true in their frequency_config.
+func (s *TaskScheduler) checkAndNotifyHydration() {
+	config := LoadConfigFromEnv()
+	if !config.CanSend() {
+		return // warnedNoConfig already logged by checkAndNotifyTasks
+	}
+
+	conn, err := db.GetConn(s.ctx)
+	if err != nil {
+		log.Printf("hydration scheduler: error getting DB connection: %v", err)
+		return
+	}
+	defer conn.Release()
+
+	// Active schedule_tasks that have waterReminder enabled.
+	rows, err := conn.Query(s.ctx, `
+		SELECT st.id, st.user_id, COALESCE(st.title, ''), COALESCE(st.target_count, 0)
+		FROM schedule_tasks st
+		WHERE st.status_level = 'active'
+		  AND (st.frequency_config->>'waterReminder')::boolean IS TRUE
+	`)
+	if err != nil {
+		log.Printf("hydration scheduler: query schedule_tasks: %v", err)
+		return
+	}
+
+	type waterSchedule struct {
+		id, userID, title string
+		targetCount       int
+	}
+	var schedules []waterSchedule
+	for rows.Next() {
+		var ws waterSchedule
+		if err := rows.Scan(&ws.id, &ws.userID, &ws.title, &ws.targetCount); err != nil {
+			log.Printf("hydration scheduler: scan: %v", err)
+			continue
+		}
+		schedules = append(schedules, ws)
+	}
+	if err := rows.Err(); err != nil {
+		log.Printf("hydration scheduler: rows err: %v", err)
+	}
+	rows.Close()
+
+	today := time.Now()
+
+	for _, ws := range schedules {
+		task, err := db.GetTaskByScheduleAndDate(s.ctx, ws.id, today)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				continue // no task generated today for this schedule
+			}
+			log.Printf("hydration scheduler: GetTaskByScheduleAndDate(%s): %v", ws.id, err)
+			continue
+		}
+
+		// Skip if already completed or fully consumed.
+		if task.Status == "completed" || (ws.targetCount > 0 && task.CurrentCount >= ws.targetCount) {
+			continue
+		}
+
+		// Rate-limit: one reminder per task per day (task_notifications PK = task_id).
+		var exists bool
+		err = conn.QueryRow(s.ctx,
+			`SELECT EXISTS(SELECT 1 FROM task_notifications WHERE task_id = $1)`,
+			task.ID,
+		).Scan(&exists)
+		if err != nil {
+			log.Printf("hydration scheduler: check task_notifications(%s): %v", task.ID, err)
+			continue
+		}
+		if exists {
+			continue // already notified today
+		}
+
+		payload := &NotificationPayload{
+			Title:              "Hidratación: " + ws.title,
+			Body:               "Recuerda tomar agua 💧",
+			Icon:               "/icon-192x192.png",
+			Badge:              "/badge-72x72.png",
+			Tag:                "water-" + ws.id,
+			RequireInteraction: false,
+			URL:                "/tasks",
+			TaskID:             task.ID,
+		}
+
+		sentCount, err := SendNotificationToUserWithConfig(s.ctx, ws.userID, payload, config)
+		if err != nil {
+			log.Printf("hydration scheduler: send notification for schedule %s: %v", ws.id, err)
+			continue
+		}
+		if sentCount == 0 {
+			continue
+		}
+
+		if _, err := conn.Exec(
+			s.ctx,
+			`INSERT INTO task_notifications (task_id, sent_at)
+			 VALUES ($1, CURRENT_TIMESTAMP)
+			 ON CONFLICT (task_id) DO NOTHING`,
+			task.ID,
+		); err != nil {
+			log.Printf("hydration scheduler: mark task_notifications(%s): %v", task.ID, err)
+			continue
+		}
+		log.Printf("hydration scheduler: sent reminder for schedule %s to user %s", ws.id, ws.userID)
 	}
 }
