@@ -203,6 +203,9 @@ func (r updateTaskRequest) toServiceInput() (tasksvc.UpdateTaskInput, error) {
 	}
 	if r.Priority != nil && strings.TrimSpace(*r.Priority) != "" {
 		priority := db.ScheduleTaskPriority(strings.TrimSpace(*r.Priority))
+		if err := db.ValidatePriority(priority); err != nil {
+			return input, err
+		}
 		input.Priority = &priority
 	}
 	if r.Frequency != nil && strings.TrimSpace(*r.Frequency) != "" {

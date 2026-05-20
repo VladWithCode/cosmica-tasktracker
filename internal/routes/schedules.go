@@ -212,6 +212,9 @@ func (r scheduleRequest) toSchedule() (*db.ScheduleTask, error) {
 	if priority == "" {
 		priority = string(db.ScheduleTaskPriorityMedium)
 	}
+	if err := db.ValidatePriority(db.ScheduleTaskPriority(priority)); err != nil {
+		return nil, err
+	}
 	frequency := strings.TrimSpace(r.Frequency)
 	if frequency == "" {
 		frequency = string(db.ScheduleTaskFrequencyDaily)
