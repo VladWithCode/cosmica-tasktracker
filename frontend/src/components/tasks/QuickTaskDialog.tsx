@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,13 @@ export function QuickTaskDialog({ open, onClose }: QuickTaskDialogProps) {
     const [startTime, setStartTime] = useState("");
     const [endTime, setEndTime] = useState("");
     const inputRef = useRef<HTMLInputElement>(null);
+
+    const timeError = useMemo(() => {
+        if (startTime && endTime && endTime <= startTime) {
+            return "La hora de fin debe ser posterior a la de inicio";
+        }
+        return null;
+    }, [startTime, endTime]);
 
     const mutation = useMutation({
         mutationFn: () => {
@@ -47,13 +54,15 @@ export function QuickTaskDialog({ open, onClose }: QuickTaskDialogProps) {
         },
     });
 
+    const canSubmit = title.trim().length > 0 && !timeError && !mutation.isPending;
+
     const handleSubmit = useCallback(
         (e: React.FormEvent) => {
             e.preventDefault();
-            if (!title.trim()) return;
+            if (!canSubmit) return;
             mutation.mutate();
         },
-        [title, mutation],
+        [canSubmit, mutation],
     );
 
     useEffect(() => {
@@ -102,13 +111,18 @@ export function QuickTaskDialog({ open, onClose }: QuickTaskDialogProps) {
                     value={title}
                 />
 
-                <div className="mb-5 flex gap-3">
+                <div className="mb-1 flex gap-3">
                     <div className="flex-1">
                         <label className="mb-1 block font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant">
                             Inicio
                         </label>
                         <input
-                            className="w-full rounded-lg border border-outline-variant/40 bg-surface px-3 py-2 text-on-surface focus:border-primary focus:outline-none"
+                            className={cn(
+                                "w-full rounded-lg border bg-surface px-3 py-2 text-on-surface focus:outline-none",
+                                timeError
+                                    ? "border-error focus:border-error"
+                                    : "border-outline-variant/40 focus:border-primary",
+                            )}
                             onChange={(e) => setStartTime(e.target.value)}
                             type="time"
                             value={startTime}
@@ -119,13 +133,23 @@ export function QuickTaskDialog({ open, onClose }: QuickTaskDialogProps) {
                             Fin
                         </label>
                         <input
-                            className="w-full rounded-lg border border-outline-variant/40 bg-surface px-3 py-2 text-on-surface focus:border-primary focus:outline-none"
+                            className={cn(
+                                "w-full rounded-lg border bg-surface px-3 py-2 text-on-surface focus:outline-none",
+                                timeError
+                                    ? "border-error focus:border-error"
+                                    : "border-outline-variant/40 focus:border-primary",
+                            )}
                             onChange={(e) => setEndTime(e.target.value)}
                             type="time"
                             value={endTime}
                         />
                     </div>
                 </div>
+                {timeError ? (
+                    <p className="mb-4 text-xs text-error">{timeError}</p>
+                ) : (
+                    <div className="mb-4" />
+                )}
 
                 <div className="flex gap-3">
                     <button
@@ -140,7 +164,7 @@ export function QuickTaskDialog({ open, onClose }: QuickTaskDialogProps) {
                             "flex-1 rounded-lg bg-primary px-4 py-2.5 font-label text-sm font-bold text-on-primary transition-colors hover:bg-primary-dim",
                             mutation.isPending && "opacity-60",
                         )}
-                        disabled={mutation.isPending || !title.trim()}
+                        disabled={!canSubmit}
                         type="submit"
                     >
                         {mutation.isPending ? "Creando…" : "Crear"}
