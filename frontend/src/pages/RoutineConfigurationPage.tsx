@@ -22,10 +22,8 @@ const categoryOptions: Record<TaskCategory, { label: string; icon: string }> = {
 };
 
 const priorityOptions: Record<TaskPriorityValue, { label: string; dotClassName: string }> = {
-    low: { label: "Low", dotClassName: "bg-tertiary" },
-    medium: { label: "Medium", dotClassName: "bg-primary" },
-    high: { label: "High", dotClassName: "bg-error" },
-    urgent: { label: "Urgent", dotClassName: "bg-error-dim" },
+    medium: { label: "Casual", dotClassName: "bg-tertiary" },
+    urgent: { label: "Urgente", dotClassName: "bg-error" },
 };
 
 const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -34,7 +32,7 @@ const taskConfigSchema = z
     .object({
         title: z.string().trim().min(1, "Escribe el nombre de la tarea").max(255),
         category: z.enum(["focus", "wellness", "movement", "admin"]),
-        priority: z.enum(["urgent", "high", "medium", "low"]),
+        priority: z.enum(["urgent", "medium"]),
         startTime: z.string().regex(timePattern, "Selecciona una hora de inicio"),
         endTime: z.string().regex(timePattern, "Selecciona una hora de fin"),
     })
@@ -62,7 +60,7 @@ export function RoutineConfigurationPage() {
         defaultValues: {
             title: "",
             category: "focus",
-            priority: "high",
+            priority: "urgent",
             startTime: defaultTimes.startTime,
             endTime: defaultTimes.endTime,
         },
@@ -499,8 +497,8 @@ function buildCreateTaskPayload(values: TaskConfigForm, repeating: boolean): Cre
         endTime: timeToDate(values.endTime).toISOString(),
         durationMinutes: timeToMinutes(values.endTime) - timeToMinutes(values.startTime),
         priority: values.priority,
-        required: values.priority === "urgent" || values.priority === "high",
-        isRequired: values.priority === "urgent" || values.priority === "high",
+        required: values.priority === "urgent",
+        isRequired: values.priority === "urgent",
         repeating,
         repeatFrequency: repeating ? "daily" : "",
         repeatWeekdays: [],

@@ -1,6 +1,7 @@
-import type { Priority, ScheduleFrequency } from "./schedule";
+import type { LegacyPriority, ScheduleFrequency } from "./schedule";
 
-export type { Priority };
+/** Re-export as Priority for backward compat — includes legacy "high"/"low" for display. */
+export type Priority = LegacyPriority;
 
 export type TaskStatus = "pending" | "in_progress" | "completed" | "skipped" | "failed";
 

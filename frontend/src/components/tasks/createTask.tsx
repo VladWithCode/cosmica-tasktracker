@@ -28,7 +28,7 @@ const taskSchema = z
         startTime: z.iso.time(),
         endTime: z.iso.time(),
         duration: z.union([z.number().positive(), z.nan()]).optional(),
-        priority: z.enum(["urgent", "high", "medium", "low"]),
+        priority: z.enum(["urgent", "medium"]),
         required: z.boolean(),
         repeating: z.boolean(),
         repeatFrequency: z.union([z.string().optional(), z.literal("")]),
