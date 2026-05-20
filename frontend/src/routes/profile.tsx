@@ -15,7 +15,7 @@ export const Route = createFileRoute("/profile")({
 
 function RouteComponent() {
     return (
-        <AppShell showBackButton showBottomNav={false} title="Profile" topBarAlign="center">
+        <AppShell showBackButton title="Profile" topBarAlign="center">
             <ProfilePage />
         </AppShell>
     );
