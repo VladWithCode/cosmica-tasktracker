@@ -14,6 +14,7 @@ import { Route as SchedulesRouteImport } from './routes/schedules'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as TasksRouteRouteImport } from './routes/tasks/route'
 import { Route as SharedRouteRouteImport } from './routes/shared/route'
 import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
@@ -48,6 +49,11 @@ const ProfileRoute = ProfileRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgendaRoute = AgendaRouteImport.update({
+  id: '/agenda',
+  path: '/agenda',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TasksRouteRoute = TasksRouteRouteImport.update({
@@ -106,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRouteRouteWithChildren
   '/shared': typeof SharedRouteRouteWithChildren
   '/tasks': typeof TasksRouteRouteWithChildren
+  '/agenda': typeof AgendaRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
@@ -121,6 +128,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/shared': typeof SharedRouteRouteWithChildren
+  '/agenda': typeof AgendaRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
@@ -139,6 +147,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRouteRouteWithChildren
   '/shared': typeof SharedRouteRouteWithChildren
   '/tasks': typeof TasksRouteRouteWithChildren
+  '/agenda': typeof AgendaRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
@@ -158,6 +167,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/shared'
     | '/tasks'
+    | '/agenda'
     | '/login'
     | '/profile'
     | '/register'
@@ -173,6 +183,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/shared'
+    | '/agenda'
     | '/login'
     | '/profile'
     | '/register'
@@ -190,6 +201,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/shared'
     | '/tasks'
+    | '/agenda'
     | '/login'
     | '/profile'
     | '/register'
@@ -208,6 +220,7 @@ export interface RootRouteChildren {
   DashboardRouteRoute: typeof DashboardRouteRouteWithChildren
   SharedRouteRoute: typeof SharedRouteRouteWithChildren
   TasksRouteRoute: typeof TasksRouteRouteWithChildren
+  AgendaRoute: typeof AgendaRoute
   LoginRoute: typeof LoginRoute
   ProfileRoute: typeof ProfileRoute
   RegisterRoute: typeof RegisterRoute
@@ -250,6 +263,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agenda': {
+      id: '/agenda'
+      path: '/agenda'
+      fullPath: '/agenda'
+      preLoaderRoute: typeof AgendaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/tasks': {
@@ -372,6 +392,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRouteRoute: DashboardRouteRouteWithChildren,
   SharedRouteRoute: SharedRouteRouteWithChildren,
   TasksRouteRoute: TasksRouteRouteWithChildren,
+  AgendaRoute: AgendaRoute,
   LoginRoute: LoginRoute,
   ProfileRoute: ProfileRoute,
   RegisterRoute: RegisterRoute,
