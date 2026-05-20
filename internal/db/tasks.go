@@ -278,33 +278,62 @@ func shouldCreateTaskForToday(scheduleTask *ScheduleTask, today time.Time) bool 
 }
 
 func shouldRepeatToday(scheduleTask *ScheduleTask, today time.Time) bool {
+	interval := max(1, scheduleTask.RepeatInterval)
+
 	switch scheduleTask.RepeatFrequency {
 	case ScheduleTaskRepeatFrequencyDaily:
-		return true
-	case ScheduleTaskRepeatFrequencyWeekly:
-		return slices.Contains(scheduleTask.RepeatWeekdays, int(today.Weekday()))
-	case ScheduleTaskRepeatFrequencyBiweekly:
-		if len(scheduleTask.RepeatWeekdays) > 0 {
-			daysDiff := int(today.Sub(scheduleTask.StartDate).Hours() / 24)
-			return daysDiff%15 == 0 && slices.Contains(scheduleTask.RepeatWeekdays, int(today.Weekday()))
+		if interval == 1 {
+			return true
 		}
-		return false
+		d := daysBetween(scheduleTask.StartDate, today)
+		return d >= 0 && d%interval == 0
+
+	case ScheduleTaskRepeatFrequencyWeekly:
+		if !matchesWeekday(scheduleTask, today) {
+			return false
+		}
+		if interval == 1 {
+			return true
+		}
+		w := weeksBetween(scheduleTask.StartDate, today)
+		return w >= 0 && w%interval == 0
+
+	case ScheduleTaskRepeatFrequencyBiweekly:
+		if !matchesWeekday(scheduleTask, today) {
+			return false
+		}
+		w := weeksBetween(scheduleTask.StartDate, today)
+		return w >= 0 && w%2 == 0
+
 	case ScheduleTaskRepeatFrequencyMonthly:
-		return scheduleTask.StartDate.Day() == today.Day()
+		if anchorDay(scheduleTask, today) != today.Day() {
+			return false
+		}
+		if interval == 1 {
+			return true
+		}
+		m := monthsBetween(scheduleTask.StartDate, today)
+		return m >= 0 && m%interval == 0
+
 	case ScheduleTaskRepeatFrequencyBimonthly:
-		monthsDiff := (today.Year()-scheduleTask.StartDate.Year())*12 + int(today.Month()) - int(scheduleTask.StartDate.Month())
-		return monthsDiff%2 == 0 && scheduleTask.StartDate.Day() == today.Day()
+		if anchorDay(scheduleTask, today) != today.Day() {
+			return false
+		}
+		m := monthsBetween(scheduleTask.StartDate, today)
+		return m >= 0 && m%2 == 0
+
 	case ScheduleTaskRepeatFrequencyYearly:
-		return scheduleTask.StartDate.Month() == today.Month() && scheduleTask.StartDate.Day() == today.Day()
+		return scheduleTask.StartDate.Month() == today.Month() &&
+			anchorDay(scheduleTask, today) == today.Day()
 	}
 
+	// Fallback for legacy/unset RepeatFrequency
 	if len(scheduleTask.RepeatWeekdays) > 0 {
 		return slices.Contains(scheduleTask.RepeatWeekdays, int(today.Weekday()))
 	}
-
 	if scheduleTask.RepeatInterval > 0 {
-		daysDiff := int(today.Sub(scheduleTask.StartDate).Hours() / 24)
-		return daysDiff%scheduleTask.RepeatInterval == 0
+		d := daysBetween(scheduleTask.StartDate, today)
+		return d >= 0 && d%scheduleTask.RepeatInterval == 0
 	}
 
 	switch scheduleTask.Frequency {
@@ -313,10 +342,50 @@ func shouldRepeatToday(scheduleTask *ScheduleTask, today time.Time) bool {
 	case ScheduleTaskFrequencyWeekly:
 		return slices.Contains(scheduleTask.RepeatWeekdays, int(today.Weekday()))
 	case ScheduleTaskFrequencyMonthly:
-		return scheduleTask.StartDate.Day() == today.Day()
+		return anchorDay(scheduleTask, today) == today.Day()
 	default:
 		return false
 	}
+}
+
+func matchesWeekday(st *ScheduleTask, today time.Time) bool {
+	if len(st.RepeatWeekdays) > 0 {
+		return slices.Contains(st.RepeatWeekdays, int(today.Weekday()))
+	}
+	if !st.StartDate.IsZero() {
+		return st.StartDate.Weekday() == today.Weekday()
+	}
+	return true
+}
+
+func anchorDay(st *ScheduleTask, today time.Time) int {
+	if st.StartDate.IsZero() {
+		return today.Day()
+	}
+	d := st.StartDate.Day()
+	lastDay := daysInMonth(today.Year(), today.Month())
+	if d > lastDay {
+		return lastDay
+	}
+	return d
+}
+
+func daysBetween(from, to time.Time) int {
+	fromDate := time.Date(from.Year(), from.Month(), from.Day(), 0, 0, 0, 0, time.UTC)
+	toDate := time.Date(to.Year(), to.Month(), to.Day(), 0, 0, 0, 0, time.UTC)
+	return int(toDate.Sub(fromDate).Hours() / 24)
+}
+
+func weeksBetween(from, to time.Time) int {
+	return daysBetween(from, to) / 7
+}
+
+func monthsBetween(from, to time.Time) int {
+	return (to.Year()-from.Year())*12 + int(to.Month()) - int(from.Month())
+}
+
+func daysInMonth(year int, month time.Month) int {
+	return time.Date(year, month+1, 0, 0, 0, 0, 0, time.UTC).Day()
 }
 
 // determineTaskStatus infers a task's status from the current time relative to

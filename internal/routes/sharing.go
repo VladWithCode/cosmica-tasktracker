@@ -6,11 +6,14 @@ import (
 	"net/http"
 	"strings"
 
+	"context"
+
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"github.com/vladwithcode/tasktracker/internal/auth"
 	"github.com/vladwithcode/tasktracker/internal/db"
 	"github.com/vladwithcode/tasktracker/internal/httpx"
+	"github.com/vladwithcode/tasktracker/internal/notifications"
 )
 
 type createSharingGrantRequest struct {
@@ -25,6 +28,8 @@ func registerSharingRoutes(router *gin.RouterGroup) {
 	router.DELETE("/sharing/grants/:id", RevokeSharingGrant)
 	router.GET("/sharing/shared-with-me", ListSharedWithMe)
 	router.GET("/sharing/users/search", SearchSharingUsers)
+	router.GET("/sharing/invitations", ListSharingInvitations)
+	router.POST("/sharing/invitations/:id/read", MarkSharingInvitationRead)
 }
 
 func ListSharingGrants(c *gin.Context) {
@@ -146,7 +151,77 @@ func CreateSharingGrant(c *gin.Context) {
 		return
 	}
 
+	// Create invitation so grantee is notified.
+	if invErr := db.CreateSharingInvitation(c.Request.Context(), createdGrant.ID, authData.ID, grantee.ID); invErr != nil {
+		log.Printf("failed to create sharing invitation for grant %s: %v", createdGrant.ID, invErr)
+	} else {
+		go sendSharingInvitationPush(context.WithoutCancel(c.Request.Context()), createdGrant)
+	}
+
 	httpx.Created(c, gin.H{"grant": createdGrant}, "Permiso creado")
+}
+
+func sendSharingInvitationPush(ctx context.Context, grant *db.TaskAccessGrant) {
+	config := notifications.LoadConfigFromEnv()
+	if !config.CanSend() {
+		return
+	}
+	ownerName := grant.OwnerFullname
+	if ownerName == "" {
+		ownerName = "@" + grant.OwnerUsername
+	}
+	payload := &notifications.NotificationPayload{
+		Title: "Nuevo acceso compartido",
+		Body:  ownerName + " te compartió acceso a sus tareas.",
+		Icon:  "/icon-192x192.png",
+		Badge: "/badge-72x72.png",
+		Tag:   "sharing-" + grant.ID,
+		URL:   "/shared/" + grant.OwnerUserID,
+	}
+	if _, err := notifications.SendNotificationToUserWithConfig(ctx, grant.GranteeUserID, payload, config); err != nil {
+		log.Printf("sharing push failed for grantee %s: %v", grant.GranteeUserID, err)
+	}
+}
+
+func ListSharingInvitations(c *gin.Context) {
+	authData, err := auth.GetAuth(c)
+	if err != nil {
+		httpx.Unauthorized(c, "No autorizado")
+		return
+	}
+
+	items, err := db.ListSharingInvitations(c.Request.Context(), authData.ID)
+	if err != nil {
+		httpx.ServerError(c, "No se pudieron cargar las invitaciones")
+		log.Printf("failed to list sharing invitations: %v", err)
+		return
+	}
+	if items == nil {
+		items = []*db.SharingInvitation{}
+	}
+
+	httpx.OK(c, gin.H{"invitations": items}, "Invitaciones recuperadas")
+}
+
+func MarkSharingInvitationRead(c *gin.Context) {
+	authData, err := auth.GetAuth(c)
+	if err != nil {
+		httpx.Unauthorized(c, "No autorizado")
+		return
+	}
+
+	ok, err := db.MarkSharingInvitationRead(c.Request.Context(), authData.ID, c.Param("id"))
+	if err != nil {
+		httpx.ServerError(c, "No se pudo marcar como leída")
+		log.Printf("failed to mark sharing invitation read: %v", err)
+		return
+	}
+	if !ok {
+		httpx.NotFound(c, "Invitación no encontrada")
+		return
+	}
+
+	httpx.OK(c, gin.H{}, "Invitación marcada como leída")
 }
 
 func RevokeSharingGrant(c *gin.Context) {

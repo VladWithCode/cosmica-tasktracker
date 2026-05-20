@@ -34,6 +34,7 @@ func registerAuthRoutes(router *gin.Engine) {
 	router.POST("/api/v1/auth/register", HandleRegister)
 	router.POST("/api/v1/auth/logout", HandleLogout)
 	router.GET("/api/v1/auth/me", auth.AuthRequired(), CheckAuth)
+	router.PUT("/api/v1/auth/password", auth.AuthRequired(), HandleChangePassword)
 }
 
 func HandleLogin(c *gin.Context) {
@@ -130,6 +131,48 @@ func clearAuthCookie(c *gin.Context) {
 		auth.UseSecureCookies,
 		auth.UseHTTPOnlyCookies,
 	)
+}
+
+type changePasswordRequest struct {
+	CurrentPassword string `json:"current_password" binding:"required"`
+	NewPassword     string `json:"new_password" binding:"required"`
+}
+
+func HandleChangePassword(c *gin.Context) {
+	sessionAuth, err := auth.GetAuth(c)
+	if err != nil {
+		httpx.ServerError(c, "Error de autenticación")
+		return
+	}
+
+	var req changePasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.BadRequest(c, "Faltan campos requeridos")
+		return
+	}
+
+	authService := auth.NewService(auth.NewUserRepository())
+	err = authService.ChangePassword(c.Request.Context(), auth.ChangePasswordInput{
+		CurrentPassword: req.CurrentPassword,
+		NewPassword:     req.NewPassword,
+		UserID:          sessionAuth.ID,
+	})
+	if err != nil {
+		if errors.Is(err, auth.ErrWrongCurrentPassword) {
+			httpx.BadRequest(c, "La contraseña actual es incorrecta")
+			return
+		}
+		var validationError *auth.ValidationError
+		if errors.As(err, &validationError) {
+			httpx.Unprocessable(c, gin.H{"fields": validationError.Fields}, "validation_error", validationError.Message)
+			return
+		}
+		httpx.ServerError(c, "No se pudo actualizar la contraseña")
+		log.Printf("failed to change password: %v", err)
+		return
+	}
+
+	httpx.OK(c, nil, "Contraseña actualizada")
 }
 
 func userPayload(user *db.User) gin.H {

@@ -8,10 +8,12 @@ import {
     createSharingGrantOpts,
     getSharedWithMeOpts,
     getSharingGrantsOpts,
+    getSharingInvitationsOpts,
+    markInvitationReadOpts,
     revokeSharingGrantOpts,
     searchSharingUsersOpts,
 } from "@/queries/sharing";
-import type { SharingAccessLevel, SharingGrant } from "@/types/sharing";
+import type { SharingAccessLevel, SharingGrant, SharingInvitation } from "@/types/sharing";
 
 const accessOptions: Array<{
     description: string;
@@ -41,9 +43,12 @@ export function SharingSettings() {
     const trimmedRecipient = recipient.trim();
     const grantsQuery = useQuery(getSharingGrantsOpts);
     const sharedWithMeQuery = useQuery(getSharedWithMeOpts);
+    const invitationsQuery = useQuery(getSharingInvitationsOpts);
     const usersQuery = useQuery(searchSharingUsersOpts(trimmedRecipient));
     const createMutation = useMutation(createSharingGrantOpts);
     const revokeMutation = useMutation(revokeSharingGrantOpts);
+    const markReadMutation = useMutation(markInvitationReadOpts);
+    const unreadCount = (invitationsQuery.data ?? []).filter((inv) => !inv.read_at).length;
     const users = usersQuery.data ?? [];
 
     const existingRecipients = useMemo(() => {
@@ -188,6 +193,44 @@ export function SharingSettings() {
                 ))}
             </div>
 
+            {/* Invitaciones recibidas */}
+            <div className="mt-6 space-y-3">
+                <div className="flex items-center gap-2">
+                    <p className="font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant">
+                        Invitaciones
+                    </p>
+                    {unreadCount > 0 ? (
+                        <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary px-1.5 font-label text-[10px] font-extrabold text-on-primary">
+                            {unreadCount}
+                        </span>
+                    ) : null}
+                </div>
+                {invitationsQuery.isLoading ? <SharingListSkeleton /> : null}
+                {invitationsQuery.isError ? (
+                    <div className="rounded-lg border border-error/20 bg-error/10 p-4 text-sm text-error">
+                        No se pudieron cargar las invitaciones.
+                    </div>
+                ) : null}
+                {!invitationsQuery.isLoading && !invitationsQuery.isError && (invitationsQuery.data ?? []).length === 0 ? (
+                    <div className="rounded-lg border border-outline-variant/10 bg-surface-container-lowest p-4 text-sm text-on-surface-variant">
+                        Sin invitaciones nuevas.
+                    </div>
+                ) : null}
+                {(invitationsQuery.data ?? []).map((inv) => (
+                    <InvitationRow
+                        invitation={inv}
+                        isMarking={markReadMutation.isPending}
+                        key={inv.id}
+                        onMarkRead={(id) =>
+                            markReadMutation.mutate(id, {
+                                onError: (error) =>
+                                    toast.error(error.message || "No se pudo marcar como leída"),
+                            })
+                        }
+                    />
+                ))}
+            </div>
+
             {/* Permisos que yo recibí */}
             <div className="mt-6 space-y-3">
                 <p className="font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant">
@@ -262,6 +305,58 @@ function ReceivedGrantRow({ grant }: { grant: SharingGrant }) {
                 <MaterialIcon name="open_in_new" className="text-xs" />
                 Ver tareas
             </Link>
+        </article>
+    );
+}
+
+function InvitationRow({
+    invitation,
+    isMarking,
+    onMarkRead,
+}: {
+    invitation: SharingInvitation;
+    isMarking: boolean;
+    onMarkRead: (id: string) => void;
+}) {
+    const isUnread = !invitation.read_at;
+    const ownerName = invitation.owner_fullname || `@${invitation.owner_username}`;
+    return (
+        <article
+            className={cn(
+                "flex items-center justify-between gap-4 rounded-lg border p-4 transition-all duration-300",
+                isUnread
+                    ? "border-primary/20 bg-primary/5"
+                    : "border-outline-variant/10 bg-surface-container-lowest opacity-70",
+            )}
+        >
+            <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold text-on-surface">
+                    {ownerName}
+                </p>
+                <p className="mt-0.5 truncate text-xs text-on-surface-variant">
+                    @{invitation.owner_username} · {formatAccessLevel(invitation.access_level as SharingAccessLevel)} · compartió contigo
+                </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+                <Link
+                    className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 font-label text-[10px] font-bold uppercase tracking-widest text-primary transition-all duration-300 hover:bg-primary/20 active:scale-95"
+                    params={{ userId: invitation.owner_user_id }}
+                    to="/shared/$userId"
+                >
+                    <MaterialIcon name="open_in_new" className="text-xs" />
+                    Ver tareas
+                </Link>
+                {isUnread ? (
+                    <button
+                        className="rounded-full border border-outline-variant/20 bg-surface-container-highest px-2 py-1 font-label text-[10px] font-bold uppercase tracking-widest text-on-surface-variant transition-all duration-300 hover:bg-surface-container-high active:scale-95 disabled:opacity-50"
+                        disabled={isMarking}
+                        onClick={() => onMarkRead(invitation.id)}
+                        type="button"
+                    >
+                        Leída
+                    </button>
+                ) : null}
+            </div>
         </article>
     );
 }

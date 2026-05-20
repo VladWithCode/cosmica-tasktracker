@@ -56,8 +56,9 @@ describe("<CounterTaskProgress />", () => {
         );
 
         const region = screen.getByRole("group");
+        // Default water unit is "vasos"; "litros" only when text contains "litro".
         expect(region.getAttribute("aria-label")).toBe(
-            "Progreso del contador: 3 de 5 litros",
+            "Progreso del contador: 3 de 5 vasos",
         );
 
         const items = within(region).getAllByRole("listitem");
@@ -71,6 +72,23 @@ describe("<CounterTaskProgress />", () => {
         );
         expect(completed).toHaveLength(3);
         expect(pending).toHaveLength(2);
+    });
+
+    it("uses litros unit when title/description/category contains 'litro'", () => {
+        render(
+            <CounterTaskProgress
+                currentCount={1}
+                targetCount={2}
+                title="Tomar 2 litros de agua"
+                category="hidratación"
+                status="pending"
+            />,
+        );
+
+        const region = screen.getByRole("group");
+        expect(region.getAttribute("aria-label")).toBe(
+            "Progreso del contador: 1 de 2 litros",
+        );
     });
 
     it("compresses very large targets into a fixed visual ceiling", () => {

@@ -58,7 +58,7 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
     };
 
     return (
-        <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-surface px-6 py-10 font-body text-on-surface selection:bg-primary-dim selection:text-on-primary">
+        <div className="relative flex min-h-dvh h-dvh items-start justify-center overflow-x-clip overflow-y-auto bg-surface px-6 py-10 sm:items-center font-body text-on-surface selection:bg-primary-dim selection:text-on-primary">
             <div className="pointer-events-none absolute left-1/2 top-12 h-80 w-80 -translate-x-1/2 rounded-full bg-primary/5 blur-[120px]" />
             <div className="pointer-events-none absolute bottom-0 right-0 h-72 w-72 translate-x-1/3 rounded-full bg-tertiary/5 blur-[120px]" />
 

@@ -72,19 +72,21 @@ export function NotificationSettings() {
         }
     };
 
+    const isDenied = notifications.permission === "denied";
+
     return (
         <section className="rounded-xl border border-outline-variant/10 bg-surface-container-low p-6 shadow-[0_15px_40px_rgba(0,0,0,0.24)]">
             <div className="mb-5 flex items-start justify-between gap-4">
                 <div>
                     <h3 className="flex items-center font-headline text-lg font-bold text-on-surface">
                         <MaterialIcon name="notifications_active" className="mr-2 text-primary" />
-                        Notificaciones
+                        Notificaciones push
                     </h3>
-                    <p className="mt-1 text-sm text-on-surface-variant">
-                        Recibe avisos web para tus tareas próximas.
+                    <p className="mt-1 text-sm leading-5 text-on-surface-variant">
+                        Avisos en este dispositivo para tareas próximas, pings, recordatorios de agua e invitaciones de sharing.
                     </p>
                 </div>
-                <div className={cn("flex h-10 w-10 items-center justify-center rounded-full bg-surface-container-lowest", status.tone)}>
+                <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-container-lowest", status.tone)}>
                     <MaterialIcon name={status.icon} filled />
                 </div>
             </div>
@@ -96,7 +98,11 @@ export function NotificationSettings() {
                 <p className="mt-1 font-headline text-base font-bold text-on-surface">
                     {isChecking ? "Revisando..." : status.label}
                 </p>
-                {notifications.error ? (
+                {isDenied ? (
+                    <p className="mt-2 text-xs leading-5 text-error">
+                        El navegador bloqueó el permiso. Para activarlas, ve a Configuración del sitio en tu navegador y permite notificaciones para esta página, luego vuelve aquí y actívalas.
+                    </p>
+                ) : notifications.error ? (
                     <p className="mt-2 text-sm text-error">{notifications.error}</p>
                 ) : null}
             </div>
@@ -115,18 +121,20 @@ export function NotificationSettings() {
                 ) : (
                     <button
                         className="flex items-center justify-center rounded-full bg-gradient-to-r from-primary to-primary-dim px-4 py-3 font-label text-xs font-black uppercase tracking-widest text-on-primary shadow-[0_0_24px_rgba(175,162,255,0.28)] transition-all duration-300 hover:-translate-y-1 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-                        disabled={!notifications.isSupported || notifications.permission === "denied" || notifications.isBusy}
+                        disabled={!notifications.isSupported || isDenied || notifications.isBusy}
                         onClick={handleEnable}
+                        title={isDenied ? "Permiso bloqueado por el navegador" : undefined}
                         type="button"
                     >
                         <MaterialIcon name="notifications" className="mr-2 text-sm" />
-                        Activar
+                        {isDenied ? "Bloqueado" : "Activar"}
                     </button>
                 )}
                 <button
                     className="flex items-center justify-center rounded-full border border-outline-variant/15 bg-surface-container-highest px-4 py-3 font-label text-xs font-bold uppercase tracking-widest text-primary transition-all duration-300 hover:bg-surface-variant active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={!canSendTest || notifications.isBusy}
                     onClick={handleTest}
+                    title={!canSendTest ? "Activa las notificaciones primero" : undefined}
                     type="button"
                 >
                     <MaterialIcon name="send" className="mr-2 text-sm" />
@@ -141,35 +149,35 @@ function getStatusCopy(notifications: ReturnType<typeof useNotifications.getStat
     if (!notifications.isSupported) {
         return {
             icon: "block",
-            label: "Este navegador no soporta Web Push",
+            label: "Este navegador no soporta notificaciones push",
             tone: "text-error",
         };
     }
     if (notifications.permission === "denied") {
         return {
             icon: "notifications_off",
-            label: "Permiso denegado en el navegador",
+            label: "Bloqueadas por el navegador",
             tone: "text-error",
         };
     }
     if (notifications.isSubscribed) {
         return {
             icon: "check_circle",
-            label: "Activadas para este dispositivo",
+            label: "Activas en este dispositivo",
             tone: "text-tertiary",
         };
     }
     if (notifications.permission === "granted") {
         return {
             icon: "notifications_paused",
-            label: "Permiso concedido, suscripción desactivada",
+            label: "Permiso concedido · pulsa Activar para suscribirte",
             tone: "text-primary",
         };
     }
 
     return {
         icon: "notifications",
-        label: "Pendiente de permiso",
+        label: "Sin activar · el navegador pedirá permiso al activar",
         tone: "text-on-surface-variant",
     };
 }

@@ -16,6 +16,7 @@ import (
 var ErrInvalidCredentials = errors.New("invalid credentials")
 var ErrUsernameTaken = errors.New("username taken")
 var ErrEmailTaken = errors.New("email taken")
+var ErrWrongCurrentPassword = errors.New("current password is incorrect")
 
 var usernamePattern = regexp.MustCompile(`^[a-z0-9_-]{3,32}$`)
 
@@ -134,6 +135,50 @@ func (s *Service) Register(ctx context.Context, input RegisterInput) (*RegisterR
 		Token: token,
 		User:  user,
 	}, nil
+}
+
+type ChangePasswordInput struct {
+	CurrentPassword string
+	NewPassword     string
+	UserID          string
+}
+
+func (s *Service) ChangePassword(ctx context.Context, input ChangePasswordInput) error {
+	user, err := s.repo.GetByID(ctx, input.UserID)
+	if err != nil {
+		return ErrInvalidCredentials
+	}
+
+	if err := user.ValidatePass(input.CurrentPassword); err != nil {
+		return ErrWrongCurrentPassword
+	}
+
+	fields := validatePassword(input.NewPassword)
+	if len(fields) > 0 {
+		return &ValidationError{Fields: fields, Message: "La nueva contraseña es inválida"}
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.NewPassword), db.BcryptCost)
+	if err != nil {
+		return err
+	}
+
+	return s.repo.UpdatePassword(ctx, input.UserID, string(hashedPassword))
+}
+
+func validatePassword(password string) FieldErrors {
+	fields := FieldErrors{}
+	n := len(password)
+	if n == 0 {
+		fields["password"] = "La contraseña es requerida"
+	} else if n < 8 {
+		fields["password"] = "La contraseña debe tener al menos 8 caracteres"
+	} else if n > 128 {
+		fields["password"] = "La contraseña no puede pasar de 128 caracteres"
+	} else if !hasLetterAndNumber(password) {
+		fields["password"] = "La contraseña debe incluir al menos una letra y un número"
+	}
+	return fields
 }
 
 func normalizeRegisterInput(input RegisterInput) RegisterInput {

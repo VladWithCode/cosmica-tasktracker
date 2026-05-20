@@ -194,6 +194,25 @@ func UpdateUser(ctx context.Context, user *User) error {
 	return nil
 }
 
+func UpdateUserPassword(ctx context.Context, userID string, hashedPassword string) error {
+	conn, err := GetConn(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	_, err = conn.Exec(
+		ctx,
+		"UPDATE users SET password = $1 WHERE id = $2",
+		hashedPassword,
+		userID,
+	)
+	return err
+}
+
 func DeleteUser(ctx context.Context, userID string) error {
 	conn, err := GetConn(ctx)
 	if err != nil {

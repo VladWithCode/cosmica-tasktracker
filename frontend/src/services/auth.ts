@@ -56,6 +56,29 @@ export async function logoutUser(): Promise<string> {
     return data.message;
 }
 
+export async function changePassword(payload: {
+    current_password: string;
+    new_password: string;
+}): Promise<string> {
+    const response = await fetch("/api/v1/auth/password", {
+        body: JSON.stringify(payload),
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        method: "PUT",
+    });
+    const data = (await response.json()) as ApiResponse<null>;
+
+    if (!response.ok) {
+        throw new AuthApiError({
+            code: data.error,
+            message: getApiError(data, "No se pudo actualizar la contraseña"),
+            status: response.status,
+        });
+    }
+
+    return data.message;
+}
+
 async function authRequest(endpoint: string, payload: LoginInput | RegisterInput): Promise<User> {
     const response = await fetch(endpoint, {
         body: JSON.stringify(payload),
