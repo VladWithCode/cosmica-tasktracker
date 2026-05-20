@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { FloatingActionButton } from "@/components/layout/FloatingActionButton";
 import { TopAppBar } from "@/components/layout/TopAppBar";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +31,7 @@ export function AppShell({
             <div className={cn("relative min-h-0 overflow-y-auto", contentClassName)}>
                 {children}
             </div>
+            <FloatingActionButton />
         </div>
     );
 }

@@ -19,8 +19,9 @@ export function QuickTaskDialog({ open, onClose }: QuickTaskDialogProps) {
     const inputRef = useRef<HTMLInputElement>(null);
 
     const mutation = useMutation({
-        mutationFn: () =>
-            createSchedule({
+        mutationFn: () => {
+            const today = new Date().toISOString().slice(0, 10);
+            return createSchedule({
                 title: title.trim(),
                 schedule_start_time: startTime || null,
                 schedule_end_time: endTime || null,
@@ -28,7 +29,10 @@ export function QuickTaskDialog({ open, onClose }: QuickTaskDialogProps) {
                 repeating: false,
                 is_required: false,
                 frequency: "daily",
-            }),
+                start_date: today,
+                end_date: today,
+            });
+        },
         onSuccess: () => {
             toast.success("Tarea creada");
             void queryClient.invalidateQueries({ queryKey: TasksQueryKeys.today() });
