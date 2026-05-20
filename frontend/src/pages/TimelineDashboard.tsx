@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { FloatingActionButton } from "@/components/layout/FloatingActionButton";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { TTask } from "@/lib/schemas/task";
 import { cn } from "@/lib/utils";
@@ -58,8 +57,6 @@ export function TimelineDashboard() {
                     })}
                 </section>
             ) : null}
-
-            <FloatingActionButton />
         </main>
     );
 }

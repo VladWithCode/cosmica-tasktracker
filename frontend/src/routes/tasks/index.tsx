@@ -3,7 +3,6 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/AppShell";
-import { FloatingActionButton } from "@/components/layout/FloatingActionButton";
 import {
     CounterTaskProgress,
     isCounterTask,
@@ -67,7 +66,6 @@ function RouteComponent() {
                         ))}
                     </section>
                 ) : null}
-                <FloatingActionButton />
             </main>
         </AppShell>
     );
