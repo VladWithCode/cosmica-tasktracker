@@ -11,6 +11,7 @@ import { getTodayTasksOpts, TasksQueryKeys } from "@/queries/tasks";
 import { createTask } from "@/services/tasks";
 import type { CreateTaskPayload, TaskCategory, TaskPriorityValue } from "@/types/task-config";
 import type { TTask } from "@/lib/schemas/task";
+import { useTheme } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 
 const categoryOptions: Record<TaskCategory, { label: string; icon: string }> = {
@@ -125,13 +126,7 @@ export function RoutineConfigurationPage() {
                         </h1>
                     </div>
                 </div>
-                <button
-                    aria-label="Ver notificaciones"
-                    className="text-on-surface-variant transition-all duration-300 hover:text-primary active:scale-95"
-                    type="button"
-                >
-                    <MaterialIcon name="notifications" className="text-2xl" />
-                </button>
+                <ThemeToggleButton />
             </header>
 
             <main className="relative mx-auto max-w-md space-y-6 px-4 pt-24">
@@ -636,4 +631,24 @@ function formatHourLabel(minutes: number) {
         hour: "numeric",
         hour12: true,
     });
+}
+
+const themeIcons: Record<string, string> = {
+    system: "brightness_auto",
+    light: "light_mode",
+    dark: "dark_mode",
+};
+
+function ThemeToggleButton() {
+    const { preference, cycle } = useTheme();
+    return (
+        <button
+            aria-label={`Tema: ${preference}`}
+            className="text-on-surface-variant transition-all duration-300 hover:text-primary active:scale-95"
+            onClick={cycle}
+            type="button"
+        >
+            <MaterialIcon name={themeIcons[preference] ?? "brightness_auto"} className="text-2xl" />
+        </button>
+    );
 }

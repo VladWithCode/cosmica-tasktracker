@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <script>
             // Apply theme before first paint to prevent FOUC
-            (function(){var t=localStorage.getItem('theme-preference');var d=(t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme:dark)').matches));document.documentElement.classList.add(d?'dark':'light')})();
+            (function(){var t=localStorage.getItem('theme-preference');var d=(t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme:dark)').matches));document.documentElement.classList.add(d?'dark':'light');var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',d?'#0d0d18':'#fdf8ff')})();
         </script>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

@@ -21,11 +21,15 @@ function getResolvedTheme(preference: ThemePreference): "light" | "dark" {
     return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
+const THEME_COLORS = { light: "#fdf8ff", dark: "#0d0d18" } as const;
+
 function applyTheme(preference: ThemePreference) {
     const resolved = getResolvedTheme(preference);
     const root = document.documentElement;
     root.classList.toggle("dark", resolved === "dark");
     root.classList.toggle("light", resolved === "light");
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", THEME_COLORS[resolved]);
 }
 
 // Simple external store for cross-component sync
