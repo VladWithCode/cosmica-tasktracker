@@ -1,8 +1,12 @@
 <!DOCTYPE html>
-<html class="dark" lang="es">
+<html lang="es">
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <script>
+            // Apply theme before first paint to prevent FOUC
+            (function(){var t=localStorage.getItem('theme-preference');var d=(t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme:dark)').matches));document.documentElement.classList.add(d?'dark':'light')})();
+        </script>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link

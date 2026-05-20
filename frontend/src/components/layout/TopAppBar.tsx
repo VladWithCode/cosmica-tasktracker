@@ -1,6 +1,6 @@
 import { Link, useRouter } from "@tanstack/react-router";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
-import { cn } from "@/lib/utils";
+import { useTheme } from "@/hooks/useTheme";
 
 interface TopAppBarProps {
     align?: "left" | "center";
@@ -8,8 +8,21 @@ interface TopAppBarProps {
     title?: string;
 }
 
+const themeIcons: Record<string, string> = {
+    system: "brightness_auto",
+    light: "light_mode",
+    dark: "dark_mode",
+};
+
+const themeLabels: Record<string, string> = {
+    system: "Tema: sistema",
+    light: "Tema: claro",
+    dark: "Tema: oscuro",
+};
+
 export function TopAppBar({ align = "left", showBackButton = false, title = "Routine Ritual" }: TopAppBarProps) {
     const router = useRouter();
+    const { preference, cycle } = useTheme();
 
     const handleBack = () => {
         // If there's browser history, go back; otherwise navigate to /tasks as fallback
@@ -41,6 +54,18 @@ export function TopAppBar({ align = "left", showBackButton = false, title = "Rou
         </Link>
     );
 
+    const themeToggle = (
+        <button
+            aria-label={themeLabels[preference] ?? "Cambiar tema"}
+            className="flex h-8 w-8 items-center justify-center text-primary transition-all duration-300 hover:opacity-80 active:scale-95"
+            onClick={cycle}
+            title={themeLabels[preference]}
+            type="button"
+        >
+            <MaterialIcon name={themeIcons[preference] ?? "brightness_auto"} />
+        </button>
+    );
+
     const leadingAction = showBackButton ? backButton : profileLink;
 
     if (align === "center") {
@@ -50,13 +75,7 @@ export function TopAppBar({ align = "left", showBackButton = false, title = "Rou
                 <h1 className="min-w-0 truncate text-center font-display text-lg font-extrabold uppercase tracking-widest text-on-surface">
                     {title}
                 </h1>
-                <button
-                    aria-label="Ver notificaciones"
-                    className="flex h-8 w-8 items-center justify-center text-primary transition-all duration-300 hover:opacity-80 active:scale-95"
-                    type="button"
-                >
-                    <MaterialIcon name="notifications" />
-                </button>
+                {themeToggle}
             </header>
         );
     }
@@ -69,15 +88,7 @@ export function TopAppBar({ align = "left", showBackButton = false, title = "Rou
                     {title}
                 </h1>
             </div>
-            <button
-                aria-label="Ver notificaciones"
-                className={cn(
-                    "rounded-full p-2 text-primary transition-all duration-300 hover:bg-surface-container-high active:scale-95",
-                )}
-                type="button"
-            >
-                <MaterialIcon name="notifications" className="text-2xl" />
-            </button>
+            {themeToggle}
         </header>
     );
 }
