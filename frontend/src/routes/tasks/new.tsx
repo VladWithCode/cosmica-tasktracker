@@ -8,7 +8,7 @@ export const Route = createFileRoute("/tasks/new")({
 
 function RouteComponent() {
     return (
-        <AppShell showBackButton showBottomNav={false} title="Nueva rutina" topBarAlign="center">
+        <AppShell showBackButton title="Nueva rutina" topBarAlign="center">
             <TaskNewPage />
         </AppShell>
     );
