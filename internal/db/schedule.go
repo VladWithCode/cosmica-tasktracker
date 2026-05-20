@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -21,10 +22,22 @@ type ScheduleTaskPriority string
 
 const (
 	ScheduleTaskPriorityUrgent ScheduleTaskPriority = "urgent"
-	ScheduleTaskPriorityHigh   ScheduleTaskPriority = "high"
+	ScheduleTaskPriorityHigh   ScheduleTaskPriority = "high"   // legacy, mapped to urgent
 	ScheduleTaskPriorityMedium ScheduleTaskPriority = "medium"
-	ScheduleTaskPriorityLow    ScheduleTaskPriority = "low"
+	ScheduleTaskPriorityLow    ScheduleTaskPriority = "low"    // legacy, mapped to medium
 )
+
+var ErrInvalidPriority = errors.New("prioridad inválida: sólo se aceptan 'urgent' o 'medium'")
+
+// ValidatePriority rejects legacy high/low values in new requests.
+func ValidatePriority(p ScheduleTaskPriority) error {
+	switch p {
+	case ScheduleTaskPriorityUrgent, ScheduleTaskPriorityMedium, "":
+		return nil
+	default:
+		return ErrInvalidPriority
+	}
+}
 
 type ScheduleTaskFrequency string
 
