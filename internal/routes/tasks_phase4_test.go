@@ -139,7 +139,7 @@ func createRouteSchedule(
 	status, body, _, _ := performJSONPayload(router, http.MethodPost, "/api/v1/schedules", map[string]interface{}{
 		"frequency":           "daily",
 		"is_required":         false,
-		"priority_level":      "high",
+		"priority_level":      "urgent",
 		"schedule_end_time":   endTime,
 		"schedule_start_time": startTime,
 		"title":               title,
