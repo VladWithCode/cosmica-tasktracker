@@ -13,6 +13,7 @@ type Repository interface {
 	CreateScheduleTask(ctx context.Context, scheduleTask *db.ScheduleTask) error
 	CreateTaskCompletion(ctx context.Context, completion *db.TaskCompletion) error
 	CreateTaskForSchedule(ctx context.Context, scheduleTask *db.ScheduleTask) (*db.Task, error)
+	CreateUserTasksForDate(ctx context.Context, userID string, date time.Time) ([]*db.DetailedTask, error)
 	CreateUsersTodayTasks(ctx context.Context, userID string) ([]*db.DetailedTask, error)
 	DeleteTask(ctx context.Context, task *db.Task) error
 	GetScheduleByID(ctx context.Context, id string) (*db.ScheduleTask, error)
@@ -22,6 +23,7 @@ type Repository interface {
 	GetUserDayProgress(ctx context.Context, userID string, day time.Time) (*db.DayProgress, error)
 	GetUserTaskHistory(ctx context.Context, userID string, from time.Time, to time.Time) (*db.TaskHistoryRange, error)
 	GetUserTaskMetrics(ctx context.Context, userID string, from time.Time, to time.Time) (*db.TaskMetricsRange, error)
+	GetUserDateDetailedTasks(ctx context.Context, userID string, date time.Time) ([]*db.DetailedTask, error)
 	GetUserTodayDetailedTasks(ctx context.Context, userID string) ([]*db.DetailedTask, error)
 	UserHasTaskPermission(ctx context.Context, ownerUserID string, granteeUserID string, permission string) (bool, error)
 	UpdateTask(ctx context.Context, task *db.Task) error
@@ -52,6 +54,10 @@ func (r *DBRepository) CreateTaskCompletion(ctx context.Context, completion *db.
 
 func (r *DBRepository) CreateTaskForSchedule(ctx context.Context, scheduleTask *db.ScheduleTask) (*db.Task, error) {
 	return db.CreateTaskForSchedule(ctx, scheduleTask)
+}
+
+func (r *DBRepository) CreateUserTasksForDate(ctx context.Context, userID string, date time.Time) ([]*db.DetailedTask, error) {
+	return db.CreateUserTasksForDate(ctx, userID, date)
 }
 
 func (r *DBRepository) CreateUsersTodayTasks(ctx context.Context, userID string) ([]*db.DetailedTask, error) {
@@ -88,6 +94,10 @@ func (r *DBRepository) GetUserTaskHistory(ctx context.Context, userID string, fr
 
 func (r *DBRepository) GetUserTaskMetrics(ctx context.Context, userID string, from time.Time, to time.Time) (*db.TaskMetricsRange, error) {
 	return db.GetUserTaskMetrics(ctx, userID, from, to)
+}
+
+func (r *DBRepository) GetUserDateDetailedTasks(ctx context.Context, userID string, date time.Time) ([]*db.DetailedTask, error) {
+	return db.GetUserDateDetailedTasks(ctx, userID, date)
 }
 
 func (r *DBRepository) GetUserTodayDetailedTasks(ctx context.Context, userID string) ([]*db.DetailedTask, error) {

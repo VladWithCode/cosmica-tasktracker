@@ -14,6 +14,7 @@ const menuItems: MenuItem[] = [
     { icon: "bolt", label: "Tarea rápida", action: "quick-task" },
     { icon: "edit_note", label: "Nueva rutina", action: { to: "/tasks/new" } },
     { icon: "auto_awesome", label: "Rituales", action: { to: "/tasks" } },
+    { icon: "today", label: "Agenda", action: { to: "/agenda" } },
     { icon: "insights", label: "Estadísticas", action: { to: "/stats" } },
     { icon: "calendar_month", label: "Mis rutinas", action: { to: "/schedules" } },
 ];
