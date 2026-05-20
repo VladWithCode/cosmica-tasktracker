@@ -27,9 +27,7 @@ const priorities: Array<{
     priority: Priority;
 }> = [
     { label: "Urgente", priority: "urgent" },
-    { label: "Alta", priority: "high" },
-    { label: "Media", priority: "medium" },
-    { label: "Baja", priority: "low" },
+    { label: "Casual", priority: "medium" },
 ];
 
 interface TaskDetailPageProps {

@@ -2,9 +2,9 @@ import type { TaskFeedItem } from "@/types/task";
 
 const priorityRank: Record<TaskFeedItem["priority_level"], number> = {
     urgent: 0,
-    high: 1,
-    medium: 2,
-    low: 3,
+    high: 0,   // legacy: treated as urgent
+    medium: 1,
+    low: 1,    // legacy: treated as medium/casual
 };
 
 export function sortTasksForFeed(tasks: TaskFeedItem[]): TaskFeedItem[] {

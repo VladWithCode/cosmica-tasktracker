@@ -87,7 +87,12 @@ func (st *ScheduleTask) NormalizeDefaults() {
 	if st.Status == "" {
 		st.Status = ScheduleTaskStatusActive
 	}
-	if st.Priority == "" {
+	switch st.Priority {
+	case "":
+		st.Priority = ScheduleTaskPriorityMedium
+	case ScheduleTaskPriorityHigh:
+		st.Priority = ScheduleTaskPriorityUrgent
+	case ScheduleTaskPriorityLow:
 		st.Priority = ScheduleTaskPriorityMedium
 	}
 	if st.Frequency == "" {
