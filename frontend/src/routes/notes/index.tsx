@@ -60,6 +60,13 @@ function NotesIndexPage() {
                     <MaterialIcon name="add" />
                     Nueva nota
                 </Link>
+                <Link
+                    className="inline-flex items-center gap-2 rounded-full border border-outline-variant/40 bg-surface-container-lowest px-4 py-2 font-label text-sm font-bold text-on-surface-variant transition-colors hover:border-primary/40 hover:text-primary"
+                    to="/notes/history"
+                >
+                    <MaterialIcon name="history" />
+                    Historial
+                </Link>
             </div>
 
             {isLoading ? (
@@ -74,7 +81,7 @@ function NotesIndexPage() {
                 <ul className="flex flex-col gap-3">
                     {data.map((note) => (
                         <li key={note.id}>
-                            <NoteCard note={note} />
+                            <NoteCard date={today} note={note} />
                         </li>
                     ))}
                 </ul>
