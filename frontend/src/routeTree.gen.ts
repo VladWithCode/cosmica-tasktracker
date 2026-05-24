@@ -17,13 +17,16 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as TasksRouteRouteImport } from './routes/tasks/route'
 import { Route as SharedRouteRouteImport } from './routes/shared/route'
+import { Route as NotesRouteRouteImport } from './routes/notes/route'
 import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TasksIndexRouteImport } from './routes/tasks/index'
+import { Route as NotesIndexRouteImport } from './routes/notes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as TasksNewRouteImport } from './routes/tasks/new'
 import { Route as TasksIdRouteImport } from './routes/tasks/$id'
 import { Route as SharedUserIdRouteImport } from './routes/shared/$userId'
+import { Route as NotesNewRouteImport } from './routes/notes/new'
 import { Route as DashboardStatsRouteImport } from './routes/dashboard/stats'
 
 const StatsRoute = StatsRouteImport.update({
@@ -66,6 +69,11 @@ const SharedRouteRoute = SharedRouteRouteImport.update({
   path: '/shared',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NotesRouteRoute = NotesRouteRouteImport.update({
+  id: '/notes',
+  path: '/notes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardRouteRoute = DashboardRouteRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -80,6 +88,11 @@ const TasksIndexRoute = TasksIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => TasksRouteRoute,
+} as any)
+const NotesIndexRoute = NotesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => NotesRouteRoute,
 } as any)
 const DashboardIndexRoute = DashboardIndexRouteImport.update({
   id: '/',
@@ -101,6 +114,11 @@ const SharedUserIdRoute = SharedUserIdRouteImport.update({
   path: '/$userId',
   getParentRoute: () => SharedRouteRoute,
 } as any)
+const NotesNewRoute = NotesNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => NotesRouteRoute,
+} as any)
 const DashboardStatsRoute = DashboardStatsRouteImport.update({
   id: '/stats',
   path: '/stats',
@@ -110,6 +128,7 @@ const DashboardStatsRoute = DashboardStatsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/notes': typeof NotesRouteRouteWithChildren
   '/shared': typeof SharedRouteRouteWithChildren
   '/tasks': typeof TasksRouteRouteWithChildren
   '/agenda': typeof AgendaRoute
@@ -119,10 +138,12 @@ export interface FileRoutesByFullPath {
   '/schedules': typeof SchedulesRoute
   '/stats': typeof StatsRoute
   '/dashboard/stats': typeof DashboardStatsRoute
+  '/notes/new': typeof NotesNewRoute
   '/shared/$userId': typeof SharedUserIdRoute
   '/tasks/$id': typeof TasksIdRoute
   '/tasks/new': typeof TasksNewRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/notes/': typeof NotesIndexRoute
   '/tasks/': typeof TasksIndexRoute
 }
 export interface FileRoutesByTo {
@@ -135,16 +156,19 @@ export interface FileRoutesByTo {
   '/schedules': typeof SchedulesRoute
   '/stats': typeof StatsRoute
   '/dashboard/stats': typeof DashboardStatsRoute
+  '/notes/new': typeof NotesNewRoute
   '/shared/$userId': typeof SharedUserIdRoute
   '/tasks/$id': typeof TasksIdRoute
   '/tasks/new': typeof TasksNewRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/notes': typeof NotesIndexRoute
   '/tasks': typeof TasksIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/notes': typeof NotesRouteRouteWithChildren
   '/shared': typeof SharedRouteRouteWithChildren
   '/tasks': typeof TasksRouteRouteWithChildren
   '/agenda': typeof AgendaRoute
@@ -154,10 +178,12 @@ export interface FileRoutesById {
   '/schedules': typeof SchedulesRoute
   '/stats': typeof StatsRoute
   '/dashboard/stats': typeof DashboardStatsRoute
+  '/notes/new': typeof NotesNewRoute
   '/shared/$userId': typeof SharedUserIdRoute
   '/tasks/$id': typeof TasksIdRoute
   '/tasks/new': typeof TasksNewRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/notes/': typeof NotesIndexRoute
   '/tasks/': typeof TasksIndexRoute
 }
 export interface FileRouteTypes {
@@ -165,6 +191,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/dashboard'
+    | '/notes'
     | '/shared'
     | '/tasks'
     | '/agenda'
@@ -174,10 +201,12 @@ export interface FileRouteTypes {
     | '/schedules'
     | '/stats'
     | '/dashboard/stats'
+    | '/notes/new'
     | '/shared/$userId'
     | '/tasks/$id'
     | '/tasks/new'
     | '/dashboard/'
+    | '/notes/'
     | '/tasks/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -190,15 +219,18 @@ export interface FileRouteTypes {
     | '/schedules'
     | '/stats'
     | '/dashboard/stats'
+    | '/notes/new'
     | '/shared/$userId'
     | '/tasks/$id'
     | '/tasks/new'
     | '/dashboard'
+    | '/notes'
     | '/tasks'
   id:
     | '__root__'
     | '/'
     | '/dashboard'
+    | '/notes'
     | '/shared'
     | '/tasks'
     | '/agenda'
@@ -208,16 +240,19 @@ export interface FileRouteTypes {
     | '/schedules'
     | '/stats'
     | '/dashboard/stats'
+    | '/notes/new'
     | '/shared/$userId'
     | '/tasks/$id'
     | '/tasks/new'
     | '/dashboard/'
+    | '/notes/'
     | '/tasks/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRouteRoute: typeof DashboardRouteRouteWithChildren
+  NotesRouteRoute: typeof NotesRouteRouteWithChildren
   SharedRouteRoute: typeof SharedRouteRouteWithChildren
   TasksRouteRoute: typeof TasksRouteRouteWithChildren
   AgendaRoute: typeof AgendaRoute
@@ -286,6 +321,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SharedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/notes': {
+      id: '/notes'
+      path: '/notes'
+      fullPath: '/notes'
+      preLoaderRoute: typeof NotesRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
@@ -306,6 +348,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/tasks/'
       preLoaderRoute: typeof TasksIndexRouteImport
       parentRoute: typeof TasksRouteRoute
+    }
+    '/notes/': {
+      id: '/notes/'
+      path: '/'
+      fullPath: '/notes/'
+      preLoaderRoute: typeof NotesIndexRouteImport
+      parentRoute: typeof NotesRouteRoute
     }
     '/dashboard/': {
       id: '/dashboard/'
@@ -335,6 +384,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SharedUserIdRouteImport
       parentRoute: typeof SharedRouteRoute
     }
+    '/notes/new': {
+      id: '/notes/new'
+      path: '/new'
+      fullPath: '/notes/new'
+      preLoaderRoute: typeof NotesNewRouteImport
+      parentRoute: typeof NotesRouteRoute
+    }
     '/dashboard/stats': {
       id: '/dashboard/stats'
       path: '/stats'
@@ -357,6 +413,20 @@ const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
 
 const DashboardRouteRouteWithChildren = DashboardRouteRoute._addFileChildren(
   DashboardRouteRouteChildren,
+)
+
+interface NotesRouteRouteChildren {
+  NotesNewRoute: typeof NotesNewRoute
+  NotesIndexRoute: typeof NotesIndexRoute
+}
+
+const NotesRouteRouteChildren: NotesRouteRouteChildren = {
+  NotesNewRoute: NotesNewRoute,
+  NotesIndexRoute: NotesIndexRoute,
+}
+
+const NotesRouteRouteWithChildren = NotesRouteRoute._addFileChildren(
+  NotesRouteRouteChildren,
 )
 
 interface SharedRouteRouteChildren {
@@ -390,6 +460,7 @@ const TasksRouteRouteWithChildren = TasksRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRouteRoute: DashboardRouteRouteWithChildren,
+  NotesRouteRoute: NotesRouteRouteWithChildren,
   SharedRouteRoute: SharedRouteRouteWithChildren,
   TasksRouteRoute: TasksRouteRouteWithChildren,
   AgendaRoute: AgendaRoute,
