@@ -38,6 +38,7 @@ func NewRouter() *gin.Engine {
 	registerScheduleRoutes(apiRoutes)
 	registerTaskRoutes(apiRoutes)
 	registerNotificationRoutes(apiRoutes)
+	registerNotesRoutes(apiRoutes)
 	registerUserRoutes(apiRoutes)
 
 	return router
