@@ -1,11 +1,11 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/AppShell";
 import { NoteForm } from "@/components/notes/NoteForm";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
-import { findCachedNote, updateNoteMutationOpts } from "@/queries/notes";
+import { getNoteOpts, updateNoteMutationOpts } from "@/queries/notes";
 
 export const Route = createFileRoute("/notes/$id/edit")({
     component: NoteEditRoute,
@@ -22,7 +22,7 @@ function NoteEditRoute() {
 function NoteEditPage() {
     const router = useRouter();
     const { id } = Route.useParams();
-    const cachedNote = useMemo(() => findCachedNote(id), [id]);
+    const { data: note, isLoading, isError, error } = useQuery(getNoteOpts(id));
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     const mutation = useMutation({
@@ -55,12 +55,20 @@ function NoteEditPage() {
         }
     };
 
-    if (!cachedNote) {
+    if (isLoading) {
+        return (
+            <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 pb-36 pt-6 sm:px-6">
+                <div className="h-48 animate-pulse rounded-2xl bg-surface-container-low" />
+            </div>
+        );
+    }
+
+    if (isError || !note) {
         return (
             <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-4 px-4 pb-36 pt-12 text-center sm:px-6">
-                <MaterialIcon className="text-4xl text-on-surface-variant" name="search_off" />
+                <MaterialIcon className="text-4xl text-error" name="error" />
                 <p className="font-label text-sm text-on-surface-variant">
-                    No encontramos la nota en caché. Vuelve al historial o a hoy para abrirla.
+                    {error instanceof Error ? error.message : "No se pudo cargar la nota."}
                 </p>
                 <button
                     className="rounded-full border border-primary/40 px-4 py-2 font-label text-sm font-bold text-primary transition-colors hover:bg-primary/10"
@@ -77,7 +85,7 @@ function NoteEditPage() {
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 pb-36 pt-6 sm:px-6">
             <NoteForm
                 errorMessage={errorMessage}
-                initialContent={cachedNote.content}
+                initialContent={note.content}
                 isSubmitting={mutation.isPending}
                 onCancel={handleCancel}
                 onSubmit={handleSubmit}

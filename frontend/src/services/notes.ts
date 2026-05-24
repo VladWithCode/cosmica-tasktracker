@@ -22,6 +22,18 @@ export async function getNotes(date: string): Promise<Note[]> {
     return data.data?.notes ?? [];
 }
 
+export async function getNote(id: string): Promise<Note> {
+    const response = await fetch(`/api/v1/notes/${id}`, { credentials: "include" });
+    const data = (await response.json()) as ApiResponse<NoteData>;
+    if (!response.ok) {
+        throw new Error(getApiError(data, "Error al obtener nota"));
+    }
+    if (!data.data?.note) {
+        throw new Error("La respuesta no incluyó la nota");
+    }
+    return data.data.note;
+}
+
 export async function createNote(content: string): Promise<Note> {
     const response = await fetch("/api/v1/notes", {
         body: JSON.stringify({ content }),

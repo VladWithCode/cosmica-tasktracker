@@ -19,6 +19,7 @@ type noteContentRequest struct {
 
 func registerNotesRoutes(router *gin.RouterGroup) {
 	router.GET("/notes", GetNotes)
+	router.GET("/notes/:id", GetNote)
 	router.POST("/notes", CreateNote)
 	router.PUT("/notes/:id", UpdateNote)
 	router.DELETE("/notes/:id", DeleteNote)
@@ -48,6 +49,34 @@ func GetNotes(c *gin.Context) {
 	}
 
 	httpx.OK(c, gin.H{"notes": notes, "date": date.Format("2006-01-02")}, "Notas obtenidas")
+}
+
+// GetNote returns a single note owned by the authenticated user.
+func GetNote(c *gin.Context) {
+	authData, err := auth.GetAuth(c)
+	if err != nil {
+		httpx.Unauthorized(c, "No autorizado")
+		return
+	}
+
+	noteID := strings.TrimSpace(c.Param("id"))
+	if _, err := uuid.Parse(noteID); err != nil {
+		httpx.BadRequest(c, "ID de nota inválido")
+		return
+	}
+
+	note, err := db.GetNoteByID(c.Request.Context(), noteID, authData.ID)
+	if err != nil {
+		if errors.Is(err, db.ErrNoteNotFound) {
+			httpx.NotFound(c, "Nota no encontrada")
+			return
+		}
+		log.Printf("notes: get error: %v", err)
+		httpx.ServerError(c, "Error al obtener nota")
+		return
+	}
+
+	httpx.OK(c, gin.H{"note": note}, "Nota obtenida")
 }
 
 // CreateNote inserts a new note for the authenticated user.

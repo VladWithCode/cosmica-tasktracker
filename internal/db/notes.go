@@ -61,6 +61,31 @@ func GetNotesByDate(ctx context.Context, userID string, date time.Time) ([]Note,
 	return notes, nil
 }
 
+// GetNoteByID fetches a single note owned by userID.
+// Returns ErrNoteNotFound if missing or owner mismatch.
+func GetNoteByID(ctx context.Context, noteID string, userID string) (*Note, error) {
+	conn, err := GetConn(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	var n Note
+	err = conn.QueryRow(ctx,
+		`SELECT id, user_id, content, created_at, updated_at
+		 FROM notes
+		 WHERE id = $1 AND user_id = $2`,
+		noteID, userID,
+	).Scan(&n.ID, &n.UserID, &n.Content, &n.CreatedAt, &n.UpdatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNoteNotFound
+		}
+		return nil, err
+	}
+	return &n, nil
+}
+
 // CreateNote inserts a new note for the user. Content is trimmed; empty rejected.
 func CreateNote(ctx context.Context, userID string, content string) (*Note, error) {
 	trimmed := strings.TrimSpace(content)
