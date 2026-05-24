@@ -30,7 +30,7 @@ export const scheduleFormSchema = z
             .optional()
             .or(z.literal("")),
         is_required: z.boolean().default(false),
-        priority_level: z.enum(["urgent", "high", "medium", "low"]),
+        priority_level: z.enum(["urgent", "medium"]),
         repeat_pattern: z.enum(repeatPatternValues).default("daily"),
         repeat_weekdays: z.array(z.number().int().min(0).max(6)).default([]),
         scheduleType: z.enum(["range", "duration", "counter"]),

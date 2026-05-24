@@ -9,14 +9,12 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as WellnessRouteImport } from './routes/wellness'
 import { Route as StatsRouteImport } from './routes/stats'
 import { Route as SchedulesRouteImport } from './routes/schedules'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as FocusRouteImport } from './routes/focus'
-import { Route as ControlRouteImport } from './routes/control'
+import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as TasksRouteRouteImport } from './routes/tasks/route'
 import { Route as SharedRouteRouteImport } from './routes/shared/route'
 import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
@@ -28,11 +26,6 @@ import { Route as TasksIdRouteImport } from './routes/tasks/$id'
 import { Route as SharedUserIdRouteImport } from './routes/shared/$userId'
 import { Route as DashboardStatsRouteImport } from './routes/dashboard/stats'
 
-const WellnessRoute = WellnessRouteImport.update({
-  id: '/wellness',
-  path: '/wellness',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const StatsRoute = StatsRouteImport.update({
   id: '/stats',
   path: '/stats',
@@ -58,14 +51,9 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const FocusRoute = FocusRouteImport.update({
-  id: '/focus',
-  path: '/focus',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ControlRoute = ControlRouteImport.update({
-  id: '/control',
-  path: '/control',
+const AgendaRoute = AgendaRouteImport.update({
+  id: '/agenda',
+  path: '/agenda',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TasksRouteRoute = TasksRouteRouteImport.update({
@@ -124,14 +112,12 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRouteRouteWithChildren
   '/shared': typeof SharedRouteRouteWithChildren
   '/tasks': typeof TasksRouteRouteWithChildren
-  '/control': typeof ControlRoute
-  '/focus': typeof FocusRoute
+  '/agenda': typeof AgendaRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/schedules': typeof SchedulesRoute
   '/stats': typeof StatsRoute
-  '/wellness': typeof WellnessRoute
   '/dashboard/stats': typeof DashboardStatsRoute
   '/shared/$userId': typeof SharedUserIdRoute
   '/tasks/$id': typeof TasksIdRoute
@@ -142,14 +128,12 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/shared': typeof SharedRouteRouteWithChildren
-  '/control': typeof ControlRoute
-  '/focus': typeof FocusRoute
+  '/agenda': typeof AgendaRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/schedules': typeof SchedulesRoute
   '/stats': typeof StatsRoute
-  '/wellness': typeof WellnessRoute
   '/dashboard/stats': typeof DashboardStatsRoute
   '/shared/$userId': typeof SharedUserIdRoute
   '/tasks/$id': typeof TasksIdRoute
@@ -163,14 +147,12 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRouteRouteWithChildren
   '/shared': typeof SharedRouteRouteWithChildren
   '/tasks': typeof TasksRouteRouteWithChildren
-  '/control': typeof ControlRoute
-  '/focus': typeof FocusRoute
+  '/agenda': typeof AgendaRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/schedules': typeof SchedulesRoute
   '/stats': typeof StatsRoute
-  '/wellness': typeof WellnessRoute
   '/dashboard/stats': typeof DashboardStatsRoute
   '/shared/$userId': typeof SharedUserIdRoute
   '/tasks/$id': typeof TasksIdRoute
@@ -185,14 +167,12 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/shared'
     | '/tasks'
-    | '/control'
-    | '/focus'
+    | '/agenda'
     | '/login'
     | '/profile'
     | '/register'
     | '/schedules'
     | '/stats'
-    | '/wellness'
     | '/dashboard/stats'
     | '/shared/$userId'
     | '/tasks/$id'
@@ -203,14 +183,12 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/shared'
-    | '/control'
-    | '/focus'
+    | '/agenda'
     | '/login'
     | '/profile'
     | '/register'
     | '/schedules'
     | '/stats'
-    | '/wellness'
     | '/dashboard/stats'
     | '/shared/$userId'
     | '/tasks/$id'
@@ -223,14 +201,12 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/shared'
     | '/tasks'
-    | '/control'
-    | '/focus'
+    | '/agenda'
     | '/login'
     | '/profile'
     | '/register'
     | '/schedules'
     | '/stats'
-    | '/wellness'
     | '/dashboard/stats'
     | '/shared/$userId'
     | '/tasks/$id'
@@ -244,25 +220,16 @@ export interface RootRouteChildren {
   DashboardRouteRoute: typeof DashboardRouteRouteWithChildren
   SharedRouteRoute: typeof SharedRouteRouteWithChildren
   TasksRouteRoute: typeof TasksRouteRouteWithChildren
-  ControlRoute: typeof ControlRoute
-  FocusRoute: typeof FocusRoute
+  AgendaRoute: typeof AgendaRoute
   LoginRoute: typeof LoginRoute
   ProfileRoute: typeof ProfileRoute
   RegisterRoute: typeof RegisterRoute
   SchedulesRoute: typeof SchedulesRoute
   StatsRoute: typeof StatsRoute
-  WellnessRoute: typeof WellnessRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/wellness': {
-      id: '/wellness'
-      path: '/wellness'
-      fullPath: '/wellness'
-      preLoaderRoute: typeof WellnessRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/stats': {
       id: '/stats'
       path: '/stats'
@@ -298,18 +265,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/focus': {
-      id: '/focus'
-      path: '/focus'
-      fullPath: '/focus'
-      preLoaderRoute: typeof FocusRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/control': {
-      id: '/control'
-      path: '/control'
-      fullPath: '/control'
-      preLoaderRoute: typeof ControlRouteImport
+    '/agenda': {
+      id: '/agenda'
+      path: '/agenda'
+      fullPath: '/agenda'
+      preLoaderRoute: typeof AgendaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/tasks': {
@@ -432,14 +392,12 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRouteRoute: DashboardRouteRouteWithChildren,
   SharedRouteRoute: SharedRouteRouteWithChildren,
   TasksRouteRoute: TasksRouteRouteWithChildren,
-  ControlRoute: ControlRoute,
-  FocusRoute: FocusRoute,
+  AgendaRoute: AgendaRoute,
   LoginRoute: LoginRoute,
   ProfileRoute: ProfileRoute,
   RegisterRoute: RegisterRoute,
   SchedulesRoute: SchedulesRoute,
   StatsRoute: StatsRoute,
-  WellnessRoute: WellnessRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

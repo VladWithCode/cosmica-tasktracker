@@ -51,6 +51,7 @@ func registerTaskRoutes(router *gin.RouterGroup) {
 	router.DELETE("/tasks/:id", DeleteTask)
 
 	router.GET("/tasks", GetUserTasks)
+	router.GET("/tasks/day", GetDayTasks)
 	router.GET("/tasks/today", GenerateTodaysTasks)
 	router.GET("/tasks/progress", GetTaskProgress)
 	router.GET("/tasks/history", GetTaskHistory)
@@ -203,6 +204,9 @@ func (r updateTaskRequest) toServiceInput() (tasksvc.UpdateTaskInput, error) {
 	}
 	if r.Priority != nil && strings.TrimSpace(*r.Priority) != "" {
 		priority := db.ScheduleTaskPriority(strings.TrimSpace(*r.Priority))
+		if err := db.ValidatePriority(priority); err != nil {
+			return input, err
+		}
 		input.Priority = &priority
 	}
 	if r.Frequency != nil && strings.TrimSpace(*r.Frequency) != "" {
@@ -415,6 +419,59 @@ func parseDateOnly(value string) (time.Time, error) {
 		return time.Time{}, err
 	}
 	return time.Date(parsed.Year(), parsed.Month(), parsed.Day(), 12, 0, 0, 0, time.Local), nil
+}
+
+func GetDayTasks(c *gin.Context) {
+	sessionAuth, err := auth.GetAuth(c)
+	if err != nil {
+		httpx.Unauthorized(c, "Authentication required")
+		log.Printf("failed to get auth: %v\n", err)
+		return
+	}
+
+	dateStr := strings.TrimSpace(c.Query("date"))
+	if dateStr == "" {
+		dateStr = time.Now().Format("2006-01-02")
+	}
+	date, err := parseDateOnly(dateStr)
+	if err != nil {
+		httpx.BadRequest(c, "Fecha inválida, usa formato YYYY-MM-DD")
+		return
+	}
+
+	ownerUserID := strings.TrimSpace(c.Query("owner_user_id"))
+	if ownerUserID == "" {
+		ownerUserID = sessionAuth.ID
+	}
+
+	service := tasksvc.NewService(tasksvc.NewRepository())
+	if err := service.CanViewOwner(c.Request.Context(), sessionAuth, ownerUserID); err != nil {
+		if errors.Is(err, tasksvc.ErrForbidden) {
+			sharingPermissionDenied(c)
+			return
+		}
+		httpx.ServerError(c, "Error al validar permisos compartidos")
+		log.Printf("failed to validate shared day tasks access: %v\n", err)
+		return
+	}
+
+	tasks, err := service.ListByDate(c.Request.Context(), ownerUserID, date)
+	if err != nil {
+		httpx.ServerError(c, "Error al recuperar tareas del día")
+		log.Printf("failed to get day tasks: %v\n", err)
+		return
+	}
+
+	feedItems := make([]db.TaskFeedItem, 0, len(tasks))
+	for _, task := range tasks {
+		feedItems = append(feedItems, db.NewTaskFeedItem(task))
+	}
+
+	httpx.OK(c, gin.H{
+		"tasks":         feedItems,
+		"date":          dateStr,
+		"owner_user_id": ownerUserID,
+	}, "Tareas del día recuperadas")
 }
 
 func GenerateTodaysTasks(c *gin.Context) {

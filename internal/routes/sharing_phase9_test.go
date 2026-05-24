@@ -317,7 +317,7 @@ func phase9SchedulePayload(title string, ownerID string) map[string]interface{} 
 		"frequency":           "daily",
 		"is_required":         false,
 		"owner_user_id":       ownerID,
-		"priority_level":      "high",
+		"priority_level":      "urgent",
 		"schedule_end_time":   "12:00",
 		"schedule_start_time": "11:00",
 		"title":               title,

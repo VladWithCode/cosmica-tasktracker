@@ -198,6 +198,88 @@ func CreateUsersTodayTasks(ctx context.Context, userID string) ([]*DetailedTask,
 	return todayTasks, nil
 }
 
+func CreateUserTasksForDate(ctx context.Context, userID string, date time.Time) ([]*DetailedTask, error) {
+	scheduleTasks, err := getUserActiveScheduleTasks(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	var tasks []*DetailedTask
+	generatedCount := 0
+
+	for _, scheduleTask := range scheduleTasks {
+		if shouldCreateTaskForToday(scheduleTask, date) {
+			existingTask, err := GetTaskByScheduleAndDate(ctx, scheduleTask.ID, date)
+			if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+				return nil, err
+			}
+
+			var task *Task
+			if existingTask == nil {
+				task, err = createTaskForDate(ctx, scheduleTask, date)
+				if err != nil {
+					return nil, err
+				}
+				generatedCount++
+			} else {
+				task = existingTask
+			}
+
+			if task.Status != TaskStatusCompleted && task.Status != TaskStatusSkipped && task.Status != TaskStatusFailed {
+				nextStatus := determineTaskStatus(scheduleTask, date)
+				task.Status = nextStatus
+			}
+			if existingTask != nil {
+				err = UpdateTask(ctx, task)
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			tasks = append(tasks, NewDetailedTask(task, scheduleTask))
+		}
+	}
+
+	log.Printf("lazy task generation user_id=%s date=%s generated=%d", userID, date.Format("2006-01-02"), generatedCount)
+
+	return tasks, nil
+}
+
+func GetUserDateDetailedTasks(ctx context.Context, userID string, date time.Time) ([]*DetailedTask, error) {
+	conn, err := GetConn(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	rows, err := conn.Query(
+		ctx,
+		detailedTaskSelectSQL()+`
+		WHERE user_id = $1 AND DATE(date) = DATE($2::timestamptz)
+		ORDER BY
+			(CASE WHEN completed_at IS NULL THEN 1 ELSE 2 END) ASC,
+			(CASE WHEN required THEN 1 ELSE 2 END) ASC,
+			(CASE priority
+				WHEN 'urgent' THEN 1
+				WHEN 'high' THEN 2
+				WHEN 'medium' THEN 3
+				WHEN 'low' THEN 4
+				ELSE 5
+			END) ASC,
+			start_time ASC NULLS LAST`,
+		userID, date,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return scanDetailedTasks(rows)
+}
+
 func GetActiveScheduleOwnerIDs(ctx context.Context) ([]string, error) {
 	conn, err := GetConn(ctx)
 	if err != nil {

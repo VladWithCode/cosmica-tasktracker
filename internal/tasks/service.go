@@ -136,6 +136,19 @@ func (s *Service) ListToday(ctx context.Context, userID string) ([]*db.DetailedT
 	return ensureDetailedTaskSlice(tasks), nil
 }
 
+func (s *Service) ListByDate(ctx context.Context, userID string, date time.Time) ([]*db.DetailedTask, error) {
+	if _, err := s.repo.CreateUserTasksForDate(ctx, userID, date); err != nil {
+		return nil, err
+	}
+
+	tasks, err := s.repo.GetUserDateDetailedTasks(ctx, userID, date)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, err
+	}
+
+	return ensureDetailedTaskSlice(tasks), nil
+}
+
 func (s *Service) Update(ctx context.Context, authData *auth.Auth, id string, input UpdateTaskInput) (*db.DetailedTask, error) {
 	task, err := s.repo.GetTaskByID(ctx, id)
 	if err != nil {

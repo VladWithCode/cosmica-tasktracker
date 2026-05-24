@@ -27,9 +27,7 @@ const priorities: Array<{
     priority: Priority;
 }> = [
     { label: "Urgente", priority: "urgent" },
-    { label: "Alta", priority: "high" },
-    { label: "Media", priority: "medium" },
-    { label: "Baja", priority: "low" },
+    { label: "Casual", priority: "medium" },
 ];
 
 interface TaskDetailPageProps {
@@ -55,7 +53,7 @@ export function TaskDetailPage({ taskId }: TaskDetailPageProps) {
     const { data, error, isError, isLoading } = useQuery(getTaskByIdOpts(taskId));
 
     return (
-        <AppShell showBackButton showBottomNav={false} title="Detalle de tarea" topBarAlign="center">
+        <AppShell showBackButton title="Detalle de tarea" topBarAlign="center">
             <main className="relative min-h-full bg-surface px-6 pb-12 pt-8 text-on-surface">
                 <div className="pointer-events-none absolute left-1/2 top-16 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/5 blur-[120px]" />
                 <div className="relative mx-auto flex max-w-3xl flex-col gap-6">

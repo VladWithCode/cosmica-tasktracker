@@ -16,15 +16,12 @@ import { cn } from "@/lib/utils";
 import type {
     CreateScheduleInput,
     LegacyRepeatFrequency,
-    Priority,
     ScheduleFrequency,
 } from "@/types/schedule";
 
-const priorityOptions: Array<{ label: string; value: Priority; className: string }> = [
-    { label: "Urgent", value: "urgent", className: "border-error/35 text-error" },
-    { label: "High", value: "high", className: "border-primary/35 text-primary" },
-    { label: "Medium", value: "medium", className: "border-tertiary/35 text-tertiary" },
-    { label: "Low", value: "low", className: "border-outline-variant/30 text-on-surface-variant" },
+const priorityOptions: Array<{ label: string; value: "urgent" | "medium"; className: string }> = [
+    { label: "Urgente", value: "urgent", className: "border-error/35 text-error" },
+    { label: "Casual", value: "medium", className: "border-tertiary/35 text-tertiary" },
 ];
 
 const repeatPatternOptions: Array<{ label: string; value: RepeatPattern; hint: string }> = [
@@ -70,7 +67,7 @@ export function TaskNewPage() {
             description: "",
             end_date: "",
             is_required: false,
-            priority_level: "high",
+            priority_level: "urgent",
             repeat_pattern: "daily",
             repeat_weekdays: [],
             scheduleType: "range",

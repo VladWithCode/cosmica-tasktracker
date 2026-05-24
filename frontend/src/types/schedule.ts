@@ -1,4 +1,6 @@
-export type Priority = "urgent" | "high" | "medium" | "low";
+/** Canonical priorities after FASE H migration. "high"/"low" are legacy DB values kept for display compat. */
+export type Priority = "urgent" | "medium";
+export type LegacyPriority = Priority | "high" | "low";
 
 export type ScheduleFrequency = "daily" | "weekly" | "monthly" | "custom";
 
@@ -37,7 +39,7 @@ export interface Schedule {
     frequencyConfig: Record<string, unknown>;
     category: string;
     status: ScheduleStatus;
-    priority: Priority;
+    priority: LegacyPriority;
     createdAt: string;
     updatedAt: string;
 }

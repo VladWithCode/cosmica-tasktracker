@@ -12,7 +12,7 @@ import {
     pauseScheduleOpts,
     resumeScheduleOpts,
 } from "@/queries/schedules";
-import type { Priority, Schedule, ScheduleStatus } from "@/types/schedule";
+import type { LegacyPriority, Schedule, ScheduleStatus } from "@/types/schedule";
 
 export const Route = createFileRoute("/schedules")({
     component: SchedulesRoute,
@@ -339,21 +339,18 @@ function StatusBadge({ status }: { status: ScheduleStatus }) {
     );
 }
 
-function PriorityBadge({ priority }: { priority: Priority }) {
-    const styles: Record<Priority, string> = {
-        urgent: "border-error/40 text-error",
-        high: "border-primary/40 text-primary",
-        medium: "border-tertiary/40 text-tertiary",
-        low: "border-outline-variant/30 text-on-surface-variant",
-    };
+function PriorityBadge({ priority }: { priority: LegacyPriority }) {
+    const isUrgent = priority === "urgent" || priority === "high";
+    const label = isUrgent ? "Urgente" : "Casual";
+    const style = isUrgent ? "border-error/40 text-error" : "border-tertiary/40 text-tertiary";
     return (
         <span
             className={cn(
                 "rounded-full border px-2 py-0.5 font-label text-[10px] font-extrabold uppercase tracking-widest",
-                styles[priority] ?? styles.medium,
+                style,
             )}
         >
-            {priority}
+            {label}
         </span>
     );
 }

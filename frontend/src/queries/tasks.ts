@@ -45,6 +45,7 @@ export const TasksQueryKeys = {
     all: () => ["tasks"] as const,
     listing: () => [...TasksQueryKeys.all(), "listing"] as const,
     today: () => [...TasksQueryKeys.listing(), "today"] as const,
+    byDate: (date: string) => [...TasksQueryKeys.listing(), "day", date] as const,
     history: () => [...TasksQueryKeys.listing(), "history"] as const,
 
     detail: () => [...TasksQueryKeys.all(), "detail"] as const,
@@ -116,6 +117,30 @@ export async function getSharedTodayTasks(ownerUserId: string) {
     const tasks: TTask[] = rawTasks.map(hydrateTask);
     const feedItems: TaskFeedItem[] = rawTasks.map(toTaskFeedItem);
     return { feedItems, tasks };
+}
+
+export function getDayTasksOpts(date: string) {
+    return queryOptions({
+        queryKey: TasksQueryKeys.byDate(date),
+        queryFn: () => getDayTasks(date),
+        staleTime: 60 * 1000,
+        enabled: date.length > 0,
+    });
+}
+
+export async function getDayTasks(date: string) {
+    const params = new URLSearchParams({ date });
+    const response = await fetch(`/api/v1/tasks/day?${params.toString()}`, {
+        method: "GET",
+        credentials: "include",
+    });
+    const data = (await response.json()) as ApiResponse<TasksData>;
+    if (!response.ok) {
+        throw new Error(getApiError(data, "Error al obtener tareas del día"));
+    }
+    const rawTasks = data.data?.tasks ?? [];
+    const feedItems: TaskFeedItem[] = rawTasks.map(toTaskFeedItem);
+    return { feedItems, date: data.data?.date ?? date };
 }
 
 export function getTaskHistoryOpts(range: TaskStatsRangeInput) {

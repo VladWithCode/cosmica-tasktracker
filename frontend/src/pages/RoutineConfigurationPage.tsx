@@ -11,6 +11,7 @@ import { getTodayTasksOpts, TasksQueryKeys } from "@/queries/tasks";
 import { createTask } from "@/services/tasks";
 import type { CreateTaskPayload, TaskCategory, TaskPriorityValue } from "@/types/task-config";
 import type { TTask } from "@/lib/schemas/task";
+import { useTheme } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 
 const categoryOptions: Record<TaskCategory, { label: string; icon: string }> = {
@@ -21,10 +22,8 @@ const categoryOptions: Record<TaskCategory, { label: string; icon: string }> = {
 };
 
 const priorityOptions: Record<TaskPriorityValue, { label: string; dotClassName: string }> = {
-    low: { label: "Low", dotClassName: "bg-tertiary" },
-    medium: { label: "Medium", dotClassName: "bg-primary" },
-    high: { label: "High", dotClassName: "bg-error" },
-    urgent: { label: "Urgent", dotClassName: "bg-error-dim" },
+    medium: { label: "Casual", dotClassName: "bg-tertiary" },
+    urgent: { label: "Urgente", dotClassName: "bg-error" },
 };
 
 const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -33,7 +32,7 @@ const taskConfigSchema = z
     .object({
         title: z.string().trim().min(1, "Escribe el nombre de la tarea").max(255),
         category: z.enum(["focus", "wellness", "movement", "admin"]),
-        priority: z.enum(["urgent", "high", "medium", "low"]),
+        priority: z.enum(["urgent", "medium"]),
         startTime: z.string().regex(timePattern, "Selecciona una hora de inicio"),
         endTime: z.string().regex(timePattern, "Selecciona una hora de fin"),
     })
@@ -61,7 +60,7 @@ export function RoutineConfigurationPage() {
         defaultValues: {
             title: "",
             category: "focus",
-            priority: "high",
+            priority: "urgent",
             startTime: defaultTimes.startTime,
             endTime: defaultTimes.endTime,
         },
@@ -125,13 +124,7 @@ export function RoutineConfigurationPage() {
                         </h1>
                     </div>
                 </div>
-                <button
-                    aria-label="Ver notificaciones"
-                    className="text-on-surface-variant transition-all duration-300 hover:text-primary active:scale-95"
-                    type="button"
-                >
-                    <MaterialIcon name="notifications" className="text-2xl" />
-                </button>
+                <ThemeToggleButton />
             </header>
 
             <main className="relative mx-auto max-w-md space-y-6 px-4 pt-24">
@@ -504,8 +497,8 @@ function buildCreateTaskPayload(values: TaskConfigForm, repeating: boolean): Cre
         endTime: timeToDate(values.endTime).toISOString(),
         durationMinutes: timeToMinutes(values.endTime) - timeToMinutes(values.startTime),
         priority: values.priority,
-        required: values.priority === "urgent" || values.priority === "high",
-        isRequired: values.priority === "urgent" || values.priority === "high",
+        required: values.priority === "urgent",
+        isRequired: values.priority === "urgent",
         repeating,
         repeatFrequency: repeating ? "daily" : "",
         repeatWeekdays: [],
@@ -636,4 +629,24 @@ function formatHourLabel(minutes: number) {
         hour: "numeric",
         hour12: true,
     });
+}
+
+const themeIcons: Record<string, string> = {
+    system: "brightness_auto",
+    light: "light_mode",
+    dark: "dark_mode",
+};
+
+function ThemeToggleButton() {
+    const { preference, cycle } = useTheme();
+    return (
+        <button
+            aria-label={`Tema: ${preference}`}
+            className="text-on-surface-variant transition-all duration-300 hover:text-primary active:scale-95"
+            onClick={cycle}
+            type="button"
+        >
+            <MaterialIcon name={themeIcons[preference] ?? "brightness_auto"} className="text-2xl" />
+        </button>
+    );
 }
