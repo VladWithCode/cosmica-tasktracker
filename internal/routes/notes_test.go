@@ -152,6 +152,70 @@ func TestNotesInvalidDateRejected(t *testing.T) {
 	}
 }
 
+func TestNotesGetByIDOwnership(t *testing.T) {
+	router := setupAuthRouteTest(t)
+	owner := fmt.Sprintf("notes_get_owner_%d", time.Now().UnixNano()%1_000_000_000)
+	other := fmt.Sprintf("notes_get_other_%d", time.Now().UnixNano()%1_000_000_000+2)
+	cleanupNotesUser(t, owner)
+	cleanupNotesUser(t, other)
+	t.Cleanup(func() {
+		cleanupNotesUser(t, owner)
+		cleanupNotesUser(t, other)
+	})
+
+	ownerCookie := registerNotesUser(t, router, owner)
+	otherCookie := registerNotesUser(t, router, other)
+
+	// owner creates note
+	status, body, _, _ := performJSONPayload(router, http.MethodPost, "/api/v1/notes",
+		map[string]interface{}{"content": "private"}, []*http.Cookie{ownerCookie})
+	if status != http.StatusCreated {
+		t.Fatalf("create status = %d body = %s", status, body)
+	}
+	var created noteResponse
+	_ = json.Unmarshal([]byte(body), &created)
+	noteID := created.Data.Note.ID
+	if noteID == "" {
+		t.Fatalf("missing note id")
+	}
+
+	// owner GET own note → 200
+	status, body, _, _ = performJSONPayload(router, http.MethodGet, "/api/v1/notes/"+noteID, nil,
+		[]*http.Cookie{ownerCookie})
+	if status != http.StatusOK {
+		t.Fatalf("owner get status = %d body = %s", status, body)
+	}
+	var fetched noteResponse
+	if err := json.Unmarshal([]byte(body), &fetched); err != nil {
+		t.Fatalf("unmarshal: %v body=%s", err, body)
+	}
+	if fetched.Data.Note.Content != "private" {
+		t.Fatalf("expected 'private', got %q", fetched.Data.Note.Content)
+	}
+
+	// other user GET → 404
+	status, _, _, _ = performJSONPayload(router, http.MethodGet, "/api/v1/notes/"+noteID, nil,
+		[]*http.Cookie{otherCookie})
+	if status != http.StatusNotFound {
+		t.Fatalf("expected 404 for cross-user GET, got %d", status)
+	}
+
+	// invalid uuid → 400
+	status, _, _, _ = performJSONPayload(router, http.MethodGet, "/api/v1/notes/not-a-uuid", nil,
+		[]*http.Cookie{ownerCookie})
+	if status != http.StatusBadRequest {
+		t.Fatalf("expected 400 for invalid id, got %d", status)
+	}
+
+	// non-existent uuid → 404
+	status, _, _, _ = performJSONPayload(router, http.MethodGet,
+		"/api/v1/notes/00000000-0000-0000-0000-000000000000", nil,
+		[]*http.Cookie{ownerCookie})
+	if status != http.StatusNotFound {
+		t.Fatalf("expected 404 for missing id, got %d", status)
+	}
+}
+
 func TestNotesOnlyOwnerCanListEditDelete(t *testing.T) {
 	router := setupAuthRouteTest(t)
 	owner := fmt.Sprintf("notes_owner_%d", time.Now().UnixNano()%1_000_000_000)
