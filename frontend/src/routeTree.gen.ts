@@ -17,14 +17,19 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as TasksRouteRouteImport } from './routes/tasks/route'
 import { Route as SharedRouteRouteImport } from './routes/shared/route'
+import { Route as NotesRouteRouteImport } from './routes/notes/route'
 import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TasksIndexRouteImport } from './routes/tasks/index'
+import { Route as NotesIndexRouteImport } from './routes/notes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as TasksNewRouteImport } from './routes/tasks/new'
 import { Route as TasksIdRouteImport } from './routes/tasks/$id'
 import { Route as SharedUserIdRouteImport } from './routes/shared/$userId'
+import { Route as NotesNewRouteImport } from './routes/notes/new'
+import { Route as NotesHistoryRouteImport } from './routes/notes/history'
 import { Route as DashboardStatsRouteImport } from './routes/dashboard/stats'
+import { Route as NotesIdEditRouteImport } from './routes/notes/$id/edit'
 
 const StatsRoute = StatsRouteImport.update({
   id: '/stats',
@@ -66,6 +71,11 @@ const SharedRouteRoute = SharedRouteRouteImport.update({
   path: '/shared',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NotesRouteRoute = NotesRouteRouteImport.update({
+  id: '/notes',
+  path: '/notes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardRouteRoute = DashboardRouteRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -80,6 +90,11 @@ const TasksIndexRoute = TasksIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => TasksRouteRoute,
+} as any)
+const NotesIndexRoute = NotesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => NotesRouteRoute,
 } as any)
 const DashboardIndexRoute = DashboardIndexRouteImport.update({
   id: '/',
@@ -101,15 +116,31 @@ const SharedUserIdRoute = SharedUserIdRouteImport.update({
   path: '/$userId',
   getParentRoute: () => SharedRouteRoute,
 } as any)
+const NotesNewRoute = NotesNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => NotesRouteRoute,
+} as any)
+const NotesHistoryRoute = NotesHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => NotesRouteRoute,
+} as any)
 const DashboardStatsRoute = DashboardStatsRouteImport.update({
   id: '/stats',
   path: '/stats',
   getParentRoute: () => DashboardRouteRoute,
 } as any)
+const NotesIdEditRoute = NotesIdEditRouteImport.update({
+  id: '/$id/edit',
+  path: '/$id/edit',
+  getParentRoute: () => NotesRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/notes': typeof NotesRouteRouteWithChildren
   '/shared': typeof SharedRouteRouteWithChildren
   '/tasks': typeof TasksRouteRouteWithChildren
   '/agenda': typeof AgendaRoute
@@ -119,11 +150,15 @@ export interface FileRoutesByFullPath {
   '/schedules': typeof SchedulesRoute
   '/stats': typeof StatsRoute
   '/dashboard/stats': typeof DashboardStatsRoute
+  '/notes/history': typeof NotesHistoryRoute
+  '/notes/new': typeof NotesNewRoute
   '/shared/$userId': typeof SharedUserIdRoute
   '/tasks/$id': typeof TasksIdRoute
   '/tasks/new': typeof TasksNewRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/notes/': typeof NotesIndexRoute
   '/tasks/': typeof TasksIndexRoute
+  '/notes/$id/edit': typeof NotesIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -135,16 +170,21 @@ export interface FileRoutesByTo {
   '/schedules': typeof SchedulesRoute
   '/stats': typeof StatsRoute
   '/dashboard/stats': typeof DashboardStatsRoute
+  '/notes/history': typeof NotesHistoryRoute
+  '/notes/new': typeof NotesNewRoute
   '/shared/$userId': typeof SharedUserIdRoute
   '/tasks/$id': typeof TasksIdRoute
   '/tasks/new': typeof TasksNewRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/notes': typeof NotesIndexRoute
   '/tasks': typeof TasksIndexRoute
+  '/notes/$id/edit': typeof NotesIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/notes': typeof NotesRouteRouteWithChildren
   '/shared': typeof SharedRouteRouteWithChildren
   '/tasks': typeof TasksRouteRouteWithChildren
   '/agenda': typeof AgendaRoute
@@ -154,17 +194,22 @@ export interface FileRoutesById {
   '/schedules': typeof SchedulesRoute
   '/stats': typeof StatsRoute
   '/dashboard/stats': typeof DashboardStatsRoute
+  '/notes/history': typeof NotesHistoryRoute
+  '/notes/new': typeof NotesNewRoute
   '/shared/$userId': typeof SharedUserIdRoute
   '/tasks/$id': typeof TasksIdRoute
   '/tasks/new': typeof TasksNewRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/notes/': typeof NotesIndexRoute
   '/tasks/': typeof TasksIndexRoute
+  '/notes/$id/edit': typeof NotesIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/dashboard'
+    | '/notes'
     | '/shared'
     | '/tasks'
     | '/agenda'
@@ -174,11 +219,15 @@ export interface FileRouteTypes {
     | '/schedules'
     | '/stats'
     | '/dashboard/stats'
+    | '/notes/history'
+    | '/notes/new'
     | '/shared/$userId'
     | '/tasks/$id'
     | '/tasks/new'
     | '/dashboard/'
+    | '/notes/'
     | '/tasks/'
+    | '/notes/$id/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -190,15 +239,20 @@ export interface FileRouteTypes {
     | '/schedules'
     | '/stats'
     | '/dashboard/stats'
+    | '/notes/history'
+    | '/notes/new'
     | '/shared/$userId'
     | '/tasks/$id'
     | '/tasks/new'
     | '/dashboard'
+    | '/notes'
     | '/tasks'
+    | '/notes/$id/edit'
   id:
     | '__root__'
     | '/'
     | '/dashboard'
+    | '/notes'
     | '/shared'
     | '/tasks'
     | '/agenda'
@@ -208,16 +262,21 @@ export interface FileRouteTypes {
     | '/schedules'
     | '/stats'
     | '/dashboard/stats'
+    | '/notes/history'
+    | '/notes/new'
     | '/shared/$userId'
     | '/tasks/$id'
     | '/tasks/new'
     | '/dashboard/'
+    | '/notes/'
     | '/tasks/'
+    | '/notes/$id/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRouteRoute: typeof DashboardRouteRouteWithChildren
+  NotesRouteRoute: typeof NotesRouteRouteWithChildren
   SharedRouteRoute: typeof SharedRouteRouteWithChildren
   TasksRouteRoute: typeof TasksRouteRouteWithChildren
   AgendaRoute: typeof AgendaRoute
@@ -286,6 +345,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SharedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/notes': {
+      id: '/notes'
+      path: '/notes'
+      fullPath: '/notes'
+      preLoaderRoute: typeof NotesRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
@@ -306,6 +372,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/tasks/'
       preLoaderRoute: typeof TasksIndexRouteImport
       parentRoute: typeof TasksRouteRoute
+    }
+    '/notes/': {
+      id: '/notes/'
+      path: '/'
+      fullPath: '/notes/'
+      preLoaderRoute: typeof NotesIndexRouteImport
+      parentRoute: typeof NotesRouteRoute
     }
     '/dashboard/': {
       id: '/dashboard/'
@@ -335,12 +408,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SharedUserIdRouteImport
       parentRoute: typeof SharedRouteRoute
     }
+    '/notes/new': {
+      id: '/notes/new'
+      path: '/new'
+      fullPath: '/notes/new'
+      preLoaderRoute: typeof NotesNewRouteImport
+      parentRoute: typeof NotesRouteRoute
+    }
+    '/notes/history': {
+      id: '/notes/history'
+      path: '/history'
+      fullPath: '/notes/history'
+      preLoaderRoute: typeof NotesHistoryRouteImport
+      parentRoute: typeof NotesRouteRoute
+    }
     '/dashboard/stats': {
       id: '/dashboard/stats'
       path: '/stats'
       fullPath: '/dashboard/stats'
       preLoaderRoute: typeof DashboardStatsRouteImport
       parentRoute: typeof DashboardRouteRoute
+    }
+    '/notes/$id/edit': {
+      id: '/notes/$id/edit'
+      path: '/$id/edit'
+      fullPath: '/notes/$id/edit'
+      preLoaderRoute: typeof NotesIdEditRouteImport
+      parentRoute: typeof NotesRouteRoute
     }
   }
 }
@@ -357,6 +451,24 @@ const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
 
 const DashboardRouteRouteWithChildren = DashboardRouteRoute._addFileChildren(
   DashboardRouteRouteChildren,
+)
+
+interface NotesRouteRouteChildren {
+  NotesHistoryRoute: typeof NotesHistoryRoute
+  NotesNewRoute: typeof NotesNewRoute
+  NotesIndexRoute: typeof NotesIndexRoute
+  NotesIdEditRoute: typeof NotesIdEditRoute
+}
+
+const NotesRouteRouteChildren: NotesRouteRouteChildren = {
+  NotesHistoryRoute: NotesHistoryRoute,
+  NotesNewRoute: NotesNewRoute,
+  NotesIndexRoute: NotesIndexRoute,
+  NotesIdEditRoute: NotesIdEditRoute,
+}
+
+const NotesRouteRouteWithChildren = NotesRouteRoute._addFileChildren(
+  NotesRouteRouteChildren,
 )
 
 interface SharedRouteRouteChildren {
@@ -390,6 +502,7 @@ const TasksRouteRouteWithChildren = TasksRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRouteRoute: DashboardRouteRouteWithChildren,
+  NotesRouteRoute: NotesRouteRouteWithChildren,
   SharedRouteRoute: SharedRouteRouteWithChildren,
   TasksRouteRoute: TasksRouteRouteWithChildren,
   AgendaRoute: AgendaRoute,
