@@ -1,26 +1,27 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import { QuickTaskDialog } from "@/components/tasks/QuickTaskDialog";
 import { cn } from "@/lib/utils";
 
 interface MenuItem {
     icon: string;
     label: string;
-    to: string;
+    action: "quick-task" | { to: string };
 }
 
 const menuItems: MenuItem[] = [
-    { icon: "sticky_note_2", label: "Nueva nota", to: "/notes/new" },
-    { icon: "edit_note", label: "Nueva rutina", to: "/tasks/new" },
-    { icon: "description", label: "Ver Notas", to: "/notes" },
-    { icon: "today", label: "Hoy", to: "/tasks" },
-    { icon: "calendar_view_day", label: "Agenda", to: "/agenda" },
-    { icon: "insights", label: "Estadísticas", to: "/stats" },
-    { icon: "calendar_month", label: "Mis rutinas", to: "/schedules" },
+    { icon: "bolt", label: "Tarea rápida", action: "quick-task" },
+    { icon: "edit_note", label: "Nueva rutina", action: { to: "/tasks/new" } },
+    { icon: "auto_awesome", label: "Rituales", action: { to: "/tasks" } },
+    { icon: "today", label: "Agenda", action: { to: "/agenda" } },
+    { icon: "insights", label: "Estadísticas", action: { to: "/stats" } },
+    { icon: "calendar_month", label: "Mis rutinas", action: { to: "/schedules" } },
 ];
 
 export function FloatingActionButton() {
     const [isOpen, setIsOpen] = useState(false);
+    const [quickTaskOpen, setQuickTaskOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
 
@@ -52,7 +53,11 @@ export function FloatingActionButton() {
     const handleItemClick = useCallback(
         (item: MenuItem) => {
             close();
-            void navigate({ to: item.to });
+            if (item.action === "quick-task") {
+                setQuickTaskOpen(true);
+            } else {
+                void navigate({ to: item.action.to });
+            }
         },
         [close, navigate],
     );
@@ -118,6 +123,11 @@ export function FloatingActionButton() {
                     />
                 </button>
             </div>
+
+            <QuickTaskDialog
+                onClose={() => setQuickTaskOpen(false)}
+                open={quickTaskOpen}
+            />
         </>
     );
 }
