@@ -2,6 +2,7 @@ import { useCallback, useMemo } from "react";
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { checkAuth } from "@/auth/useAuth";
+import { AgendaCalendar } from "@/components/agenda/AgendaCalendar";
 import { AppShell } from "@/components/layout/AppShell";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { cn } from "@/lib/utils";
@@ -62,33 +63,9 @@ const HOURS = Array.from({ length: 24 }, (_, i) => i);
 function AgendaPage() {
     const { date } = Route.useSearch();
     if (!date) {
-        return <AgendaCalendarPlaceholder />;
+        return <AgendaCalendar />;
     }
     return <AgendaDayView date={date} />;
-}
-
-function AgendaCalendarPlaceholder() {
-    const navigate = useNavigate();
-    const today = toDateString(new Date());
-
-    return (
-        <main className="relative mx-auto flex min-h-full max-w-3xl flex-col items-center justify-center px-4 pb-36 pt-6 text-center sm:px-6">
-            <div className="pointer-events-none absolute left-1/2 top-16 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/5 blur-[120px]" />
-            <MaterialIcon name="calendar_month" className="text-5xl text-primary/60" />
-            <h2 className="mt-4 font-display text-xl font-bold text-on-surface">Calendario</h2>
-            <p className="mt-2 max-w-sm font-label text-sm text-on-surface-variant">
-                La vista de calendario mensual llegará pronto. Mientras tanto, abre la agenda del
-                día.
-            </p>
-            <button
-                className="mt-6 rounded-full border border-primary/30 bg-primary/10 px-5 py-2 font-label text-xs font-bold uppercase tracking-widest text-primary transition-colors hover:bg-primary/20"
-                onClick={() => navigate({ to: "/agenda", search: { date: today } })}
-                type="button"
-            >
-                Ver agenda de hoy
-            </button>
-        </main>
-    );
 }
 
 function AgendaDayView({ date: selectedDate }: { date: string }) {
