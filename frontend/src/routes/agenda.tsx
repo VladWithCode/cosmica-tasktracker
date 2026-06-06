@@ -155,15 +155,6 @@ function AgendaDayView({ date: selectedDate }: { date: string }) {
                                     Hoy
                                 </span>
                             )}
-                            <input
-                                aria-label="Seleccionar fecha"
-                                className="h-7 rounded-lg border border-outline-variant/30 bg-surface-container-lowest px-2 text-xs text-on-surface focus:border-primary focus:outline-none"
-                                onChange={(e) => {
-                                    if (isValidDateString(e.target.value)) goToDate(e.target.value);
-                                }}
-                                type="date"
-                                value={selectedDate}
-                            />
                         </div>
                     </div>
 
