@@ -167,7 +167,13 @@ func TestProgressEndpointReturnsCorrectCounts(t *testing.T) {
 		t.Fatalf("expected percentage=50, got %v", progress.Percentage)
 	}
 
-	dateStr := time.Now().Format("2006-01-02")
+	// Use the date the endpoint just reported (server-local) as the
+	// explicit-date query. Avoids timezone skew between the test runner
+	// and the database session when computing "today".
+	dateStr := progress.Date
+	if dateStr == "" {
+		t.Fatalf("expected progress.Date to be populated, got empty")
+	}
 	progressByDate := getProgress(t, router, authCookie, dateStr)
 	if progressByDate.Date != dateStr {
 		t.Fatalf("expected date=%q, got %q", dateStr, progressByDate.Date)
