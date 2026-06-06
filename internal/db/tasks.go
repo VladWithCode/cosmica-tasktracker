@@ -1359,10 +1359,16 @@ func GetUserDayProgress(ctx context.Context, userID string, day time.Time) (*Day
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	progress := &DayProgress{Date: day.Format("2006-01-02")}
+	// The canonical day string comes from the database itself so that the
+	// returned Date matches the day under postgres' session timezone — which
+	// is also the timezone used to filter tasks by DATE(date). Otherwise a
+	// caller using progress.Date as the explicit ?date= parameter could get a
+	// different day than the one the database used for the count.
+	progress := &DayProgress{}
 	row := conn.QueryRow(
 		ctx,
 		`SELECT
+			DATE($2::timestamptz)::text AS day_str,
 			COUNT(*) AS total,
 			COUNT(*) FILTER (WHERE status_level = 'completed') AS completed,
 			COUNT(*) FILTER (WHERE status_level = 'pending') AS pending,
@@ -1375,6 +1381,7 @@ func GetUserDayProgress(ctx context.Context, userID string, day time.Time) (*Day
 		day,
 	)
 	if err := row.Scan(
+		&progress.Date,
 		&progress.Total,
 		&progress.Completed,
 		&progress.Pending,
