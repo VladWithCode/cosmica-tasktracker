@@ -20,10 +20,6 @@ function toDateString(date: Date): string {
     return `${y}-${m}-${d}`;
 }
 
-/**
- * Safe YYYY-MM-DD validation. Rejects bad shapes and impossible dates
- * (e.g. 2025-02-31) by round-tripping through Date.
- */
 function isValidDateString(value: unknown): value is string {
     if (typeof value !== "string") return false;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -55,11 +51,6 @@ function AgendaRoute() {
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
-/**
- * URL-driven agenda mode:
- *   /agenda                  -> calendar mode (monthly, placeholder for now)
- *   /agenda?date=YYYY-MM-DD  -> day mode (hourly view)
- */
 function AgendaPage() {
     const { date } = Route.useSearch();
     if (!date) {
@@ -70,6 +61,7 @@ function AgendaPage() {
 
 function AgendaDayView({ date: selectedDate }: { date: string }) {
     const navigate = useNavigate();
+
     const { data, isLoading, isError, error } = useQuery(getDayTasksOpts(selectedDate));
 
     const feedItems = data?.feedItems ?? [];
@@ -155,6 +147,15 @@ function AgendaDayView({ date: selectedDate }: { date: string }) {
                                     Hoy
                                 </span>
                             )}
+                            <input
+                                aria-label="Seleccionar fecha"
+                                className="h-7 rounded-lg border border-outline-variant/30 bg-surface-container-lowest px-2 text-xs text-on-surface focus:border-primary focus:outline-none"
+                                onChange={(e) => {
+                                    if (e.target.value) goToDate(e.target.value);
+                                }}
+                                type="date"
+                                value={selectedDate}
+                            />
                         </div>
                     </div>
 
