@@ -1,4 +1,5 @@
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
+import { apiFetch } from "@/lib/apiFetch";
 import type { ApiResponse } from "@/types/api";
 import { getApiError } from "@/types/api";
 import type { NotificationInboxItem } from "@/types/sharing";
@@ -27,7 +28,7 @@ export const markNotificationReadOpts = mutationOptions({
 });
 
 export async function getNotificationInbox(): Promise<NotificationInboxItem[]> {
-    const response = await fetch("/api/v1/notifications/inbox", {
+    const response = await apiFetch("/api/v1/notifications/inbox", {
         credentials: "include",
         method: "GET",
     });
@@ -39,7 +40,7 @@ export async function getNotificationInbox(): Promise<NotificationInboxItem[]> {
 }
 
 export async function markNotificationRead(id: string): Promise<void> {
-    const response = await fetch(`/api/v1/notifications/inbox/${id}/read`, {
+    const response = await apiFetch(`/api/v1/notifications/inbox/${id}/read`, {
         credentials: "include",
         method: "POST",
     });

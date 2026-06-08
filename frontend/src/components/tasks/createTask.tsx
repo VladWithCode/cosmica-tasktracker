@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { queryClient } from "@/queries/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
 import { MaterialIcon } from "../ui/MaterialIcon";
 
 const taskSchema = z
@@ -88,7 +89,7 @@ export function NewTask() {
         },
     });
     const createTask = useMutation({
-        mutationFn: (data: TaskFormData) => fetch("/api/v1/tasks", {
+        mutationFn: (data: TaskFormData) => apiFetch("/api/v1/tasks", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

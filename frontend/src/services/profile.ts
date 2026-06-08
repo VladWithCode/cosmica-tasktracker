@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/apiFetch";
 import type { ApiResponse } from "@/types/api";
 import { getApiError } from "@/types/api";
 import type { ProfileActionResponse, UpdateProfilePayload, UserProfile } from "@/types/profile";
@@ -8,7 +9,7 @@ interface ProfileData {
 }
 
 export async function getProfile(): Promise<UserProfile> {
-    const response = await fetch("/api/v1/profile", {
+    const response = await apiFetch("/api/v1/profile", {
         method: "GET",
         credentials: "include",
     });
@@ -28,7 +29,7 @@ export async function getProfile(): Promise<UserProfile> {
 export async function updateProfile(
     payload: UpdateProfilePayload,
 ): Promise<ProfileActionResponse> {
-    const response = await fetch("/api/v1/profile", {
+    const response = await apiFetch("/api/v1/profile", {
         method: "PUT",
         headers: {
             "Content-Type": "application/json",

@@ -1,4 +1,5 @@
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
+import { apiFetch } from "@/lib/apiFetch";
 import type { ApiResponse } from "@/types/api";
 import { getApiError } from "@/types/api";
 import type {
@@ -88,7 +89,7 @@ export const pingTaskOpts = mutationOptions({
 });
 
 export async function getSharingGrants(): Promise<SharingGrant[]> {
-    const response = await fetch("/api/v1/sharing/grants", {
+    const response = await apiFetch("/api/v1/sharing/grants", {
         credentials: "include",
         method: "GET",
     });
@@ -100,7 +101,7 @@ export async function getSharingGrants(): Promise<SharingGrant[]> {
 }
 
 export async function getSharedWithMe(): Promise<SharingGrant[]> {
-    const response = await fetch("/api/v1/sharing/shared-with-me", {
+    const response = await apiFetch("/api/v1/sharing/shared-with-me", {
         credentials: "include",
         method: "GET",
     });
@@ -113,7 +114,7 @@ export async function getSharedWithMe(): Promise<SharingGrant[]> {
 
 export async function searchSharingUsers(query: string): Promise<SharingUser[]> {
     const params = new URLSearchParams({ q: query.trim() });
-    const response = await fetch(`/api/v1/sharing/users/search?${params.toString()}`, {
+    const response = await apiFetch(`/api/v1/sharing/users/search?${params.toString()}`, {
         credentials: "include",
         method: "GET",
     });
@@ -127,7 +128,7 @@ export async function searchSharingUsers(query: string): Promise<SharingUser[]> 
 export async function createSharingGrant(
     input: CreateSharingGrantInput,
 ): Promise<SharingGrant> {
-    const response = await fetch("/api/v1/sharing/grants", {
+    const response = await apiFetch("/api/v1/sharing/grants", {
         body: JSON.stringify(input),
         credentials: "include",
         headers: {
@@ -146,7 +147,7 @@ export async function createSharingGrant(
 }
 
 export async function revokeSharingGrant(grantId: string): Promise<void> {
-    const response = await fetch(`/api/v1/sharing/grants/${grantId}`, {
+    const response = await apiFetch(`/api/v1/sharing/grants/${grantId}`, {
         credentials: "include",
         method: "DELETE",
     });
@@ -157,7 +158,7 @@ export async function revokeSharingGrant(grantId: string): Promise<void> {
 }
 
 export async function getSharingInvitations(): Promise<SharingInvitation[]> {
-    const response = await fetch("/api/v1/sharing/invitations", {
+    const response = await apiFetch("/api/v1/sharing/invitations", {
         credentials: "include",
         method: "GET",
     });
@@ -169,7 +170,7 @@ export async function getSharingInvitations(): Promise<SharingInvitation[]> {
 }
 
 export async function markInvitationRead(invitationId: string): Promise<void> {
-    const response = await fetch(`/api/v1/sharing/invitations/${invitationId}/read`, {
+    const response = await apiFetch(`/api/v1/sharing/invitations/${invitationId}/read`, {
         credentials: "include",
         method: "POST",
     });
@@ -186,7 +187,7 @@ export async function pingTask({
     message?: string;
     taskId: string;
 }): Promise<PingTaskResult> {
-    const response = await fetch(`/api/v1/tasks/${taskId}/ping`, {
+    const response = await apiFetch(`/api/v1/tasks/${taskId}/ping`, {
         body: JSON.stringify({ message: message?.trim() ?? "" }),
         credentials: "include",
         headers: {

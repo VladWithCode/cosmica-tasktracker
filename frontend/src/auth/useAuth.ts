@@ -1,4 +1,5 @@
 import { queryClient } from "@/queries/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
 import type { ApiResponse } from "@/types/api";
 import type { User } from "@/types/auth";
 import { useQuery } from "@tanstack/react-query";
@@ -11,7 +12,7 @@ export function useAuth() {
     return useQuery({
         queryKey: ["session"],
         queryFn: async () => {
-            const response = await fetch("/api/v1/auth/me", {
+            const response = await apiFetch("/api/v1/auth/me", {
                 method: "GET",
                 credentials: "include",
             });
@@ -29,7 +30,7 @@ export async function checkAuth(): Promise<boolean> {
         const data = await queryClient.fetchQuery({
             queryKey: ["session"],
             queryFn: async () => {
-                const res = await fetch("/api/v1/auth/me", {
+                const res = await apiFetch("/api/v1/auth/me", {
                     method: "GET",
                     credentials: "include",
                 });

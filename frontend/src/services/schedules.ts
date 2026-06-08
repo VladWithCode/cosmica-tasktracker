@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/apiFetch";
 import type { ApiResponse } from "@/types/api";
 import { getApiError } from "@/types/api";
 import type { CreateScheduleInput, Schedule } from "@/types/schedule";
@@ -11,7 +12,7 @@ interface SchedulesData {
 }
 
 export async function createSchedule(payload: CreateScheduleInput): Promise<Schedule> {
-    const response = await fetch("/api/v1/schedules", {
+    const response = await apiFetch("/api/v1/schedules", {
         body: JSON.stringify(payload),
         credentials: "include",
         headers: {
@@ -32,7 +33,7 @@ export async function createSchedule(payload: CreateScheduleInput): Promise<Sche
 }
 
 export async function listSchedules(): Promise<Schedule[]> {
-    const response = await fetch("/api/v1/schedules", { credentials: "include" });
+    const response = await apiFetch("/api/v1/schedules", { credentials: "include" });
     const data = (await response.json()) as ApiResponse<SchedulesData>;
     if (!response.ok) {
         throw new Error(getApiError(data, "Error al recuperar rutinas"));
@@ -41,7 +42,7 @@ export async function listSchedules(): Promise<Schedule[]> {
 }
 
 async function postScheduleAction(id: string, action: "pause" | "resume"): Promise<Schedule> {
-    const response = await fetch(`/api/v1/schedules/${id}/${action}`, {
+    const response = await apiFetch(`/api/v1/schedules/${id}/${action}`, {
         credentials: "include",
         method: "POST",
     });
@@ -64,7 +65,7 @@ export function resumeSchedule(id: string) {
 }
 
 export async function cancelSchedule(id: string): Promise<void> {
-    const response = await fetch(`/api/v1/schedules/${id}`, {
+    const response = await apiFetch(`/api/v1/schedules/${id}`, {
         credentials: "include",
         method: "DELETE",
     });

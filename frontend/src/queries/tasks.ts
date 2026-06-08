@@ -7,6 +7,7 @@ import type {
     UpdateTaskInput,
 } from "@/types/task";
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
+import { apiFetch } from "@/lib/apiFetch";
 import { queryClient } from "./queryClient";
 import type { ApiResponse } from "@/types/api";
 import { getApiError } from "@/types/api";
@@ -105,7 +106,7 @@ export function getSharedTodayTasksOpts(ownerUserId: string) {
 
 export async function getSharedTodayTasks(ownerUserId: string) {
     const params = new URLSearchParams({ owner_user_id: ownerUserId });
-    const response = await fetch(`/api/v1/tasks/today?${params.toString()}`, {
+    const response = await apiFetch(`/api/v1/tasks/today?${params.toString()}`, {
         method: "GET",
         credentials: "include",
     });
@@ -130,7 +131,7 @@ export function getDayTasksOpts(date: string) {
 
 export async function getDayTasks(date: string) {
     const params = new URLSearchParams({ date });
-    const response = await fetch(`/api/v1/tasks/day?${params.toString()}`, {
+    const response = await apiFetch(`/api/v1/tasks/day?${params.toString()}`, {
         method: "GET",
         credentials: "include",
     });
@@ -160,7 +161,7 @@ export function getTaskMetricsOpts(range: TaskStatsRangeInput) {
 }
 
 export async function getTodayProgress(): Promise<DayProgress> {
-    const response = await fetch("/api/v1/tasks/progress", {
+    const response = await apiFetch("/api/v1/tasks/progress", {
         method: "GET",
         credentials: "include",
     });
@@ -179,7 +180,7 @@ export async function getTaskHistory(range: TaskStatsRangeInput): Promise<TaskHi
         from: range.from,
         to: range.to,
     });
-    const response = await fetch(`/api/v1/tasks/history?${params.toString()}`, {
+    const response = await apiFetch(`/api/v1/tasks/history?${params.toString()}`, {
         method: "GET",
         credentials: "include",
     });
@@ -198,7 +199,7 @@ export async function getTaskMetrics(range: TaskStatsRangeInput): Promise<TaskMe
         from: range.from,
         to: range.to,
     });
-    const response = await fetch(`/api/v1/tasks/metrics?${params.toString()}`, {
+    const response = await apiFetch(`/api/v1/tasks/metrics?${params.toString()}`, {
         method: "GET",
         credentials: "include",
     });
@@ -221,7 +222,7 @@ export function getTaskByIdOpts(taskId: string) {
 }
 
 export async function getTasks() {
-    const response = await fetch("/api/v1/tasks", {
+    const response = await apiFetch("/api/v1/tasks", {
         method: "GET",
         credentials: "include",
     });
@@ -235,7 +236,7 @@ export async function getTasks() {
 }
 
 export async function getTodayTasks() {
-    const response = await fetch("/api/v1/tasks/today", {
+    const response = await apiFetch("/api/v1/tasks/today", {
         method: "GET",
         credentials: "include",
     });
@@ -251,7 +252,7 @@ export async function getTodayTasks() {
 }
 
 export async function getTaskById(taskId: string) {
-    const response = await fetch(`/api/v1/tasks/${taskId}`, {
+    const response = await apiFetch(`/api/v1/tasks/${taskId}`, {
         method: "GET",
         credentials: "include",
     });
@@ -341,7 +342,7 @@ export function useCompleteTask() {
     };
 }
 export async function markTaskAsCompleted({ taskId }: { taskId: string }) {
-    const response = await fetch(`/api/v1/tasks/${taskId}`, {
+    const response = await apiFetch(`/api/v1/tasks/${taskId}`, {
         method: "PUT",
         credentials: "include",
         headers: {
@@ -378,7 +379,7 @@ export async function incrementTaskCount({
     if (reachesTarget) {
         body.status = "completed";
     }
-    const response = await fetch(`/api/v1/tasks/${taskId}`, {
+    const response = await apiFetch(`/api/v1/tasks/${taskId}`, {
         method: "PUT",
         credentials: "include",
         headers: {
@@ -501,7 +502,7 @@ export async function updateTask({
     taskId,
     title,
 }: UpdateTaskPayload) {
-    const response = await fetch(`/api/v1/tasks/${taskId}`, {
+    const response = await apiFetch(`/api/v1/tasks/${taskId}`, {
         method: "PUT",
         credentials: "include",
         headers: {
