@@ -6,6 +6,7 @@ import (
 	"net/mail"
 	"regexp"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/google/uuid"
@@ -17,6 +18,13 @@ var ErrInvalidCredentials = errors.New("invalid credentials")
 var ErrUsernameTaken = errors.New("username taken")
 var ErrEmailTaken = errors.New("email taken")
 var ErrWrongCurrentPassword = errors.New("current password is incorrect")
+var ErrInvalidRefreshToken = errors.New("invalid refresh token")
+
+// SessionMeta carries optional context about the client opening a session.
+type SessionMeta struct {
+	UserAgent string
+	IP        string
+}
 
 var usernamePattern = regexp.MustCompile(`^[a-z0-9_-]{3,32}$`)
 
@@ -26,8 +34,15 @@ type LoginInput struct {
 }
 
 type LoginResult struct {
-	Token string
-	User  *db.User
+	Token        string
+	RefreshToken string
+	User         *db.User
+}
+
+type RefreshResult struct {
+	Token        string
+	RefreshToken string
+	User         *db.User
 }
 
 type RegisterInput struct {
@@ -38,8 +53,9 @@ type RegisterInput struct {
 }
 
 type RegisterResult struct {
-	Token string
-	User  *db.User
+	Token        string
+	RefreshToken string
+	User         *db.User
 }
 
 type FieldErrors map[string]string
@@ -61,7 +77,7 @@ func NewService(repo UserRepository) *Service {
 	return &Service{repo: repo}
 }
 
-func (s *Service) Login(ctx context.Context, input LoginInput) (*LoginResult, error) {
+func (s *Service) Login(ctx context.Context, input LoginInput, meta SessionMeta) (*LoginResult, error) {
 	user, err := s.repo.GetByUsername(ctx, input.Username)
 	if err != nil {
 		return nil, ErrInvalidCredentials
@@ -76,13 +92,111 @@ func (s *Service) Login(ctx context.Context, input LoginInput) (*LoginResult, er
 		return nil, err
 	}
 
+	refreshRaw, _, err := s.issueRefreshToken(ctx, user.ID, meta)
+	if err != nil {
+		return nil, err
+	}
+
 	return &LoginResult{
-		Token: token,
-		User:  user,
+		Token:        token,
+		RefreshToken: refreshRaw,
+		User:         user,
 	}, nil
 }
 
-func (s *Service) Register(ctx context.Context, input RegisterInput) (*RegisterResult, error) {
+// issueRefreshToken generates a new opaque refresh token, persists its hash and
+// returns the raw token plus the stored record.
+func (s *Service) issueRefreshToken(ctx context.Context, userID string, meta SessionMeta) (string, *db.RefreshToken, error) {
+	raw, err := GenerateRefreshToken()
+	if err != nil {
+		return "", nil, err
+	}
+
+	rec := &db.RefreshToken{
+		ID:        uuid.NewString(),
+		UserID:    userID,
+		TokenHash: HashRefreshToken(raw),
+		ExpiresAt: time.Now().Add(RefreshTokenTTL),
+		UserAgent: meta.UserAgent,
+		IP:        meta.IP,
+	}
+	if err := s.repo.InsertRefreshToken(ctx, rec); err != nil {
+		return "", nil, err
+	}
+
+	return raw, rec, nil
+}
+
+// RefreshSession validates a raw refresh token, rotates it (revoking the old
+// token and issuing a new one linked as its successor) and returns a fresh
+// access token. A revoked token presented again is treated as reuse/compromise
+// and revokes the entire token family for that user.
+func (s *Service) RefreshSession(ctx context.Context, rawRefresh string, meta SessionMeta) (*RefreshResult, error) {
+	if strings.TrimSpace(rawRefresh) == "" {
+		return nil, ErrInvalidRefreshToken
+	}
+
+	rec, err := s.repo.GetRefreshTokenByHash(ctx, HashRefreshToken(rawRefresh))
+	if err != nil {
+		return nil, ErrInvalidRefreshToken
+	}
+
+	now := time.Now()
+
+	// Reuse detection: a previously revoked token is being presented again.
+	// Treat as compromise and revoke every active token for the user.
+	if rec.RevokedAt != nil {
+		_ = s.repo.RevokeAllUserRefreshTokens(ctx, rec.UserID)
+		return nil, ErrInvalidRefreshToken
+	}
+
+	if !now.Before(rec.ExpiresAt) {
+		return nil, ErrInvalidRefreshToken
+	}
+
+	user, err := s.repo.GetByID(ctx, rec.UserID)
+	if err != nil {
+		return nil, ErrInvalidRefreshToken
+	}
+
+	// Rotate: issue the successor first, then revoke the old token linking it
+	// to its replacement.
+	newRaw, newRec, err := s.issueRefreshToken(ctx, rec.UserID, meta)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.repo.RevokeRefreshToken(ctx, rec.ID, newRec.ID); err != nil {
+		return nil, err
+	}
+
+	token, err := CreateToken(user)
+	if err != nil {
+		return nil, err
+	}
+
+	return &RefreshResult{
+		Token:        token,
+		RefreshToken: newRaw,
+		User:         user,
+	}, nil
+}
+
+// Logout revokes the refresh token represented by rawRefresh, if it exists. A
+// missing or unknown token is not an error: logout is idempotent.
+func (s *Service) Logout(ctx context.Context, rawRefresh string) error {
+	if strings.TrimSpace(rawRefresh) == "" {
+		return nil
+	}
+
+	rec, err := s.repo.GetRefreshTokenByHash(ctx, HashRefreshToken(rawRefresh))
+	if err != nil {
+		return nil
+	}
+
+	return s.repo.RevokeRefreshToken(ctx, rec.ID, "")
+}
+
+func (s *Service) Register(ctx context.Context, input RegisterInput, meta SessionMeta) (*RegisterResult, error) {
 	normalized := normalizeRegisterInput(input)
 
 	if fields := validateRegisterInput(normalized); len(fields) > 0 {
@@ -131,9 +245,15 @@ func (s *Service) Register(ctx context.Context, input RegisterInput) (*RegisterR
 		return nil, err
 	}
 
+	refreshRaw, _, err := s.issueRefreshToken(ctx, user.ID, meta)
+	if err != nil {
+		return nil, err
+	}
+
 	return &RegisterResult{
-		Token: token,
-		User:  user,
+		Token:        token,
+		RefreshToken: refreshRaw,
+		User:         user,
 	}, nil
 }
 

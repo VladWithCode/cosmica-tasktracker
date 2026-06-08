@@ -32,9 +32,18 @@ func registerAuthRoutes(router *gin.Engine) {
 	// the new release.
 	router.POST("/api/v1/auth/login", HandleLogin)
 	router.POST("/api/v1/auth/register", HandleRegister)
+	router.POST("/api/v1/auth/refresh", HandleRefresh)
 	router.POST("/api/v1/auth/logout", HandleLogout)
 	router.GET("/api/v1/auth/me", auth.AuthRequired(), CheckAuth)
 	router.PUT("/api/v1/auth/password", auth.AuthRequired(), HandleChangePassword)
+}
+
+// sessionMeta extracts optional client context for refresh-token bookkeeping.
+func sessionMeta(c *gin.Context) auth.SessionMeta {
+	return auth.SessionMeta{
+		UserAgent: c.Request.UserAgent(),
+		IP:        c.ClientIP(),
+	}
 }
 
 func HandleLogin(c *gin.Context) {
@@ -49,7 +58,7 @@ func HandleLogin(c *gin.Context) {
 	result, err := authService.Login(c.Request.Context(), auth.LoginInput{
 		Username: loginReq.Username,
 		Password: loginReq.Password,
-	})
+	}, sessionMeta(c))
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
 			httpx.Unauthorized(c, "Usuario o contraseña incorrectos")
@@ -61,6 +70,7 @@ func HandleLogin(c *gin.Context) {
 	}
 
 	setAuthCookie(c, result.Token)
+	setRefreshCookie(c, result.RefreshToken)
 	httpx.OK(c, gin.H{"user": userPayload(result.User)}, "Sesión iniciada")
 }
 
@@ -78,7 +88,7 @@ func HandleRegister(c *gin.Context) {
 		Fullname: req.Fullname,
 		Password: req.Password,
 		Username: req.Username,
-	})
+	}, sessionMeta(c))
 	if err != nil {
 		var validationError *auth.ValidationError
 		if errors.As(err, &validationError) {
@@ -99,11 +109,52 @@ func HandleRegister(c *gin.Context) {
 	}
 
 	setAuthCookie(c, result.Token)
+	setRefreshCookie(c, result.RefreshToken)
 	httpx.Created(c, gin.H{"user": userPayload(result.User)}, "Cuenta creada")
 }
 
+// HandleRefresh rotates the refresh token and issues a new access token. Reads
+// the refresh token from the refresh cookie; rejects missing/invalid/expired/
+// revoked tokens with 401.
+func HandleRefresh(c *gin.Context) {
+	rawRefresh, err := c.Cookie(auth.RefreshCookieName)
+	if err != nil || rawRefresh == "" {
+		auth.RejectUnauthenticated(c, "Sesión expirada")
+		return
+	}
+
+	authService := auth.NewService(auth.NewUserRepository())
+	result, err := authService.RefreshSession(c.Request.Context(), rawRefresh, sessionMeta(c))
+	if err != nil {
+		if errors.Is(err, auth.ErrInvalidRefreshToken) {
+			// Clear cookies so a bad refresh token does not linger.
+			clearAuthCookie(c)
+			clearRefreshCookie(c)
+			auth.RejectUnauthenticated(c, "Sesión expirada")
+			return
+		}
+		httpx.ServerError(c, "Error inesperado")
+		log.Printf("failed to refresh session: %v", err)
+		return
+	}
+
+	setAuthCookie(c, result.Token)
+	setRefreshCookie(c, result.RefreshToken)
+	httpx.OK(c, gin.H{"user": userPayload(result.User)}, "Sesión renovada")
+}
+
 func HandleLogout(c *gin.Context) {
+	// Revoke the refresh token server-side when present. Logout stays
+	// idempotent: a missing or unknown refresh cookie is not an error.
+	if rawRefresh, err := c.Cookie(auth.RefreshCookieName); err == nil && rawRefresh != "" {
+		authService := auth.NewService(auth.NewUserRepository())
+		if err := authService.Logout(c.Request.Context(), rawRefresh); err != nil {
+			log.Printf("failed to revoke refresh token on logout: %v", err)
+		}
+	}
+
 	clearAuthCookie(c)
+	clearRefreshCookie(c)
 	httpx.OK(c, nil, "Sesión cerrada")
 }
 
@@ -127,6 +178,32 @@ func clearAuthCookie(c *gin.Context) {
 		"",
 		-1,
 		"/",
+		"",
+		auth.UseSecureCookies,
+		auth.UseHTTPOnlyCookies,
+	)
+}
+
+func setRefreshCookie(c *gin.Context, token string) {
+	c.SetSameSite(http.SameSiteStrictMode)
+	c.SetCookie(
+		auth.RefreshCookieName,
+		token,
+		auth.RefreshCookieMaxAge,
+		auth.RefreshCookiePath,
+		"",
+		auth.UseSecureCookies,
+		auth.UseHTTPOnlyCookies,
+	)
+}
+
+func clearRefreshCookie(c *gin.Context) {
+	c.SetSameSite(http.SameSiteStrictMode)
+	c.SetCookie(
+		auth.RefreshCookieName,
+		"",
+		-1,
+		auth.RefreshCookiePath,
 		"",
 		auth.UseSecureCookies,
 		auth.UseHTTPOnlyCookies,
