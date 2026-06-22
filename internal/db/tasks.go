@@ -809,19 +809,19 @@ func CreateTaskCompletion(ctx context.Context, completion *TaskCompletion) error
 func getNextTaskDate(sct *ScheduleTask) (time.Time, error) {
 	currentTime := time.Now()
 
-	// One-off tasks materialize on their explicit StartDate (respecting StartTime),
-	// not on time.Now(). Recurring tasks keep their existing scheduling logic.
+	// One-off tasks materialize on their explicit StartDate, not on time.Now().
+	// Anchor at local noon (same convention as parseDateOnly / recurring task
+	// generation) so the stored date's calendar day is stable under any DB
+	// session timezone. The display time comes from schedule_start_time, a
+	// separate column, so the noon anchor does not affect the shown hour.
+	// Recurring tasks keep their existing scheduling logic.
 	if !sct.Repeating && !sct.StartDate.IsZero() {
-		startHr, startMin := 0, 0
-		if !sct.StartTime.IsZero() {
-			startHr, startMin, _ = sct.StartTime.Clock()
-		}
 		return time.Date(
 			sct.StartDate.Year(),
 			sct.StartDate.Month(),
 			sct.StartDate.Day(),
-			startHr,
-			startMin,
+			12,
+			0,
 			0,
 			0,
 			time.Local,

@@ -6,7 +6,9 @@ import (
 )
 
 // One-off tasks (repeating=false with an explicit StartDate) must materialize on
-// their StartDate, respecting StartTime — not on time.Now().
+// their StartDate calendar day — not on time.Now(). The stored date is anchored
+// at local noon so the calendar day is stable under any DB session timezone
+// (the display hour comes from the separate schedule_start_time column).
 func TestGetNextTaskDate_OneOffUsesStartDate(t *testing.T) {
 	startDate := date(2026, 8, 15) // distinct from today
 	st := &ScheduleTask{
@@ -24,13 +26,35 @@ func TestGetNextTaskDate_OneOffUsesStartDate(t *testing.T) {
 	if got.Year() != 2026 || got.Month() != time.August || got.Day() != 15 {
 		t.Fatalf("expected materialization on 2026-08-15, got %s", got.Format("2006-01-02"))
 	}
-	if got.Hour() != 10 || got.Minute() != 30 {
-		t.Fatalf("expected time 10:30, got %02d:%02d", got.Hour(), got.Minute())
+	if got.Hour() != 12 || got.Minute() != 0 {
+		t.Fatalf("expected noon anchor 12:00, got %02d:%02d", got.Hour(), got.Minute())
 	}
 
 	now := time.Now()
 	if got.Year() == now.Year() && got.Month() == now.Month() && got.Day() == now.Day() {
 		t.Fatal("one-off must NOT land on time.Now()")
+	}
+}
+
+// A nighttime StartTime must not shift the materialized calendar day: the date
+// is anchored at noon, so the day stays on StartDate regardless of the hour.
+func TestGetNextTaskDate_OneOffNightTimeKeepsDay(t *testing.T) {
+	st := &ScheduleTask{
+		Repeating: false,
+		Frequency: ScheduleTaskFrequencyCustom,
+		StartDate: date(2026, 8, 15),
+		StartTime: time.Date(2000, 1, 1, 23, 30, 0, 0, time.Local),
+	}
+
+	got, err := getNextTaskDate(st)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.Year() != 2026 || got.Month() != time.August || got.Day() != 15 {
+		t.Fatalf("nighttime task must stay on 2026-08-15, got %s", got.Format("2006-01-02"))
+	}
+	if got.Hour() != 12 {
+		t.Fatalf("expected noon anchor, got hour %d", got.Hour())
 	}
 }
 
@@ -48,8 +72,8 @@ func TestGetNextTaskDate_OneOffWithoutStartTime(t *testing.T) {
 	if got.Year() != 2026 || got.Month() != time.August || got.Day() != 15 {
 		t.Fatalf("expected 2026-08-15, got %s", got.Format("2006-01-02"))
 	}
-	if got.Hour() != 0 || got.Minute() != 0 {
-		t.Fatalf("expected midnight, got %02d:%02d", got.Hour(), got.Minute())
+	if got.Hour() != 12 {
+		t.Fatalf("expected noon anchor, got hour %d", got.Hour())
 	}
 }
 
