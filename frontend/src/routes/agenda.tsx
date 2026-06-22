@@ -1,12 +1,26 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { checkAuth } from "@/auth/useAuth";
 import { AgendaCalendar } from "@/components/agenda/AgendaCalendar";
 import { AppShell } from "@/components/layout/AppShell";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { apiFetch } from "@/lib/apiFetch";
 import { cn } from "@/lib/utils";
-import { getDayTasksOpts } from "@/queries/tasks";
+import { queryClient } from "@/queries/queryClient";
+import { getDayTasksOpts, TasksQueryKeys } from "@/queries/tasks";
 import type { TaskFeedItem } from "@/types/task";
 
 type AgendaSearch = {
@@ -110,6 +124,7 @@ function AgendaDayView({ date: selectedDate }: { date: string }) {
     }, [selectedDate, goToDate]);
 
     const isToday = selectedDate === toDateString(new Date());
+    const [quickTaskOpen, setQuickTaskOpen] = useState(false);
 
     const formattedDate = useMemo(() => {
         const d = new Date(selectedDate + "T12:00:00");
@@ -124,6 +139,23 @@ function AgendaDayView({ date: selectedDate }: { date: string }) {
     return (
         <main className="relative mx-auto min-h-full max-w-3xl px-4 pb-36 pt-6 sm:px-6">
             <div className="pointer-events-none absolute left-1/2 top-16 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/5 blur-[120px]" />
+
+            {/* Quick one-off task creation */}
+            <div className="relative mb-2 flex justify-end">
+                <button
+                    aria-label="Agregar tarea"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-primary shadow-sm transition-all hover:scale-105 hover:bg-primary/20 active:scale-95"
+                    onClick={() => setQuickTaskOpen(true)}
+                    type="button"
+                >
+                    <MaterialIcon name="add" className="text-2xl" />
+                </button>
+            </div>
+            <QuickTaskDialog
+                open={quickTaskOpen}
+                onOpenChange={setQuickTaskOpen}
+                selectedDate={selectedDate}
+            />
 
             {/* Date navigation */}
             <section className="relative mb-6">
@@ -231,6 +263,128 @@ function AgendaDayView({ date: selectedDate }: { date: string }) {
                 </>
             ) : null}
         </main>
+    );
+}
+
+function QuickTaskDialog({
+    open,
+    onOpenChange,
+    selectedDate,
+}: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    selectedDate: string;
+}) {
+    const [title, setTitle] = useState("");
+    const [time, setTime] = useState("");
+
+    const reset = useCallback(() => {
+        setTitle("");
+        setTime("");
+    }, []);
+
+    const createTask = useMutation({
+        mutationFn: async () => {
+            // Build literal-UTC strings so the chosen wall-clock day/hour are
+            // preserved server-side without timezone drift (backend reads the
+            // UTC clock of these fields).
+            const startTime = `${selectedDate}T${time}:00Z`;
+            const startDate = `${selectedDate}T00:00:00Z`;
+            const response = await apiFetch("/api/v1/tasks", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({
+                    title: title.trim(),
+                    startTime,
+                    startDate,
+                    repeating: false,
+                    frequency: "custom",
+                    frequencyConfig: { singleInstance: true },
+                    priority: "medium",
+                }),
+            });
+            if (!response.ok) {
+                throw new Error("No se pudo crear la tarea");
+            }
+            return response.json();
+        },
+        onSuccess: async () => {
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: TasksQueryKeys.byDate(selectedDate) }),
+                queryClient.invalidateQueries({ queryKey: TasksQueryKeys.history() }),
+                queryClient.invalidateQueries({ queryKey: TasksQueryKeys.progress() }),
+            ]);
+            toast.success("Tarea creada");
+            reset();
+            onOpenChange(false);
+        },
+        onError: (err: Error) => {
+            toast.error(err.message || "Ocurrió un error al crear la tarea");
+        },
+    });
+
+    const canSubmit = title.trim().length > 0 && time.length > 0 && !createTask.isPending;
+
+    const handleOpenChange = (next: boolean) => {
+        if (!next) {
+            reset();
+        }
+        onOpenChange(next);
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={handleOpenChange}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Nueva tarea</DialogTitle>
+                    <DialogDescription>Agrega una tarea para este día.</DialogDescription>
+                </DialogHeader>
+
+                <form
+                    className="space-y-4"
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        if (canSubmit) {
+                            createTask.mutate();
+                        }
+                    }}
+                >
+                    <div className="space-y-2">
+                        <Label htmlFor="quick-task-title">¿Qué se va a hacer?</Label>
+                        <Input
+                            id="quick-task-title"
+                            autoFocus
+                            placeholder="Escribe la tarea"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="quick-task-time">Horario</Label>
+                        <Input
+                            id="quick-task-time"
+                            type="time"
+                            value={time}
+                            onChange={(e) => setTime(e.target.value)}
+                        />
+                    </div>
+
+                    <DialogFooter className="gap-2 sm:gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => handleOpenChange(false)}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button type="submit" disabled={!canSubmit}>
+                            {createTask.isPending ? "Creando..." : "Crear"}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
     );
 }
 

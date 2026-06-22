@@ -809,6 +809,25 @@ func CreateTaskCompletion(ctx context.Context, completion *TaskCompletion) error
 func getNextTaskDate(sct *ScheduleTask) (time.Time, error) {
 	currentTime := time.Now()
 
+	// One-off tasks materialize on their explicit StartDate (respecting StartTime),
+	// not on time.Now(). Recurring tasks keep their existing scheduling logic.
+	if !sct.Repeating && !sct.StartDate.IsZero() {
+		startHr, startMin := 0, 0
+		if !sct.StartTime.IsZero() {
+			startHr, startMin, _ = sct.StartTime.Clock()
+		}
+		return time.Date(
+			sct.StartDate.Year(),
+			sct.StartDate.Month(),
+			sct.StartDate.Day(),
+			startHr,
+			startMin,
+			0,
+			0,
+			time.Local,
+		), nil
+	}
+
 	if !sct.StartTime.IsZero() {
 		startHr, startMin, _ := sct.StartTime.Clock()
 		currHr, currMin, _ := currentTime.Clock()
