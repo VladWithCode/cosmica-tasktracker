@@ -115,10 +115,14 @@ func TestOneOffTaskAppearsOnlyOnSelectedAgendaDate(t *testing.T) {
 		t.Fatalf("expected exactly 1 one-off on %s, got %d (tasks=%+v)", selectedStr, len(selectedMatches), selectedDay.Data.Tasks)
 	}
 
-	// 4. Start time preserved as 23:30.
+	// 4. Start time preserved as the user-chosen 23:30.
 	st := selectedMatches[0].ScheduleStartTime
+	stValue := "<nil>"
+	if st != nil {
+		stValue = *st
+	}
 	if st == nil || *st != "23:30" {
-		t.Fatalf("expected schedule_start_time 23:30, got %v", st)
+		t.Fatalf("expected schedule_start_time 23:30, got %q", stValue)
 	}
 
 	// 2. Does NOT appear on today (selected != today).
