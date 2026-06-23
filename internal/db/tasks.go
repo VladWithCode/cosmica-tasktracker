@@ -1085,8 +1085,11 @@ func detailedTaskSelectSQL() string {
 		completed_at,
 		actual_start,
 		actual_end,
-		CASE WHEN start_time IS NULL THEN NULL ELSE (CURRENT_DATE + start_time)::timestamptz END AS start_time,
-		CASE WHEN end_time IS NULL THEN NULL ELSE (CURRENT_DATE + end_time)::timestamptz END AS end_time,
+		-- Keep the literal wall-clock: casting to timestamptz would reinterpret
+		-- the time column in the DB session timezone and shift the displayed
+		-- hour on non-UTC servers (e.g. a 23:30 task showing as 05:30).
+		CASE WHEN start_time IS NULL THEN NULL ELSE (CURRENT_DATE + start_time)::timestamp END AS start_time,
+		CASE WHEN end_time IS NULL THEN NULL ELSE (CURRENT_DATE + end_time)::timestamp END AS end_time,
 		start_date,
 		end_date,
 		duration,
