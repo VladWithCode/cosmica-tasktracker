@@ -5,6 +5,11 @@ import { toast } from "sonner";
 import { checkAuth } from "@/auth/useAuth";
 import { AgendaCalendar } from "@/components/agenda/AgendaCalendar";
 import { AppShell } from "@/components/layout/AppShell";
+import {
+    DayNavHeader,
+    dayNavNeutralAction,
+    dayNavPrimaryAction,
+} from "@/components/layout/DayNavHeader";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import {
     Dialog,
@@ -18,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiFetch } from "@/lib/apiFetch";
-import { addDays, formatDayLong, formatDayShort, isValidDateString } from "@/lib/date";
+import { addDays, isValidDateString } from "@/lib/date";
 import { cn } from "@/lib/utils";
 import { queryClient } from "@/queries/queryClient";
 import { getDayTasksOpts, TasksQueryKeys } from "@/queries/tasks";
@@ -100,60 +105,35 @@ function AgendaDayView({ date: selectedDate }: { date: string }) {
 
     const [quickTaskOpen, setQuickTaskOpen] = useState(false);
 
-    const formattedDate = useMemo(() => formatDayLong(selectedDate), [selectedDate]);
-    const shortDate = useMemo(() => formatDayShort(selectedDate), [selectedDate]);
-
     return (
         <main className="relative mx-auto min-h-full max-w-3xl px-4 pb-36 sm:px-6">
             <div className="pointer-events-none absolute left-1/2 top-16 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/5 blur-[120px]" />
 
-            {/* Sticky day header: calendar / day nav / quick task */}
-            <header className="sticky top-0 z-30 -mx-4 mb-4 border-b border-outline-variant/10 bg-surface/90 px-4 py-1.5 backdrop-blur-xl sm:-mx-6 sm:px-6">
-                <div className="flex items-center gap-2">
+            <DayNavHeader
+                date={selectedDate}
+                onPrev={goPrev}
+                onNext={goNext}
+                leading={
                     <button
                         aria-label="Ver calendario"
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-outline-variant/20 bg-surface-container-lowest text-on-surface-variant transition-colors hover:text-primary"
+                        className={dayNavNeutralAction}
                         onClick={goCalendar}
                         type="button"
                     >
                         <MaterialIcon name="calendar_month" className="text-xl" />
                     </button>
-
-                    <div className="flex min-w-0 flex-1 items-center justify-center gap-1">
-                        <button
-                            aria-label="Día anterior"
-                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-outline-variant/20 bg-surface-container-lowest text-on-surface-variant transition-colors hover:text-primary"
-                            onClick={goPrev}
-                            type="button"
-                        >
-                            <MaterialIcon name="chevron_left" className="text-xl" />
-                        </button>
-
-                        <p className="min-w-0 truncate text-center font-display text-sm font-bold capitalize text-on-surface sm:text-base">
-                            <span className="sm:hidden">{shortDate}</span>
-                            <span className="hidden sm:inline">{formattedDate}</span>
-                        </p>
-
-                        <button
-                            aria-label="Día siguiente"
-                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-outline-variant/20 bg-surface-container-lowest text-on-surface-variant transition-colors hover:text-primary"
-                            onClick={goNext}
-                            type="button"
-                        >
-                            <MaterialIcon name="chevron_right" className="text-xl" />
-                        </button>
-                    </div>
-
+                }
+                actions={
                     <button
                         aria-label="Agregar tarea"
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-primary shadow-sm transition-all hover:bg-primary/20 active:scale-95"
+                        className={dayNavPrimaryAction}
                         onClick={() => setQuickTaskOpen(true)}
                         type="button"
                     >
                         <MaterialIcon name="add" className="text-xl" />
                     </button>
-                </div>
-            </header>
+                }
+            />
 
             <QuickTaskDialog
                 open={quickTaskOpen}
