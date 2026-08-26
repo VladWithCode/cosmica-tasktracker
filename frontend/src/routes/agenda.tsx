@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiFetch } from "@/lib/apiFetch";
+import { addDays, formatDayLong, formatDayShort, isValidDateString } from "@/lib/date";
 import { cn } from "@/lib/utils";
 import { queryClient } from "@/queries/queryClient";
 import { getDayTasksOpts, TasksQueryKeys } from "@/queries/tasks";
@@ -26,21 +27,6 @@ import type { TaskFeedItem } from "@/types/task";
 type AgendaSearch = {
     date?: string;
 };
-
-function toDateString(date: Date): string {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const d = String(date.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
-}
-
-function isValidDateString(value: unknown): value is string {
-    if (typeof value !== "string") return false;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-    const d = new Date(value + "T12:00:00");
-    if (Number.isNaN(d.getTime())) return false;
-    return toDateString(d) === value;
-}
 
 export const Route = createFileRoute("/agenda")({
     component: AgendaRoute,
@@ -103,37 +89,19 @@ function AgendaDayView({ date: selectedDate }: { date: string }) {
         () => navigate({ to: "/agenda", search: {} }),
         [navigate],
     );
-    const goPrev = useCallback(() => {
-        const d = new Date(selectedDate + "T12:00:00");
-        d.setDate(d.getDate() - 1);
-        goToDate(toDateString(d));
-    }, [selectedDate, goToDate]);
-    const goNext = useCallback(() => {
-        const d = new Date(selectedDate + "T12:00:00");
-        d.setDate(d.getDate() + 1);
-        goToDate(toDateString(d));
-    }, [selectedDate, goToDate]);
+    const goPrev = useCallback(
+        () => goToDate(addDays(selectedDate, -1)),
+        [selectedDate, goToDate],
+    );
+    const goNext = useCallback(
+        () => goToDate(addDays(selectedDate, 1)),
+        [selectedDate, goToDate],
+    );
 
     const [quickTaskOpen, setQuickTaskOpen] = useState(false);
 
-    const formattedDate = useMemo(() => {
-        const d = new Date(selectedDate + "T12:00:00");
-        return d.toLocaleDateString("es-MX", {
-            weekday: "long",
-            day: "2-digit",
-            month: "long",
-            year: "numeric",
-        });
-    }, [selectedDate]);
-
-    const shortDate = useMemo(() => {
-        const d = new Date(selectedDate + "T12:00:00");
-        return d.toLocaleDateString("es-MX", {
-            weekday: "short",
-            day: "2-digit",
-            month: "short",
-        });
-    }, [selectedDate]);
+    const formattedDate = useMemo(() => formatDayLong(selectedDate), [selectedDate]);
+    const shortDate = useMemo(() => formatDayShort(selectedDate), [selectedDate]);
 
     return (
         <main className="relative mx-auto min-h-full max-w-3xl px-4 pb-36 sm:px-6">

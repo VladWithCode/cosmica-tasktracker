@@ -4,18 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/layout/AppShell";
 import { NoteCard } from "@/components/notes/NoteCard";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import { todayDateString } from "@/lib/date";
 import { getNotesOpts } from "@/queries/notes";
 
 export const Route = createFileRoute("/notes/")({
     component: NotesIndexRoute,
 });
-
-function toDateString(date: Date): string {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const d = String(date.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
-}
 
 const dateFormatter = new Intl.DateTimeFormat("es-MX", {
     day: "numeric",
@@ -33,7 +27,7 @@ function NotesIndexRoute() {
 }
 
 function NotesIndexPage() {
-    const today = useMemo(() => toDateString(new Date()), []);
+    const today = useMemo(() => todayDateString(), []);
     const { data, isLoading, isError, error } = useQuery(getNotesOpts(today));
 
     const formattedDate = useMemo(() => {

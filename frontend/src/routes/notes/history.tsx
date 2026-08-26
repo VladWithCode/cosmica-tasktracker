@@ -4,18 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/layout/AppShell";
 import { NoteCard } from "@/components/notes/NoteCard";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import { addDays, todayDateString } from "@/lib/date";
 import { getNotesOpts } from "@/queries/notes";
 
 export const Route = createFileRoute("/notes/history")({
     component: NotesHistoryRoute,
 });
-
-function toDateString(date: Date): string {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const d = String(date.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
-}
 
 function NotesHistoryRoute() {
     return (
@@ -26,10 +20,10 @@ function NotesHistoryRoute() {
 }
 
 function NotesHistoryPage() {
-    const [selectedDate, setSelectedDate] = useState(() => toDateString(new Date()));
+    const [selectedDate, setSelectedDate] = useState(() => todayDateString());
     const { data, isLoading, isError, error } = useQuery(getNotesOpts(selectedDate));
 
-    const isToday = selectedDate === toDateString(new Date());
+    const isToday = selectedDate === todayDateString();
 
     const formattedDate = useMemo(() => {
         const d = new Date(selectedDate + "T12:00:00");
@@ -41,25 +35,9 @@ function NotesHistoryPage() {
         });
     }, [selectedDate]);
 
-    const goToday = useCallback(() => setSelectedDate(toDateString(new Date())), []);
-    const goPrev = useCallback(
-        () =>
-            setSelectedDate((prev) => {
-                const d = new Date(prev + "T12:00:00");
-                d.setDate(d.getDate() - 1);
-                return toDateString(d);
-            }),
-        [],
-    );
-    const goNext = useCallback(
-        () =>
-            setSelectedDate((prev) => {
-                const d = new Date(prev + "T12:00:00");
-                d.setDate(d.getDate() + 1);
-                return toDateString(d);
-            }),
-        [],
-    );
+    const goToday = useCallback(() => setSelectedDate(todayDateString()), []);
+    const goPrev = useCallback(() => setSelectedDate((prev) => addDays(prev, -1)), []);
+    const goNext = useCallback(() => setSelectedDate((prev) => addDays(prev, 1)), []);
 
     return (
         <main className="relative mx-auto min-h-full max-w-3xl px-4 pb-36 pt-6 sm:px-6">

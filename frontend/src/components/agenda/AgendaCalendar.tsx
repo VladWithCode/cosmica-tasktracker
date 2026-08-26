@@ -6,16 +6,10 @@ import { getDefaultClassNames } from "react-day-picker";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import { toDateString } from "@/lib/date";
 import { cn } from "@/lib/utils";
 import { getTaskHistoryOpts } from "@/queries/tasks";
 import type { TaskHistoryDay } from "@/types/task";
-
-function toDateString(date: Date): string {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const d = String(date.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
-}
 
 /**
  * Compute the 6-row grid range visible for a given month, including

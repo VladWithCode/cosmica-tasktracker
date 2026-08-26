@@ -4,18 +4,12 @@ import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/AppShell";
 import { NoteForm } from "@/components/notes/NoteForm";
+import { todayDateString } from "@/lib/date";
 import { createNoteMutationOpts } from "@/queries/notes";
 
 export const Route = createFileRoute("/notes/new")({
     component: NoteNewRoute,
 });
-
-function toDateString(date: Date): string {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const d = String(date.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
-}
 
 function NoteNewRoute() {
     return (
@@ -27,7 +21,7 @@ function NoteNewRoute() {
 
 function NoteNewPage() {
     const router = useRouter();
-    const today = useMemo(() => toDateString(new Date()), []);
+    const today = useMemo(() => todayDateString(), []);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     const mutation = useMutation({
