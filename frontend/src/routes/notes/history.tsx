@@ -1,14 +1,22 @@
-import { useCallback, useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { useCallback } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/layout/AppShell";
+import { DayNavHeader } from "@/components/layout/DayNavHeader";
 import { NoteCard } from "@/components/notes/NoteCard";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
-import { addDays, todayDateString } from "@/lib/date";
+import { addDays, isValidDateString, todayDateString } from "@/lib/date";
 import { getNotesOpts } from "@/queries/notes";
+
+type NotesHistorySearch = {
+    date?: string;
+};
 
 export const Route = createFileRoute("/notes/history")({
     component: NotesHistoryRoute,
+    validateSearch: (search: Record<string, unknown>): NotesHistorySearch => {
+        return isValidDateString(search.date) ? { date: search.date } : {};
+    },
 });
 
 function NotesHistoryRoute() {
@@ -20,82 +28,28 @@ function NotesHistoryRoute() {
 }
 
 function NotesHistoryPage() {
-    const [selectedDate, setSelectedDate] = useState(() => todayDateString());
+    const navigate = useNavigate();
+    const { date } = Route.useSearch();
+    const selectedDate = date ?? todayDateString();
+
     const { data, isLoading, isError, error } = useQuery(getNotesOpts(selectedDate));
 
-    const isToday = selectedDate === todayDateString();
-
-    const formattedDate = useMemo(() => {
-        const d = new Date(selectedDate + "T12:00:00");
-        return d.toLocaleDateString("es-MX", {
-            day: "2-digit",
-            month: "long",
-            weekday: "long",
-            year: "numeric",
-        });
-    }, [selectedDate]);
-
-    const goToday = useCallback(() => setSelectedDate(todayDateString()), []);
-    const goPrev = useCallback(() => setSelectedDate((prev) => addDays(prev, -1)), []);
-    const goNext = useCallback(() => setSelectedDate((prev) => addDays(prev, 1)), []);
+    const goToDate = useCallback(
+        (next: string) => navigate({ to: "/notes/history", search: { date: next } }),
+        [navigate],
+    );
+    const goPrev = useCallback(
+        () => goToDate(addDays(selectedDate, -1)),
+        [selectedDate, goToDate],
+    );
+    const goNext = useCallback(
+        () => goToDate(addDays(selectedDate, 1)),
+        [selectedDate, goToDate],
+    );
 
     return (
-        <main className="relative mx-auto min-h-full max-w-3xl px-4 pb-36 pt-6 sm:px-6">
-            <section className="relative mb-6">
-                <div className="flex items-center justify-between gap-2">
-                    <button
-                        aria-label="Día anterior"
-                        className="flex h-10 w-10 items-center justify-center rounded-full border border-outline-variant/20 bg-surface-container-lowest text-on-surface-variant transition-colors hover:text-primary"
-                        onClick={goPrev}
-                        type="button"
-                    >
-                        <MaterialIcon className="text-2xl" name="chevron_left" />
-                    </button>
-
-                    <div className="flex flex-1 flex-col items-center gap-1">
-                        <p className="text-center font-display text-lg font-bold capitalize text-on-surface sm:text-xl">
-                            {formattedDate}
-                        </p>
-                        <div className="flex items-center gap-2">
-                            {!isToday ? (
-                                <button
-                                    className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 font-label text-[11px] font-bold uppercase tracking-widest text-primary transition-colors hover:bg-primary/20"
-                                    onClick={goToday}
-                                    type="button"
-                                >
-                                    Hoy
-                                </button>
-                            ) : (
-                                <span className="rounded-full bg-primary/15 px-3 py-1 font-label text-[11px] font-bold uppercase tracking-widest text-primary">
-                                    Hoy
-                                </span>
-                            )}
-                            <input
-                                aria-label="Seleccionar fecha"
-                                className="h-7 rounded-lg border border-outline-variant/30 bg-surface-container-lowest px-2 text-xs text-on-surface focus:border-primary focus:outline-none"
-                                onChange={(e) => {
-                                    if (e.target.value) setSelectedDate(e.target.value);
-                                }}
-                                type="date"
-                                value={selectedDate}
-                            />
-                        </div>
-                    </div>
-
-                    <button
-                        aria-label="Día siguiente"
-                        className="flex h-10 w-10 items-center justify-center rounded-full border border-outline-variant/20 bg-surface-container-lowest text-on-surface-variant transition-colors hover:text-primary"
-                        onClick={goNext}
-                        type="button"
-                    >
-                        <MaterialIcon className="text-2xl" name="chevron_right" />
-                    </button>
-                </div>
-
-                <p className="mt-2 text-center font-label text-xs text-on-surface-variant">
-                    {(data?.length ?? 0)} {(data?.length ?? 0) === 1 ? "nota" : "notas"}
-                </p>
-            </section>
+        <main className="relative mx-auto min-h-full max-w-3xl px-4 pb-36 sm:px-6">
+            <DayNavHeader date={selectedDate} onPrev={goPrev} onNext={goNext} />
 
             {isLoading ? (
                 <div className="space-y-2">
