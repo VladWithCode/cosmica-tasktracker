@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { QuickNoteDialog } from "@/components/notes/QuickNoteDialog";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import { todayDateString } from "@/lib/date";
 import { cn } from "@/lib/utils";
 
-interface MenuItem {
+type MenuItem = {
     icon: string;
     label: string;
-    to: string;
-}
+} & ({ to: string } | { action: "new-note" });
 
 const menuItems: MenuItem[] = [
-    { icon: "sticky_note_2", label: "Nueva nota", to: "/notes/new" },
+    { icon: "sticky_note_2", label: "Nueva nota", action: "new-note" },
     { icon: "edit_note", label: "Nueva rutina", to: "/tasks/new" },
     { icon: "description", label: "Ver Notas", to: "/notes" },
     { icon: "today", label: "Hoy", to: "/tasks" },
@@ -24,8 +25,32 @@ export function FloatingActionButton() {
     const containerRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
 
+    const [quickNoteOpen, setQuickNoteOpen] = useState(false);
+    const location = useRouterState({ select: (state) => state.location });
+
     const toggle = useCallback(() => setIsOpen((prev) => !prev), []);
     const close = useCallback(() => setIsOpen(false), []);
+
+    /**
+     * Whether a note created right now would show up on screen. The menu is
+     * reachable from anywhere, so after saving from a view that would not list
+     * the new note we send the user somewhere it is visible.
+     */
+    const showsTodaysNotes = useCallback(() => {
+        const pathname = location.pathname.replace(/\/+$/, "") || "/";
+        if (pathname === "/notes") return true;
+        if (pathname === "/notes/history") {
+            const { date } = location.search as { date?: string };
+            return date === todayDateString();
+        }
+        return false;
+    }, [location]);
+
+    const handleNoteCreated = useCallback(() => {
+        if (!showsTodaysNotes()) {
+            void navigate({ to: "/notes" });
+        }
+    }, [navigate, showsTodaysNotes]);
 
     // Close on click outside
     useEffect(() => {
@@ -52,6 +77,10 @@ export function FloatingActionButton() {
     const handleItemClick = useCallback(
         (item: MenuItem) => {
             close();
+            if ("action" in item) {
+                setQuickNoteOpen(true);
+                return;
+            }
             void navigate({ to: item.to });
         },
         [close, navigate],
@@ -118,6 +147,13 @@ export function FloatingActionButton() {
                     />
                 </button>
             </div>
+
+            <QuickNoteDialog
+                open={quickNoteOpen}
+                onOpenChange={setQuickNoteOpen}
+                date={todayDateString()}
+                onCreated={handleNoteCreated}
+            />
         </>
     );
 }

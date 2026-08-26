@@ -18,18 +18,21 @@ import { createNoteMutationOpts } from "@/queries/notes";
  * Create a note without leaving the current view.
  *
  * `POST /api/v1/notes` stamps the note with the current server day, so callers
- * must only offer this while today is the day in view. `/notes/new` remains the
- * full-page equivalent for deep links and the global action menu.
+ * must only offer this while today is the day in view. This is the only way to
+ * create a note; editing an existing one still has its own page.
  */
 export function QuickNoteDialog({
     open,
     onOpenChange,
     date,
+    onCreated,
 }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     /** Day the new note will land on; used to refresh that day's listing. */
     date: string;
+    /** Called after a successful save, once the dialog has closed. */
+    onCreated?: () => void;
 }) {
     const [content, setContent] = useState("");
 
@@ -70,6 +73,7 @@ export function QuickNoteDialog({
                                 toast.success("Nota creada");
                                 setContent("");
                                 onOpenChange(false);
+                                onCreated?.();
                             },
                         });
                     }}
