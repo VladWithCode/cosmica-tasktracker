@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { apiFetch } from "@/lib/apiFetch";
 import type { ApiResponse } from "@/types/api";
 import { getApiError } from "@/types/api";
 
@@ -68,7 +69,7 @@ export const useNotifications = create<NotificationState>((set, get) => {
         sendTestNotification: async () => {
             set({ error: null, isBusy: true });
             try {
-                const response = await fetch("/api/v1/notifications/test", {
+                const response = await apiFetch("/api/v1/notifications/test", {
                     credentials: "include",
                     method: "POST",
                 });
@@ -158,7 +159,7 @@ export const useNotifications = create<NotificationState>((set, get) => {
 });
 
 async function fetchVapidPublicKey(): Promise<string> {
-    const response = await fetch("/api/v1/notifications/vapid-public-key", {
+    const response = await apiFetch("/api/v1/notifications/vapid-public-key", {
         credentials: "include",
         method: "GET",
     });
@@ -175,7 +176,7 @@ async function fetchVapidPublicKey(): Promise<string> {
 }
 
 async function saveSubscription(subscription: PushSubscription): Promise<void> {
-    const response = await fetch("/api/v1/notifications/subscriptions", {
+    const response = await apiFetch("/api/v1/notifications/subscriptions", {
         body: JSON.stringify(subscription),
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -188,7 +189,7 @@ async function saveSubscription(subscription: PushSubscription): Promise<void> {
 }
 
 async function deleteSubscription(endpoint: string): Promise<void> {
-    const response = await fetch("/api/v1/notifications/subscriptions", {
+    const response = await apiFetch("/api/v1/notifications/subscriptions", {
         body: JSON.stringify({ endpoint }),
         credentials: "include",
         headers: { "Content-Type": "application/json" },

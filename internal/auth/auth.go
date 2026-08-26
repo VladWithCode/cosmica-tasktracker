@@ -3,6 +3,10 @@ package auth
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log"
@@ -25,10 +29,22 @@ var (
 	// UseHTTPOnlyCookies is a flag to enable HTTP only cookies, by default they are HTTP only
 	// This may be changed through the USE_HTTP_ONLY_COOKIES environment variable if needed
 	UseHTTPOnlyCookies = true
-	// DefaultCookieName is the name of the cookie used to store the auth token
+	// DefaultCookieName is the name of the cookie used to store the access token
 	DefaultCookieName = "auth_token"
-	// DefaultCookieMaxAge is the max age of the cookie in seconds
+	// DefaultCookieMaxAge is the max age of the access cookie in seconds.
+	// The cookie outlives the short-lived access JWT so the browser keeps
+	// presenting it; the server rejects it once the JWT itself expires and the
+	// client refreshes through the refresh cookie.
 	DefaultCookieMaxAge = 60 * 60 * 24 * 7 // 1 week
+	// RefreshCookieName is the name of the cookie holding the opaque refresh token.
+	RefreshCookieName = "refresh_token"
+	// RefreshCookiePath restricts the refresh cookie to the auth endpoints.
+	// It must cover both /api/v1/auth/refresh (rotation) and
+	// /api/v1/auth/logout (server-side revoke), so it is scoped to the auth
+	// group rather than the refresh endpoint alone.
+	RefreshCookiePath = "/api/v1/auth"
+	// RefreshCookieMaxAge is the max age of the refresh cookie in seconds.
+	RefreshCookieMaxAge = 60 * 60 * 24 * 30 // 30 days
 )
 
 func SetAuthParameters() {
@@ -42,6 +58,14 @@ func SetAuthParameters() {
 	envMaxAge, _ := strconv.Atoi(os.Getenv("DEFAULT_COOKIE_MAX_AGE"))
 	if envMaxAge > 0 {
 		DefaultCookieMaxAge = envMaxAge
+	}
+
+	if envAccessTTL, _ := strconv.Atoi(os.Getenv("ACCESS_TOKEN_TTL_SECONDS")); envAccessTTL > 0 {
+		AccessTokenTTL = time.Duration(envAccessTTL) * time.Second
+	}
+	if envRefreshTTL, _ := strconv.Atoi(os.Getenv("REFRESH_TOKEN_TTL_SECONDS")); envRefreshTTL > 0 {
+		RefreshTokenTTL = time.Duration(envRefreshTTL) * time.Second
+		RefreshCookieMaxAge = envRefreshTTL
 	}
 }
 
@@ -90,9 +114,42 @@ type AuthClaims struct {
 	jwt.RegisteredClaims
 }
 
+// AccessTokenTTL is the lifetime of the short-lived access JWT. Kept short so a
+// leaked access token has a small window; sessions stay alive through refresh
+// token rotation. Overridable via ACCESS_TOKEN_TTL_SECONDS.
+var AccessTokenTTL = 15 * time.Minute
+
+// RefreshTokenTTL is the lifetime of an opaque refresh token. Overridable via
+// REFRESH_TOKEN_TTL_SECONDS.
+var RefreshTokenTTL = 30 * 24 * time.Hour
+
+// DefaultExpirationTime is retained for backward compatibility with callers
+// that referenced it. New code should use AccessTokenTTL.
 const DefaultExpirationTime = time.Hour * 24
 const InvalidTokenID = "invalid"
 const ExpiredTokenID = "expired"
+
+// refreshTokenBytes is the number of random bytes in an opaque refresh token.
+const refreshTokenBytes = 32
+
+// GenerateRefreshToken returns a new cryptographically random opaque refresh
+// token, URL-safe base64 encoded. This is the raw value handed to the client;
+// only its hash is ever persisted.
+func GenerateRefreshToken() (string, error) {
+	buf := make([]byte, refreshTokenBytes)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(buf), nil
+}
+
+// HashRefreshToken returns the hex-encoded SHA-256 hash of a raw refresh token.
+// Stored and compared instead of the raw token so a database leak does not
+// expose usable tokens.
+func HashRefreshToken(raw string) string {
+	sum := sha256.Sum256([]byte(raw))
+	return hex.EncodeToString(sum[:])
+}
 
 type AuthCtxKey string
 
@@ -103,7 +160,7 @@ func CreateToken(user *db.User) (string, error) {
 		t *jwt.Token
 		k = os.Getenv("JWT_SECRET")
 	)
-	expTime := time.Now().Add(DefaultExpirationTime)
+	expTime := time.Now().Add(AccessTokenTTL)
 
 	t = jwt.NewWithClaims(jwt.SigningMethodHS256, AuthClaims{
 		user.ID,

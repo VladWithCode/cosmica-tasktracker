@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/apiFetch";
 import type { ApiResponse } from "@/types/api";
 import { getApiError } from "@/types/api";
 import type {
@@ -60,7 +61,7 @@ export async function changePassword(payload: {
     current_password: string;
     new_password: string;
 }): Promise<string> {
-    const response = await fetch("/api/v1/auth/password", {
+    const response = await apiFetch("/api/v1/auth/password", {
         body: JSON.stringify(payload),
         credentials: "include",
         headers: { "Content-Type": "application/json" },

@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/apiFetch";
 import type { ApiResponse } from "@/types/api";
 import { getApiError } from "@/types/api";
 import type { Note } from "@/types/note";
@@ -12,7 +13,7 @@ interface NotesListData {
 }
 
 export async function getNotes(date: string): Promise<Note[]> {
-    const response = await fetch(`/api/v1/notes?date=${encodeURIComponent(date)}`, {
+    const response = await apiFetch(`/api/v1/notes?date=${encodeURIComponent(date)}`, {
         credentials: "include",
     });
     const data = (await response.json()) as ApiResponse<NotesListData>;
@@ -23,7 +24,7 @@ export async function getNotes(date: string): Promise<Note[]> {
 }
 
 export async function getNote(id: string): Promise<Note> {
-    const response = await fetch(`/api/v1/notes/${id}`, { credentials: "include" });
+    const response = await apiFetch(`/api/v1/notes/${id}`, { credentials: "include" });
     const data = (await response.json()) as ApiResponse<NoteData>;
     if (!response.ok) {
         throw new Error(getApiError(data, "Error al obtener nota"));
@@ -35,7 +36,7 @@ export async function getNote(id: string): Promise<Note> {
 }
 
 export async function createNote(content: string): Promise<Note> {
-    const response = await fetch("/api/v1/notes", {
+    const response = await apiFetch("/api/v1/notes", {
         body: JSON.stringify({ content }),
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -52,7 +53,7 @@ export async function createNote(content: string): Promise<Note> {
 }
 
 export async function updateNote(id: string, content: string): Promise<Note> {
-    const response = await fetch(`/api/v1/notes/${id}`, {
+    const response = await apiFetch(`/api/v1/notes/${id}`, {
         body: JSON.stringify({ content }),
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -69,7 +70,7 @@ export async function updateNote(id: string, content: string): Promise<Note> {
 }
 
 export async function deleteNote(id: string): Promise<void> {
-    const response = await fetch(`/api/v1/notes/${id}`, {
+    const response = await apiFetch(`/api/v1/notes/${id}`, {
         credentials: "include",
         method: "DELETE",
     });

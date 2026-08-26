@@ -99,6 +99,100 @@ func TestAuthRoutes(t *testing.T) {
 	}
 }
 
+func TestRefreshTokenFlow(t *testing.T) {
+	router := setupAuthRouteTest(t)
+	username := fmt.Sprintf("refreshflow_%d", time.Now().UnixNano()%1_000_000_000)
+	password := "Test1234"
+	cleanupRouteTestUser(t, username)
+	t.Cleanup(func() { cleanupRouteTestUser(t, username) })
+
+	// Register issues both an access cookie and a refresh cookie.
+	status, body, cookies, _ := performJSON(router, http.MethodPost, "/api/v1/auth/register", map[string]string{
+		"email":    username + "@example.com",
+		"fullname": "Refresh Flow User",
+		"password": password,
+		"username": username,
+	}, nil)
+	if status != http.StatusCreated {
+		t.Fatalf("register status = %d body = %s", status, body)
+	}
+	accessCookie := findCookie(cookies, auth.DefaultCookieName)
+	refreshCookie := findCookie(cookies, auth.RefreshCookieName)
+	if accessCookie == nil {
+		t.Fatalf("expected access cookie on register, got %#v", cookies)
+	}
+	if refreshCookie == nil || refreshCookie.Value == "" {
+		t.Fatalf("expected refresh cookie on register, got %#v", cookies)
+	}
+
+	// /me works with the access cookie.
+	status, body, _, _ = performJSON(router, http.MethodGet, "/api/v1/auth/me", nil, []*http.Cookie{accessCookie})
+	if status != http.StatusOK {
+		t.Fatalf("me status = %d body = %s", status, body)
+	}
+
+	// Refresh rotates the refresh token and issues a new access token.
+	status, body, refreshedCookies, _ := performJSON(router, http.MethodPost, "/api/v1/auth/refresh", nil, []*http.Cookie{refreshCookie})
+	if status != http.StatusOK {
+		t.Fatalf("refresh status = %d body = %s", status, body)
+	}
+	newAccessCookie := findCookie(refreshedCookies, auth.DefaultCookieName)
+	newRefreshCookie := findCookie(refreshedCookies, auth.RefreshCookieName)
+	if newAccessCookie == nil || newAccessCookie.Value == "" {
+		t.Fatalf("expected new access cookie after refresh, got %#v", refreshedCookies)
+	}
+	if newRefreshCookie == nil || newRefreshCookie.Value == "" {
+		t.Fatalf("expected new refresh cookie after refresh, got %#v", refreshedCookies)
+	}
+	if newRefreshCookie.Value == refreshCookie.Value {
+		t.Fatal("expected rotated refresh cookie to differ from original")
+	}
+
+	// /me works with the refreshed access cookie.
+	status, body, _, _ = performJSON(router, http.MethodGet, "/api/v1/auth/me", nil, []*http.Cookie{newAccessCookie})
+	if status != http.StatusOK {
+		t.Fatalf("me after refresh status = %d body = %s", status, body)
+	}
+
+	// Reusing the old (now rotated) refresh token must fail.
+	status, _, _, _ = performJSON(router, http.MethodPost, "/api/v1/auth/refresh", nil, []*http.Cookie{refreshCookie})
+	if status != http.StatusUnauthorized {
+		t.Fatalf("expected 401 reusing rotated refresh token, got %d", status)
+	}
+
+	// Logout revokes the current refresh token and clears both cookies.
+	status, body, logoutCookies, _ := performJSON(router, http.MethodPost, "/api/v1/auth/logout", nil, []*http.Cookie{newAccessCookie, newRefreshCookie})
+	if status != http.StatusOK {
+		t.Fatalf("logout status = %d body = %s", status, body)
+	}
+	clearedAccess := findCookie(logoutCookies, auth.DefaultCookieName)
+	clearedRefresh := findCookie(logoutCookies, auth.RefreshCookieName)
+	if clearedAccess == nil || clearedAccess.Value != "" || clearedAccess.MaxAge >= 0 {
+		t.Fatalf("expected cleared access cookie, got %#v", logoutCookies)
+	}
+	if clearedRefresh == nil || clearedRefresh.Value != "" || clearedRefresh.MaxAge >= 0 {
+		t.Fatalf("expected cleared refresh cookie, got %#v", logoutCookies)
+	}
+
+	// Refresh after logout with the revoked token must fail.
+	status, _, _, _ = performJSON(router, http.MethodPost, "/api/v1/auth/refresh", nil, []*http.Cookie{newRefreshCookie})
+	if status != http.StatusUnauthorized {
+		t.Fatalf("expected 401 refreshing after logout, got %d", status)
+	}
+
+	// Refresh without a refresh cookie must fail.
+	status, _, _, _ = performJSON(router, http.MethodPost, "/api/v1/auth/refresh", nil, nil)
+	if status != http.StatusUnauthorized {
+		t.Fatalf("expected 401 refreshing without cookie, got %d", status)
+	}
+
+	// Logout without any cookies must not crash and stays OK.
+	status, _, _, _ = performJSON(router, http.MethodPost, "/api/v1/auth/logout", nil, nil)
+	if status != http.StatusOK {
+		t.Fatalf("expected logout without cookies to be OK, got %d", status)
+	}
+}
+
 func setupAuthRouteTest(t *testing.T) *gin.Engine {
 	t.Helper()
 

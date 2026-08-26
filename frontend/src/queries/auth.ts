@@ -1,4 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
+import { apiFetch } from "@/lib/apiFetch";
 import type { ApiResponse } from "@/types/api";
 import { getApiError } from "@/types/api";
 import type { User } from "@/types/auth";
@@ -26,7 +27,7 @@ export const checkAuthOpts = queryOptions({
 });
 
 export async function checkAuth() {
-    const response = await fetch("/api/v1/auth/me", {
+    const response = await apiFetch("/api/v1/auth/me", {
         method: "GET",
         credentials: "include",
     });

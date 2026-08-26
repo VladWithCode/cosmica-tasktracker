@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/apiFetch";
 import type { ApiResponse } from "@/types/api";
 import { getApiError } from "@/types/api";
 import type { CreateTaskPayload } from "@/types/task-config";
@@ -7,7 +8,7 @@ interface CreatedTaskData {
 }
 
 export async function createTask(payload: CreateTaskPayload): Promise<ApiResponse<CreatedTaskData>> {
-    const response = await fetch("/api/v1/tasks", {
+    const response = await apiFetch("/api/v1/tasks", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",

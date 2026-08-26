@@ -13,6 +13,12 @@ type UserRepository interface {
 	IsEmailTaken(ctx context.Context, email string) (bool, error)
 	IsUsernameTaken(ctx context.Context, username string) (bool, error)
 	UpdatePassword(ctx context.Context, userID string, hashedPassword string) error
+
+	// Refresh-token session storage.
+	InsertRefreshToken(ctx context.Context, token *db.RefreshToken) error
+	GetRefreshTokenByHash(ctx context.Context, tokenHash string) (*db.RefreshToken, error)
+	RevokeRefreshToken(ctx context.Context, id string, replacedByID string) error
+	RevokeAllUserRefreshTokens(ctx context.Context, userID string) error
 }
 
 type DBUserRepository struct{}
@@ -43,4 +49,20 @@ func (r *DBUserRepository) IsUsernameTaken(ctx context.Context, username string)
 
 func (r *DBUserRepository) IsEmailTaken(ctx context.Context, email string) (bool, error) {
 	return db.UserExistsByEmail(ctx, email)
+}
+
+func (r *DBUserRepository) InsertRefreshToken(ctx context.Context, token *db.RefreshToken) error {
+	return db.InsertRefreshToken(ctx, token)
+}
+
+func (r *DBUserRepository) GetRefreshTokenByHash(ctx context.Context, tokenHash string) (*db.RefreshToken, error) {
+	return db.GetRefreshTokenByHash(ctx, tokenHash)
+}
+
+func (r *DBUserRepository) RevokeRefreshToken(ctx context.Context, id string, replacedByID string) error {
+	return db.RevokeRefreshToken(ctx, id, replacedByID)
+}
+
+func (r *DBUserRepository) RevokeAllUserRefreshTokens(ctx context.Context, userID string) error {
+	return db.RevokeAllUserRefreshTokens(ctx, userID)
 }
