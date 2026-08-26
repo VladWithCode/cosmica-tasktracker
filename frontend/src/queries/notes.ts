@@ -45,6 +45,8 @@ export function getNoteOpts(id: string) {
 
 function invalidateNotesForDate(date: string) {
     void queryClient.invalidateQueries({ queryKey: NotesQueryKeys.byDate(date) });
+    // Per-day counts feed the calendar badges, so they move with the listing.
+    void queryClient.invalidateQueries({ queryKey: NotesQueryKeys.history() });
 }
 
 function invalidateAllNotes() {
