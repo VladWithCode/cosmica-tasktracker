@@ -19,6 +19,7 @@ type noteContentRequest struct {
 
 func registerNotesRoutes(router *gin.RouterGroup) {
 	router.GET("/notes", GetNotes)
+	router.GET("/notes/history", GetNotesHistory)
 	router.GET("/notes/:id", GetNote)
 	router.POST("/notes", CreateNote)
 	router.PUT("/notes/:id", UpdateNote)
@@ -49,6 +50,31 @@ func GetNotes(c *gin.Context) {
 	}
 
 	httpx.OK(c, gin.H{"notes": notes, "date": date.Format("2006-01-02")}, "Notas obtenidas")
+}
+
+// GetNotesHistory returns the per-day note count over a date range.
+// Query: ?from=YYYY-MM-DD&to=YYYY-MM-DD (defaults to the last 7 days).
+func GetNotesHistory(c *gin.Context) {
+	authData, err := auth.GetAuth(c)
+	if err != nil {
+		httpx.Unauthorized(c, "No autorizado")
+		return
+	}
+
+	from, to, err := parseDateRange(c)
+	if err != nil {
+		httpx.BadRequest(c, err.Error())
+		return
+	}
+
+	history, err := db.GetNotesHistory(c.Request.Context(), authData.ID, from, to)
+	if err != nil {
+		log.Printf("notes: history error: %v", err)
+		httpx.ServerError(c, "Error al obtener historial de notas")
+		return
+	}
+
+	httpx.OK(c, gin.H{"history": history}, "Historial de notas obtenido")
 }
 
 // GetNote returns a single note owned by the authenticated user.

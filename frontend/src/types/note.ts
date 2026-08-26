@@ -5,3 +5,15 @@ export interface Note {
     created_at: string;
     updated_at: string;
 }
+
+/** Note count for a single local calendar day. */
+export interface NoteHistoryDay {
+    date: string;
+    total: number;
+}
+
+export interface NoteHistoryRange {
+    from: string;
+    to: string;
+    days: NoteHistoryDay[];
+}

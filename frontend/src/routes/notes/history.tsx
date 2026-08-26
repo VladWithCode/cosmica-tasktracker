@@ -2,10 +2,11 @@ import { useCallback } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/layout/AppShell";
-import { DayNavHeader } from "@/components/layout/DayNavHeader";
+import { DayNavHeader, dayNavNeutralAction } from "@/components/layout/DayNavHeader";
 import { NoteCard } from "@/components/notes/NoteCard";
+import { NotesCalendar } from "@/components/notes/NotesCalendar";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
-import { addDays, isValidDateString, todayDateString } from "@/lib/date";
+import { addDays, isValidDateString } from "@/lib/date";
 import { getNotesOpts } from "@/queries/notes";
 
 type NotesHistorySearch = {
@@ -28,14 +29,23 @@ function NotesHistoryRoute() {
 }
 
 function NotesHistoryPage() {
-    const navigate = useNavigate();
     const { date } = Route.useSearch();
-    const selectedDate = date ?? todayDateString();
+    if (!date) {
+        return <NotesCalendar />;
+    }
+    return <NotesDayView date={date} />;
+}
 
+function NotesDayView({ date: selectedDate }: { date: string }) {
+    const navigate = useNavigate();
     const { data, isLoading, isError, error } = useQuery(getNotesOpts(selectedDate));
 
     const goToDate = useCallback(
         (next: string) => navigate({ to: "/notes/history", search: { date: next } }),
+        [navigate],
+    );
+    const goCalendar = useCallback(
+        () => navigate({ to: "/notes/history", search: {} }),
         [navigate],
     );
     const goPrev = useCallback(
@@ -49,7 +59,21 @@ function NotesHistoryPage() {
 
     return (
         <main className="relative mx-auto min-h-full max-w-3xl px-4 pb-36 sm:px-6">
-            <DayNavHeader date={selectedDate} onPrev={goPrev} onNext={goNext} />
+            <DayNavHeader
+                date={selectedDate}
+                onPrev={goPrev}
+                onNext={goNext}
+                leading={
+                    <button
+                        aria-label="Ver calendario"
+                        className={dayNavNeutralAction}
+                        onClick={goCalendar}
+                        type="button"
+                    >
+                        <MaterialIcon name="calendar_month" className="text-xl" />
+                    </button>
+                }
+            />
 
             {isLoading ? (
                 <div className="space-y-2">
