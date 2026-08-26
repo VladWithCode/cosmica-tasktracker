@@ -103,7 +103,6 @@ function AgendaDayView({ date: selectedDate }: { date: string }) {
         () => navigate({ to: "/agenda", search: {} }),
         [navigate],
     );
-    const goToday = useCallback(() => goToDate(toDateString(new Date())), [goToDate]);
     const goPrev = useCallback(() => {
         const d = new Date(selectedDate + "T12:00:00");
         d.setDate(d.getDate() - 1);
@@ -115,7 +114,6 @@ function AgendaDayView({ date: selectedDate }: { date: string }) {
         goToDate(toDateString(d));
     }, [selectedDate, goToDate]);
 
-    const isToday = selectedDate === toDateString(new Date());
     const [quickTaskOpen, setQuickTaskOpen] = useState(false);
 
     const formattedDate = useMemo(() => {
@@ -128,93 +126,72 @@ function AgendaDayView({ date: selectedDate }: { date: string }) {
         });
     }, [selectedDate]);
 
+    const shortDate = useMemo(() => {
+        const d = new Date(selectedDate + "T12:00:00");
+        return d.toLocaleDateString("es-MX", {
+            weekday: "short",
+            day: "2-digit",
+            month: "short",
+        });
+    }, [selectedDate]);
+
     return (
-        <main className="relative mx-auto min-h-full max-w-3xl px-4 pb-36 pt-6 sm:px-6">
+        <main className="relative mx-auto min-h-full max-w-3xl px-4 pb-36 sm:px-6">
             <div className="pointer-events-none absolute left-1/2 top-16 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/5 blur-[120px]" />
 
-            {/* Quick one-off task creation */}
-            <div className="relative mb-2 flex justify-end">
-                <button
-                    aria-label="Agregar tarea"
-                    className="flex h-10 w-10 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-primary shadow-sm transition-all hover:scale-105 hover:bg-primary/20 active:scale-95"
-                    onClick={() => setQuickTaskOpen(true)}
-                    type="button"
-                >
-                    <MaterialIcon name="add" className="text-2xl" />
-                </button>
-            </div>
+            {/* Sticky day header: calendar / day nav / quick task */}
+            <header className="sticky top-0 z-30 -mx-4 mb-4 border-b border-outline-variant/10 bg-surface/90 px-4 py-1.5 backdrop-blur-xl sm:-mx-6 sm:px-6">
+                <div className="flex items-center gap-2">
+                    <button
+                        aria-label="Ver calendario"
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-outline-variant/20 bg-surface-container-lowest text-on-surface-variant transition-colors hover:text-primary"
+                        onClick={goCalendar}
+                        type="button"
+                    >
+                        <MaterialIcon name="calendar_month" className="text-xl" />
+                    </button>
+
+                    <div className="flex min-w-0 flex-1 items-center justify-center gap-1">
+                        <button
+                            aria-label="Día anterior"
+                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-outline-variant/20 bg-surface-container-lowest text-on-surface-variant transition-colors hover:text-primary"
+                            onClick={goPrev}
+                            type="button"
+                        >
+                            <MaterialIcon name="chevron_left" className="text-xl" />
+                        </button>
+
+                        <p className="min-w-0 truncate text-center font-display text-sm font-bold capitalize text-on-surface sm:text-base">
+                            <span className="sm:hidden">{shortDate}</span>
+                            <span className="hidden sm:inline">{formattedDate}</span>
+                        </p>
+
+                        <button
+                            aria-label="Día siguiente"
+                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-outline-variant/20 bg-surface-container-lowest text-on-surface-variant transition-colors hover:text-primary"
+                            onClick={goNext}
+                            type="button"
+                        >
+                            <MaterialIcon name="chevron_right" className="text-xl" />
+                        </button>
+                    </div>
+
+                    <button
+                        aria-label="Agregar tarea"
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-primary shadow-sm transition-all hover:bg-primary/20 active:scale-95"
+                        onClick={() => setQuickTaskOpen(true)}
+                        type="button"
+                    >
+                        <MaterialIcon name="add" className="text-xl" />
+                    </button>
+                </div>
+            </header>
+
             <QuickTaskDialog
                 open={quickTaskOpen}
                 onOpenChange={setQuickTaskOpen}
                 selectedDate={selectedDate}
             />
-
-            {/* Date navigation */}
-            <section className="relative mb-6">
-                <div className="flex items-center justify-between gap-2">
-                    <button
-                        aria-label="Día anterior"
-                        className="flex h-10 w-10 items-center justify-center rounded-full border border-outline-variant/20 bg-surface-container-lowest text-on-surface-variant transition-colors hover:text-primary"
-                        onClick={goPrev}
-                        type="button"
-                    >
-                        <MaterialIcon name="chevron_left" className="text-2xl" />
-                    </button>
-
-                    <div className="flex flex-1 flex-col items-center gap-1">
-                        <p className="text-center font-display text-lg font-bold capitalize text-on-surface sm:text-xl">
-                            {formattedDate}
-                        </p>
-                        <div className="flex items-center gap-2">
-                            {!isToday ? (
-                                <button
-                                    className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 font-label text-[11px] font-bold uppercase tracking-widest text-primary transition-colors hover:bg-primary/20"
-                                    onClick={goToday}
-                                    type="button"
-                                >
-                                    Hoy
-                                </button>
-                            ) : (
-                                <span className="rounded-full bg-primary/15 px-3 py-1 font-label text-[11px] font-bold uppercase tracking-widest text-primary">
-                                    Hoy
-                                </span>
-                            )}
-                            <input
-                                aria-label="Seleccionar fecha"
-                                className="h-7 rounded-lg border border-outline-variant/30 bg-surface-container-lowest px-2 text-xs text-on-surface focus:border-primary focus:outline-none"
-                                onChange={(e) => {
-                                    if (e.target.value) goToDate(e.target.value);
-                                }}
-                                type="date"
-                                value={selectedDate}
-                            />
-                        </div>
-                    </div>
-
-                    <button
-                        aria-label="Día siguiente"
-                        className="flex h-10 w-10 items-center justify-center rounded-full border border-outline-variant/20 bg-surface-container-lowest text-on-surface-variant transition-colors hover:text-primary"
-                        onClick={goNext}
-                        type="button"
-                    >
-                        <MaterialIcon name="chevron_right" className="text-2xl" />
-                    </button>
-                </div>
-
-                <div className="mt-2 flex items-center justify-center gap-3">
-                    <p className="font-label text-xs text-on-surface-variant">
-                        {feedItems.length} {feedItems.length === 1 ? "tarea" : "tareas"}
-                    </p>
-                    <button
-                        className="inline-flex items-center gap-1 rounded-full border border-outline-variant/30 bg-surface-container-lowest px-3 py-1 font-label text-[11px] font-bold uppercase tracking-widest text-on-surface-variant transition-colors hover:text-primary"
-                        onClick={goCalendar}
-                        type="button"
-                    >
-                        <MaterialIcon name="calendar_month" className="text-sm" />
-                        Ver calendario
-                    </button>
-                </div>
-            </section>
 
             {isLoading ? (
                 <div className="space-y-2">
