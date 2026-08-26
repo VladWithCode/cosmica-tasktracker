@@ -342,7 +342,7 @@ func GetTaskHistory(c *gin.Context) {
 		return
 	}
 
-	from, to, err := parseTaskRange(c)
+	from, to, err := parseDateRange(c)
 	if err != nil {
 		httpx.BadRequest(c, err.Error())
 		return
@@ -367,7 +367,7 @@ func GetTaskMetrics(c *gin.Context) {
 		return
 	}
 
-	from, to, err := parseTaskRange(c)
+	from, to, err := parseDateRange(c)
 	if err != nil {
 		httpx.BadRequest(c, err.Error())
 		return
@@ -384,7 +384,7 @@ func GetTaskMetrics(c *gin.Context) {
 	httpx.OK(c, gin.H{"metrics": metrics}, "Métricas recuperadas")
 }
 
-func parseTaskRange(c *gin.Context) (time.Time, time.Time, error) {
+func parseDateRange(c *gin.Context) (time.Time, time.Time, error) {
 	now := time.Now()
 	to := time.Date(now.Year(), now.Month(), now.Day(), 12, 0, 0, 0, time.Local)
 	from := to.AddDate(0, 0, -6)

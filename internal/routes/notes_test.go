@@ -298,3 +298,159 @@ func TestNotesOnlyOwnerCanListEditDelete(t *testing.T) {
 		t.Fatalf("owner delete status = %d body = %s", status, body)
 	}
 }
+
+type notesHistoryResponse struct {
+	Data struct {
+		History struct {
+			From string `json:"from"`
+			To   string `json:"to"`
+			Days []struct {
+				Date  string `json:"date"`
+				Total int    `json:"total"`
+			} `json:"days"`
+		} `json:"history"`
+	} `json:"data"`
+	Message string `json:"message"`
+}
+
+// dbDayOffset returns DATE(now()) shifted by days, as the database itself sees
+// it. The history query buckets on DATE(created_at), so expectations have to be
+// derived from the database timezone rather than the test process timezone.
+func dbDayOffset(t *testing.T, days int) string {
+	t.Helper()
+	conn, err := db.GetConn(context.Background())
+	if err != nil {
+		t.Fatalf("failed to acquire db conn: %v", err)
+	}
+	defer conn.Release()
+
+	var day string
+	if err := conn.QueryRow(context.Background(),
+		`SELECT (DATE(now()) + $1::int)::text`, days).Scan(&day); err != nil {
+		t.Fatalf("day offset query failed: %v", err)
+	}
+	return day
+}
+
+// insertBackdatedNotes writes notes directly, since the create endpoint always
+// stamps the current day.
+func insertBackdatedNotes(t *testing.T, username string, daysAgo int, count int) {
+	t.Helper()
+	conn, err := db.GetConn(context.Background())
+	if err != nil {
+		t.Fatalf("failed to acquire db conn: %v", err)
+	}
+	defer conn.Release()
+
+	for i := 0; i < count; i++ {
+		if _, err := conn.Exec(context.Background(),
+			`INSERT INTO notes (user_id, content, created_at)
+			 SELECT id, $2, now() - ($3::int * interval '1 day')
+			 FROM users WHERE username = $1`,
+			username, fmt.Sprintf("backdated %d", i), daysAgo); err != nil {
+			t.Fatalf("insert backdated note failed: %v", err)
+		}
+	}
+}
+
+func TestNotesHistoryCountsByDay(t *testing.T) {
+	router := setupAuthRouteTest(t)
+	username := fmt.Sprintf("notes_hist_%d", time.Now().UnixNano()%1_000_000_000)
+	cleanupNotesUser(t, username)
+	t.Cleanup(func() { cleanupNotesUser(t, username) })
+
+	cookie := registerNotesUser(t, router, username)
+
+	status, body, _, _ := performJSONPayload(router, http.MethodPost, "/api/v1/notes",
+		map[string]interface{}{"content": "today note"},
+		[]*http.Cookie{cookie})
+	if status != http.StatusCreated {
+		t.Fatalf("create status = %d body = %s", status, body)
+	}
+	insertBackdatedNotes(t, username, 2, 2)
+
+	today := dbDayOffset(t, 0)
+	from := dbDayOffset(t, -6)
+
+	status, body, _, _ = performJSONPayload(router, http.MethodGet,
+		"/api/v1/notes/history?from="+from+"&to="+today, nil, []*http.Cookie{cookie})
+	if status != http.StatusOK {
+		t.Fatalf("history status = %d body = %s", status, body)
+	}
+
+	var history notesHistoryResponse
+	if err := json.Unmarshal([]byte(body), &history); err != nil {
+		t.Fatalf("unmarshal history: %v body=%s", err, body)
+	}
+
+	counts := map[string]int{}
+	for _, day := range history.Data.History.Days {
+		counts[day.Date] = day.Total
+	}
+	if got := counts[today]; got != 1 {
+		t.Fatalf("expected 1 note on %s, got %d (days=%v)", today, got, history.Data.History.Days)
+	}
+	twoDaysAgo := dbDayOffset(t, -2)
+	if got := counts[twoDaysAgo]; got != 2 {
+		t.Fatalf("expected 2 notes on %s, got %d (days=%v)", twoDaysAgo, got, history.Data.History.Days)
+	}
+	if len(history.Data.History.Days) != 2 {
+		t.Fatalf("expected only days with notes, got %v", history.Data.History.Days)
+	}
+}
+
+func TestNotesHistoryScopedToOwner(t *testing.T) {
+	router := setupAuthRouteTest(t)
+	owner := fmt.Sprintf("notes_hist_own_%d", time.Now().UnixNano()%1_000_000_000)
+	other := fmt.Sprintf("notes_hist_oth_%d", time.Now().UnixNano()%1_000_000_000+2)
+	cleanupNotesUser(t, owner)
+	cleanupNotesUser(t, other)
+	t.Cleanup(func() {
+		cleanupNotesUser(t, owner)
+		cleanupNotesUser(t, other)
+	})
+
+	ownerCookie := registerNotesUser(t, router, owner)
+	otherCookie := registerNotesUser(t, router, other)
+
+	status, body, _, _ := performJSONPayload(router, http.MethodPost, "/api/v1/notes",
+		map[string]interface{}{"content": "owner note"}, []*http.Cookie{ownerCookie})
+	if status != http.StatusCreated {
+		t.Fatalf("create status = %d body = %s", status, body)
+	}
+
+	status, body, _, _ = performJSONPayload(router, http.MethodGet,
+		"/api/v1/notes/history", nil, []*http.Cookie{otherCookie})
+	if status != http.StatusOK {
+		t.Fatalf("history status = %d body = %s", status, body)
+	}
+	var history notesHistoryResponse
+	if err := json.Unmarshal([]byte(body), &history); err != nil {
+		t.Fatalf("unmarshal history: %v body=%s", err, body)
+	}
+	if len(history.Data.History.Days) != 0 {
+		t.Fatalf("expected no days for other user, got %v", history.Data.History.Days)
+	}
+}
+
+func TestNotesHistoryRejectsInvalidRange(t *testing.T) {
+	router := setupAuthRouteTest(t)
+	username := fmt.Sprintf("notes_hist_bad_%d", time.Now().UnixNano()%1_000_000_000)
+	cleanupNotesUser(t, username)
+	t.Cleanup(func() { cleanupNotesUser(t, username) })
+
+	cookie := registerNotesUser(t, router, username)
+
+	cases := []string{
+		"?from=not-a-date",
+		"?from=2026-08-26&to=2026-08-25",
+		"?from=2026-01-01&to=2026-12-31",
+	}
+	for _, query := range cases {
+		status, _, _, _ := performJSONPayload(router, http.MethodGet,
+			"/api/v1/notes/history"+query, nil, []*http.Cookie{cookie})
+		if status != http.StatusBadRequest {
+			t.Fatalf("expected 400 for %q, got %d", query, status)
+		}
+	}
+}

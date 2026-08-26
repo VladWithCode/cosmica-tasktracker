@@ -1,5 +1,12 @@
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
-import { createNote, deleteNote, getNote, getNotes, updateNote } from "@/services/notes";
+import {
+    createNote,
+    deleteNote,
+    getNote,
+    getNotes,
+    getNotesHistory,
+    updateNote,
+} from "@/services/notes";
 import type { Note } from "@/types/note";
 import { queryClient } from "./queryClient";
 
@@ -8,12 +15,21 @@ export const NotesQueryKeys = {
     listing: () => [...NotesQueryKeys.all(), "listing"] as const,
     byDate: (date: string) => [...NotesQueryKeys.listing(), "date", date] as const,
     detail: (id: string) => [...NotesQueryKeys.all(), "detail", id] as const,
+    history: () => [...NotesQueryKeys.all(), "history"] as const,
 };
 
 export function getNotesOpts(date: string) {
     return queryOptions({
         queryKey: NotesQueryKeys.byDate(date),
         queryFn: () => getNotes(date),
+        staleTime: 60_000,
+    });
+}
+
+export function getNotesHistoryOpts(range: { from: string; to: string }) {
+    return queryOptions({
+        queryKey: [...NotesQueryKeys.history(), range.from, range.to] as const,
+        queryFn: () => getNotesHistory(range),
         staleTime: 60_000,
     });
 }
@@ -29,6 +45,8 @@ export function getNoteOpts(id: string) {
 
 function invalidateNotesForDate(date: string) {
     void queryClient.invalidateQueries({ queryKey: NotesQueryKeys.byDate(date) });
+    // Per-day counts feed the calendar badges, so they move with the listing.
+    void queryClient.invalidateQueries({ queryKey: NotesQueryKeys.history() });
 }
 
 function invalidateAllNotes() {

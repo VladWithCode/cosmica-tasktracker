@@ -1,21 +1,29 @@
-import { useCallback, useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { useCallback, useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/layout/AppShell";
+import {
+    DayNavHeader,
+    dayNavNeutralAction,
+    dayNavPrimaryAction,
+} from "@/components/layout/DayNavHeader";
 import { NoteCard } from "@/components/notes/NoteCard";
+import { NotesCalendar } from "@/components/notes/NotesCalendar";
+import { QuickNoteDialog } from "@/components/notes/QuickNoteDialog";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import { addDays, isValidDateString, todayDateString } from "@/lib/date";
 import { getNotesOpts } from "@/queries/notes";
+
+type NotesHistorySearch = {
+    date?: string;
+};
 
 export const Route = createFileRoute("/notes/history")({
     component: NotesHistoryRoute,
+    validateSearch: (search: Record<string, unknown>): NotesHistorySearch => {
+        return isValidDateString(search.date) ? { date: search.date } : {};
+    },
 });
-
-function toDateString(date: Date): string {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const d = String(date.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
-}
 
 function NotesHistoryRoute() {
     return (
@@ -26,98 +34,74 @@ function NotesHistoryRoute() {
 }
 
 function NotesHistoryPage() {
-    const [selectedDate, setSelectedDate] = useState(() => toDateString(new Date()));
+    const { date } = Route.useSearch();
+    if (!date) {
+        return <NotesCalendar />;
+    }
+    return <NotesDayView date={date} />;
+}
+
+function NotesDayView({ date: selectedDate }: { date: string }) {
+    const navigate = useNavigate();
     const { data, isLoading, isError, error } = useQuery(getNotesOpts(selectedDate));
 
-    const isToday = selectedDate === toDateString(new Date());
-
-    const formattedDate = useMemo(() => {
-        const d = new Date(selectedDate + "T12:00:00");
-        return d.toLocaleDateString("es-MX", {
-            day: "2-digit",
-            month: "long",
-            weekday: "long",
-            year: "numeric",
-        });
-    }, [selectedDate]);
-
-    const goToday = useCallback(() => setSelectedDate(toDateString(new Date())), []);
+    const goToDate = useCallback(
+        (next: string) => navigate({ to: "/notes/history", search: { date: next } }),
+        [navigate],
+    );
+    const goCalendar = useCallback(
+        () => navigate({ to: "/notes/history", search: {} }),
+        [navigate],
+    );
     const goPrev = useCallback(
-        () =>
-            setSelectedDate((prev) => {
-                const d = new Date(prev + "T12:00:00");
-                d.setDate(d.getDate() - 1);
-                return toDateString(d);
-            }),
-        [],
+        () => goToDate(addDays(selectedDate, -1)),
+        [selectedDate, goToDate],
     );
     const goNext = useCallback(
-        () =>
-            setSelectedDate((prev) => {
-                const d = new Date(prev + "T12:00:00");
-                d.setDate(d.getDate() + 1);
-                return toDateString(d);
-            }),
-        [],
+        () => goToDate(addDays(selectedDate, 1)),
+        [selectedDate, goToDate],
     );
 
+    // A note is always stamped with the current server day, so creating one is
+    // only offered while today is the day in view.
+    const isToday = selectedDate === todayDateString();
+    const [quickNoteOpen, setQuickNoteOpen] = useState(false);
+
     return (
-        <main className="relative mx-auto min-h-full max-w-3xl px-4 pb-36 pt-6 sm:px-6">
-            <section className="relative mb-6">
-                <div className="flex items-center justify-between gap-2">
+        <main className="relative mx-auto min-h-full max-w-3xl px-4 pb-36 sm:px-6">
+            <DayNavHeader
+                date={selectedDate}
+                onPrev={goPrev}
+                onNext={goNext}
+                leading={
                     <button
-                        aria-label="Día anterior"
-                        className="flex h-10 w-10 items-center justify-center rounded-full border border-outline-variant/20 bg-surface-container-lowest text-on-surface-variant transition-colors hover:text-primary"
-                        onClick={goPrev}
+                        aria-label="Ver calendario"
+                        className={dayNavNeutralAction}
+                        onClick={goCalendar}
                         type="button"
                     >
-                        <MaterialIcon className="text-2xl" name="chevron_left" />
+                        <MaterialIcon name="calendar_month" className="text-xl" />
                     </button>
+                }
+                actions={
+                    isToday ? (
+                        <button
+                            aria-label="Agregar nota"
+                            className={dayNavPrimaryAction}
+                            onClick={() => setQuickNoteOpen(true)}
+                            type="button"
+                        >
+                            <MaterialIcon name="add" className="text-xl" />
+                        </button>
+                    ) : undefined
+                }
+            />
 
-                    <div className="flex flex-1 flex-col items-center gap-1">
-                        <p className="text-center font-display text-lg font-bold capitalize text-on-surface sm:text-xl">
-                            {formattedDate}
-                        </p>
-                        <div className="flex items-center gap-2">
-                            {!isToday ? (
-                                <button
-                                    className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 font-label text-[11px] font-bold uppercase tracking-widest text-primary transition-colors hover:bg-primary/20"
-                                    onClick={goToday}
-                                    type="button"
-                                >
-                                    Hoy
-                                </button>
-                            ) : (
-                                <span className="rounded-full bg-primary/15 px-3 py-1 font-label text-[11px] font-bold uppercase tracking-widest text-primary">
-                                    Hoy
-                                </span>
-                            )}
-                            <input
-                                aria-label="Seleccionar fecha"
-                                className="h-7 rounded-lg border border-outline-variant/30 bg-surface-container-lowest px-2 text-xs text-on-surface focus:border-primary focus:outline-none"
-                                onChange={(e) => {
-                                    if (e.target.value) setSelectedDate(e.target.value);
-                                }}
-                                type="date"
-                                value={selectedDate}
-                            />
-                        </div>
-                    </div>
-
-                    <button
-                        aria-label="Día siguiente"
-                        className="flex h-10 w-10 items-center justify-center rounded-full border border-outline-variant/20 bg-surface-container-lowest text-on-surface-variant transition-colors hover:text-primary"
-                        onClick={goNext}
-                        type="button"
-                    >
-                        <MaterialIcon className="text-2xl" name="chevron_right" />
-                    </button>
-                </div>
-
-                <p className="mt-2 text-center font-label text-xs text-on-surface-variant">
-                    {(data?.length ?? 0)} {(data?.length ?? 0) === 1 ? "nota" : "notas"}
-                </p>
-            </section>
+            <QuickNoteDialog
+                open={quickNoteOpen}
+                onOpenChange={setQuickNoteOpen}
+                date={selectedDate}
+            />
 
             {isLoading ? (
                 <div className="space-y-2">

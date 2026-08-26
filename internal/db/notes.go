@@ -61,6 +61,66 @@ func GetNotesByDate(ctx context.Context, userID string, date time.Time) ([]Note,
 	return notes, nil
 }
 
+// NoteHistoryDay is the note count for a single local calendar day.
+type NoteHistoryDay struct {
+	Date  string `json:"date"`
+	Total int    `json:"total"`
+}
+
+// NoteHistoryRange is the per-day note activity over an inclusive date range.
+type NoteHistoryRange struct {
+	From string           `json:"from"`
+	To   string           `json:"to"`
+	Days []NoteHistoryDay `json:"days"`
+}
+
+// GetNotesHistory returns the note count per day for the given user over the
+// inclusive range [from, to]. Days without notes are omitted. Days are bucketed
+// with the same DATE(created_at) expression GetNotesByDate filters on, so a
+// day's count always matches the notes that day's listing returns.
+func GetNotesHistory(ctx context.Context, userID string, from time.Time, to time.Time) (*NoteHistoryRange, error) {
+	conn, err := GetConn(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	rows, err := conn.Query(ctx,
+		`SELECT DATE(created_at) AS day, COUNT(*) AS total
+		 FROM notes
+		 WHERE user_id = $1
+		   AND DATE(created_at) BETWEEN $2::date AND $3::date
+		 GROUP BY DATE(created_at)
+		 ORDER BY day ASC`,
+		userID, from, to,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	history := &NoteHistoryRange{
+		From: from.Format("2006-01-02"),
+		To:   to.Format("2006-01-02"),
+		Days: []NoteHistoryDay{},
+	}
+	for rows.Next() {
+		var day time.Time
+		var total int
+		if err := rows.Scan(&day, &total); err != nil {
+			return nil, err
+		}
+		history.Days = append(history.Days, NoteHistoryDay{
+			Date:  day.Format("2006-01-02"),
+			Total: total,
+		})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return history, nil
+}
+
 // GetNoteByID fetches a single note owned by userID.
 // Returns ErrNoteNotFound if missing or owner mismatch.
 func GetNoteByID(ctx context.Context, noteID string, userID string) (*Note, error) {

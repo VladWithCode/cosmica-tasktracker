@@ -1,7 +1,7 @@
 import { apiFetch } from "@/lib/apiFetch";
 import type { ApiResponse } from "@/types/api";
 import { getApiError } from "@/types/api";
-import type { Note } from "@/types/note";
+import type { Note, NoteHistoryRange } from "@/types/note";
 
 interface NoteData {
     note: Note;
@@ -21,6 +21,18 @@ export async function getNotes(date: string): Promise<Note[]> {
         throw new Error(getApiError(data, "Error al obtener notas"));
     }
     return data.data?.notes ?? [];
+}
+
+export async function getNotesHistory(range: { from: string; to: string }): Promise<NoteHistoryRange> {
+    const query = new URLSearchParams({ from: range.from, to: range.to });
+    const response = await apiFetch(`/api/v1/notes/history?${query.toString()}`, {
+        credentials: "include",
+    });
+    const data = (await response.json()) as ApiResponse<{ history: NoteHistoryRange }>;
+    if (!response.ok) {
+        throw new Error(getApiError(data, "Error al obtener historial de notas"));
+    }
+    return data.data?.history ?? { from: range.from, to: range.to, days: [] };
 }
 
 export async function getNote(id: string): Promise<Note> {
