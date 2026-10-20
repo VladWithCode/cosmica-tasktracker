@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"errors"
+	"io/fs"
 	"log"
 	"os"
 	"time"
@@ -20,7 +22,7 @@ const (
 
 func main() {
 	err := godotenv.Load()
-	if err != nil {
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		log.Fatalf("error loading env file: %v\n", err)
 	}
 	globalCtx := context.Background()

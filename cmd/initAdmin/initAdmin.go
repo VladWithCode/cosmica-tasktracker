@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"errors"
+	"io/fs"
 	"log"
 	"os"
 
@@ -12,7 +14,7 @@ import (
 
 func main() {
 	err := godotenv.Overload()
-	if err != nil {
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		log.Fatalf("failed to load .env file: %v", err)
 	}
 	var (

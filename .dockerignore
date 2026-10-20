@@ -1,0 +1,10 @@
+.git
+.github
+.claude
+.env*
+tmp
+docs
+*.log
+frontend/node_modules
+frontend/dist
+frontend/dev-dist
