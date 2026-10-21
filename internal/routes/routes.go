@@ -12,7 +12,7 @@ import (
 
 func NewRouter() *gin.Engine {
 	router := gin.Default()
-	router.SetTrustedProxies([]string{"127.0.0.1", "::1", "192.168.1.0/24"})
+	router.SetTrustedProxies([]string{"127.0.0.1", "::1", "192.168.1.0/24", "172.16.0.0/12"})
 
 	// CORS config
 	corsAllowOrigins := os.Getenv("CORS_ALLOW_ORIGINS")
