@@ -1,0 +1,3 @@
+tasktracker.lat {
+	reverse_proxy tasktracker-web:80
+}

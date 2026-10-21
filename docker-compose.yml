@@ -15,6 +15,7 @@ services:
       retries: 10
 
   app:
+    image: localhost/tasktracker-app:latest
     build:
       context: .
       target: app
@@ -28,23 +29,22 @@ services:
         condition: service_healthy
 
   web:
+    image: localhost/tasktracker-web:latest
     build:
       context: .
       target: web
     restart: unless-stopped
-    environment:
-      DOMAIN: ${DOMAIN:-:80}
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    volumes:
-      - caddy_data:/data
-      - caddy_config:/config
     depends_on:
       - app
+    networks:
+      default:
+      edge:
+        aliases:
+          - tasktracker-web
+
+networks:
+  edge:
+    external: true
 
 volumes:
   pgdata:
-  caddy_data:
-  caddy_config:

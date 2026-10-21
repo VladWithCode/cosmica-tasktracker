@@ -27,29 +27,48 @@ pushing.
 
 The `Dockerfile` builds two images: `app` (Go backend, `initAdmin` and Goose
 migrations, applied on every start) and `web` (Caddy serving the built
-frontend and proxying `/api/*` to the backend, with automatic HTTPS).
-`docker-compose.yml` runs both plus PostgreSQL 16.
+frontend on plain HTTP and proxying `/api/*` to the backend).
+`docker-compose.yml` runs both plus PostgreSQL 16. It publishes no host
+ports: `web` joins the shared `edge` network as `tasktracker-web`.
 
-On the server, create a `.env` next to `docker-compose.yml`:
+A single shared Caddy in [`deploy/edge/`](deploy/edge/) owns ports 80 and
+443 on the server, terminates HTTPS for every app and routes each domain to
+its container. Other apps join the same `edge` network the same way.
 
-```env
-DOMAIN=tasks.example.com
-POSTGRES_PASSWORD=<url-safe random string>
-JWT_SECRET=<long random string>
-CORS_ALLOW_ORIGINS=https://tasks.example.com
-USE_SECURE_COOKIES=true
-VAPID_PUBLIC_KEY=<key>
-VAPID_PRIVATE_KEY=<key>
-VAPID_SUBJECT=mailto:you@example.com
-ENABLE_TASK_GENERATOR=true
-```
+Images are built locally and shipped to the server as a tar archive, so the
+server never builds anything and needs no source checkout.
 
-Point the domain's DNS `A` record at the server, open ports 80 and 443, then:
+### One-time server setup
 
 ```sh
-docker compose up -d --build
-docker compose exec -e ADMIN_USERNAME=admin -e ADMIN_PASSWORD='<password>' app /app/initAdmin
+docker network create edge
 ```
 
-Leave `DOMAIN` unset to serve plain HTTP on port 80 (no TLS). In that case
-also leave `USE_SECURE_COOKIES` unset, or the login cookie is rejected.
+Copy [`deploy/edge/`](deploy/edge/) to `~/edge` on the server, then run
+`docker compose up -d` inside it. Point each domain's DNS `A` record at the
+server and open ports 80 and 443. After editing `caddy/Caddyfile`, reload it:
+
+```sh
+docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
+```
+
+### Tasktracker
+
+Copy `.env.example` to `~/apps/tasktracker/.env` on the server and fill in
+real values (at least `POSTGRES_PASSWORD`, `JWT_SECRET`, `CORS_ALLOW_ORIGINS`,
+`USE_SECURE_COOKIES=true` and the VAPID keys). Use only letters and digits in
+`POSTGRES_PASSWORD`, because it is inserted into `DATABASE_URL` as is.
+
+Build, upload and start a release from your machine (Podman by default, set
+`CONTAINER_ENGINE=docker` to use Docker):
+
+```sh
+deploy/release.sh deploy@tasktracker.lat
+```
+
+The first time, create the admin user on the server:
+
+```sh
+cd ~/apps/tasktracker
+docker compose exec -e ADMIN_USERNAME=admin -e ADMIN_PASSWORD='<password>' app /app/initAdmin
+```
