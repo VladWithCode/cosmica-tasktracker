@@ -72,3 +72,5 @@ The first time, create the admin user on the server:
 cd ~/apps/tasktracker
 docker compose exec -e ADMIN_USERNAME=admin -e ADMIN_PASSWORD='<password>' app /app/initAdmin
 ```
+
+To host another app on the same droplet, see [`docs/add-app.md`](docs/add-app.md).
