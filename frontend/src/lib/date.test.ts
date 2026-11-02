@@ -1,76 +1,30 @@
 import { describe, expect, it } from "vitest";
-import {
-    addDays,
-    isValidDateString,
-    parseDateString,
-    toDateString,
-    todayDateString,
-} from "./date";
+import { formatClock, formatDay, fromISODate, minutesOfDay, shiftISODate, toISODate, weekDays } from "./date";
 
-describe("toDateString", () => {
-    it("pads month and day", () => {
-        expect(toDateString(new Date(2026, 0, 5))).toBe("2026-01-05");
+describe("date helpers", () => {
+    it("round-trips ISO dates in the app time zone", () => {
+        expect(toISODate(fromISODate("2026-11-02"))).toBe("2026-11-02");
     });
 
-    it("uses local calendar fields, not UTC", () => {
-        // 23:30 local on the 26th stays the 26th even when UTC has rolled over.
-        expect(toDateString(new Date(2026, 7, 26, 23, 30))).toBe("2026-08-26");
+    it("maps an instant to the Mexico City calendar day", () => {
+        expect(toISODate(new Date("2026-11-03T04:30:00Z"))).toBe("2026-11-02");
+        expect(toISODate(new Date("2026-11-03T06:30:00Z"))).toBe("2026-11-03");
     });
 
-    it("round-trips through parseDateString", () => {
-        expect(toDateString(parseDateString("2026-02-29"))).toBe("2026-03-01");
-        expect(toDateString(parseDateString("2026-08-26"))).toBe("2026-08-26");
-    });
-});
-
-describe("isValidDateString", () => {
-    it("accepts a real calendar date", () => {
-        expect(isValidDateString("2026-08-26")).toBe(true);
-        expect(isValidDateString("2024-02-29")).toBe(true);
+    it("shifts across month boundaries", () => {
+        expect(shiftISODate("2026-10-31", 1)).toBe("2026-11-01");
+        expect(shiftISODate("2026-03-01", -1)).toBe("2026-02-28");
     });
 
-    it("rejects non-strings", () => {
-        expect(isValidDateString(undefined)).toBe(false);
-        expect(isValidDateString(20260826)).toBe(false);
+    it("builds a Monday-first week", () => {
+        const days = weekDays("2026-11-05");
+        expect(days[0]).toBe("2026-11-02");
+        expect(days[6]).toBe("2026-11-08");
     });
 
-    it("rejects malformed input", () => {
-        expect(isValidDateString("2026-8-26")).toBe(false);
-        expect(isValidDateString("26-08-2026")).toBe(false);
-        expect(isValidDateString("")).toBe(false);
-    });
-
-    it("rejects dates that do not exist", () => {
-        expect(isValidDateString("2026-02-30")).toBe(false);
-        expect(isValidDateString("2026-13-01")).toBe(false);
-        expect(isValidDateString("2026-00-10")).toBe(false);
-    });
-});
-
-describe("addDays", () => {
-    it("steps forward and backward", () => {
-        expect(addDays("2026-08-26", 1)).toBe("2026-08-27");
-        expect(addDays("2026-08-26", -1)).toBe("2026-08-25");
-    });
-
-    it("crosses month boundaries", () => {
-        expect(addDays("2026-08-31", 1)).toBe("2026-09-01");
-        expect(addDays("2026-09-01", -1)).toBe("2026-08-31");
-    });
-
-    it("crosses year boundaries", () => {
-        expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
-        expect(addDays("2027-01-01", -1)).toBe("2026-12-31");
-    });
-
-    it("handles leap days", () => {
-        expect(addDays("2024-02-28", 1)).toBe("2024-02-29");
-        expect(addDays("2026-02-28", 1)).toBe("2026-03-01");
-    });
-});
-
-describe("todayDateString", () => {
-    it("matches toDateString of now", () => {
-        expect(todayDateString()).toBe(toDateString(new Date()));
+    it("formats in Spanish", () => {
+        expect(formatDay("2026-11-02")).toBe("Lunes 2 de noviembre");
+        expect(formatClock("07:05")).toMatch(/^7:05\s?a/i);
+        expect(minutesOfDay("13:30")).toBe(810);
     });
 });

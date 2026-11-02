@@ -9,45 +9,21 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as StatsRouteImport } from './routes/stats'
-import { Route as SchedulesRouteImport } from './routes/schedules'
-import { Route as RegisterRouteImport } from './routes/register'
-import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as AgendaRouteImport } from './routes/agenda'
-import { Route as TasksRouteRouteImport } from './routes/tasks/route'
-import { Route as SharedRouteRouteImport } from './routes/shared/route'
-import { Route as NotesRouteRouteImport } from './routes/notes/route'
-import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as TasksIndexRouteImport } from './routes/tasks/index'
-import { Route as NotesIndexRouteImport } from './routes/notes/index'
-import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
-import { Route as TasksNewRouteImport } from './routes/tasks/new'
-import { Route as TasksIdRouteImport } from './routes/tasks/$id'
-import { Route as SharedUserIdRouteImport } from './routes/shared/$userId'
-import { Route as NotesHistoryRouteImport } from './routes/notes/history'
-import { Route as DashboardStatsRouteImport } from './routes/dashboard/stats'
-import { Route as NotesIdEditRouteImport } from './routes/notes/$id/edit'
+import { Route as RegisterRouteImport } from './routes/register'
+import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppActivityRouteImport } from './routes/_app/activity'
+import { Route as AppCalendarRouteImport } from './routes/_app/calendar'
+import { Route as AppNotesRouteImport } from './routes/_app/notes'
+import { Route as AppProfileRouteImport } from './routes/_app/profile'
+import { Route as AppProgressRouteImport } from './routes/_app/progress'
+import { Route as AppRoutinesRouteImport } from './routes/_app/routines'
+import { Route as AppTasksIndexRouteImport } from './routes/_app/tasks/index'
+import { Route as AppTasksIdRouteImport } from './routes/_app/tasks/$id'
 
-const StatsRoute = StatsRouteImport.update({
-  id: '/stats',
-  path: '/stats',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SchedulesRoute = SchedulesRouteImport.update({
-  id: '/schedules',
-  path: '/schedules',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RegisterRoute = RegisterRouteImport.update({
-  id: '/register',
-  path: '/register',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProfileRoute = ProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -55,254 +31,154 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AgendaRoute = AgendaRouteImport.update({
-  id: '/agenda',
-  path: '/agenda',
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TasksRouteRoute = TasksRouteRouteImport.update({
-  id: '/tasks',
-  path: '/tasks',
-  getParentRoute: () => rootRouteImport,
+const AppIndexRoute = AppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRoute,
 } as any)
-const SharedRouteRoute = SharedRouteRouteImport.update({
-  id: '/shared',
-  path: '/shared',
-  getParentRoute: () => rootRouteImport,
+const AppActivityRoute = AppActivityRouteImport.update({
+  id: '/activity',
+  path: '/activity',
+  getParentRoute: () => AppRoute,
 } as any)
-const NotesRouteRoute = NotesRouteRouteImport.update({
+const AppCalendarRoute = AppCalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppNotesRoute = AppNotesRouteImport.update({
   id: '/notes',
   path: '/notes',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const DashboardRouteRoute = DashboardRouteRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => rootRouteImport,
+const AppProfileRoute = AppProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AppRoute,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
+const AppProgressRoute = AppProgressRouteImport.update({
+  id: '/progress',
+  path: '/progress',
+  getParentRoute: () => AppRoute,
 } as any)
-const TasksIndexRoute = TasksIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => TasksRouteRoute,
+const AppRoutinesRoute = AppRoutinesRouteImport.update({
+  id: '/routines',
+  path: '/routines',
+  getParentRoute: () => AppRoute,
 } as any)
-const NotesIndexRoute = NotesIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => NotesRouteRoute,
+const AppTasksIndexRoute = AppTasksIndexRouteImport.update({
+  id: '/tasks/',
+  path: '/tasks/',
+  getParentRoute: () => AppRoute,
 } as any)
-const DashboardIndexRoute = DashboardIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => DashboardRouteRoute,
-} as any)
-const TasksNewRoute = TasksNewRouteImport.update({
-  id: '/new',
-  path: '/new',
-  getParentRoute: () => TasksRouteRoute,
-} as any)
-const TasksIdRoute = TasksIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => TasksRouteRoute,
-} as any)
-const SharedUserIdRoute = SharedUserIdRouteImport.update({
-  id: '/$userId',
-  path: '/$userId',
-  getParentRoute: () => SharedRouteRoute,
-} as any)
-const NotesHistoryRoute = NotesHistoryRouteImport.update({
-  id: '/history',
-  path: '/history',
-  getParentRoute: () => NotesRouteRoute,
-} as any)
-const DashboardStatsRoute = DashboardStatsRouteImport.update({
-  id: '/stats',
-  path: '/stats',
-  getParentRoute: () => DashboardRouteRoute,
-} as any)
-const NotesIdEditRoute = NotesIdEditRouteImport.update({
-  id: '/$id/edit',
-  path: '/$id/edit',
-  getParentRoute: () => NotesRouteRoute,
+const AppTasksIdRoute = AppTasksIdRouteImport.update({
+  id: '/tasks/$id',
+  path: '/tasks/$id',
+  getParentRoute: () => AppRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRouteRouteWithChildren
-  '/notes': typeof NotesRouteRouteWithChildren
-  '/shared': typeof SharedRouteRouteWithChildren
-  '/tasks': typeof TasksRouteRouteWithChildren
-  '/agenda': typeof AgendaRoute
+  '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
-  '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
-  '/schedules': typeof SchedulesRoute
-  '/stats': typeof StatsRoute
-  '/dashboard/stats': typeof DashboardStatsRoute
-  '/notes/history': typeof NotesHistoryRoute
-  '/shared/$userId': typeof SharedUserIdRoute
-  '/tasks/$id': typeof TasksIdRoute
-  '/tasks/new': typeof TasksNewRoute
-  '/dashboard/': typeof DashboardIndexRoute
-  '/notes/': typeof NotesIndexRoute
-  '/tasks/': typeof TasksIndexRoute
-  '/notes/$id/edit': typeof NotesIdEditRoute
+  '/activity': typeof AppActivityRoute
+  '/calendar': typeof AppCalendarRoute
+  '/notes': typeof AppNotesRoute
+  '/profile': typeof AppProfileRoute
+  '/progress': typeof AppProgressRoute
+  '/routines': typeof AppRoutinesRoute
+  '/tasks/$id': typeof AppTasksIdRoute
+  '/tasks/': typeof AppTasksIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/shared': typeof SharedRouteRouteWithChildren
-  '/agenda': typeof AgendaRoute
   '/login': typeof LoginRoute
-  '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
-  '/schedules': typeof SchedulesRoute
-  '/stats': typeof StatsRoute
-  '/dashboard/stats': typeof DashboardStatsRoute
-  '/notes/history': typeof NotesHistoryRoute
-  '/shared/$userId': typeof SharedUserIdRoute
-  '/tasks/$id': typeof TasksIdRoute
-  '/tasks/new': typeof TasksNewRoute
-  '/dashboard': typeof DashboardIndexRoute
-  '/notes': typeof NotesIndexRoute
-  '/tasks': typeof TasksIndexRoute
-  '/notes/$id/edit': typeof NotesIdEditRoute
+  '/activity': typeof AppActivityRoute
+  '/calendar': typeof AppCalendarRoute
+  '/notes': typeof AppNotesRoute
+  '/profile': typeof AppProfileRoute
+  '/progress': typeof AppProgressRoute
+  '/routines': typeof AppRoutinesRoute
+  '/': typeof AppIndexRoute
+  '/tasks/$id': typeof AppTasksIdRoute
+  '/tasks': typeof AppTasksIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRouteRouteWithChildren
-  '/notes': typeof NotesRouteRouteWithChildren
-  '/shared': typeof SharedRouteRouteWithChildren
-  '/tasks': typeof TasksRouteRouteWithChildren
-  '/agenda': typeof AgendaRoute
+  '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
-  '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
-  '/schedules': typeof SchedulesRoute
-  '/stats': typeof StatsRoute
-  '/dashboard/stats': typeof DashboardStatsRoute
-  '/notes/history': typeof NotesHistoryRoute
-  '/shared/$userId': typeof SharedUserIdRoute
-  '/tasks/$id': typeof TasksIdRoute
-  '/tasks/new': typeof TasksNewRoute
-  '/dashboard/': typeof DashboardIndexRoute
-  '/notes/': typeof NotesIndexRoute
-  '/tasks/': typeof TasksIndexRoute
-  '/notes/$id/edit': typeof NotesIdEditRoute
+  '/_app/activity': typeof AppActivityRoute
+  '/_app/calendar': typeof AppCalendarRoute
+  '/_app/notes': typeof AppNotesRoute
+  '/_app/profile': typeof AppProfileRoute
+  '/_app/progress': typeof AppProgressRoute
+  '/_app/routines': typeof AppRoutinesRoute
+  '/_app/': typeof AppIndexRoute
+  '/_app/tasks/$id': typeof AppTasksIdRoute
+  '/_app/tasks/': typeof AppTasksIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/dashboard'
-    | '/notes'
-    | '/shared'
-    | '/tasks'
-    | '/agenda'
     | '/login'
-    | '/profile'
     | '/register'
-    | '/schedules'
-    | '/stats'
-    | '/dashboard/stats'
-    | '/notes/history'
-    | '/shared/$userId'
+    | '/activity'
+    | '/calendar'
+    | '/notes'
+    | '/profile'
+    | '/progress'
+    | '/routines'
     | '/tasks/$id'
-    | '/tasks/new'
-    | '/dashboard/'
-    | '/notes/'
     | '/tasks/'
-    | '/notes/$id/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
-    | '/shared'
-    | '/agenda'
     | '/login'
-    | '/profile'
     | '/register'
-    | '/schedules'
-    | '/stats'
-    | '/dashboard/stats'
-    | '/notes/history'
-    | '/shared/$userId'
-    | '/tasks/$id'
-    | '/tasks/new'
-    | '/dashboard'
+    | '/activity'
+    | '/calendar'
     | '/notes'
+    | '/profile'
+    | '/progress'
+    | '/routines'
+    | '/'
+    | '/tasks/$id'
     | '/tasks'
-    | '/notes/$id/edit'
   id:
     | '__root__'
-    | '/'
-    | '/dashboard'
-    | '/notes'
-    | '/shared'
-    | '/tasks'
-    | '/agenda'
+    | '/_app'
     | '/login'
-    | '/profile'
     | '/register'
-    | '/schedules'
-    | '/stats'
-    | '/dashboard/stats'
-    | '/notes/history'
-    | '/shared/$userId'
-    | '/tasks/$id'
-    | '/tasks/new'
-    | '/dashboard/'
-    | '/notes/'
-    | '/tasks/'
-    | '/notes/$id/edit'
+    | '/_app/activity'
+    | '/_app/calendar'
+    | '/_app/notes'
+    | '/_app/profile'
+    | '/_app/progress'
+    | '/_app/routines'
+    | '/_app/'
+    | '/_app/tasks/$id'
+    | '/_app/tasks/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  DashboardRouteRoute: typeof DashboardRouteRouteWithChildren
-  NotesRouteRoute: typeof NotesRouteRouteWithChildren
-  SharedRouteRoute: typeof SharedRouteRouteWithChildren
-  TasksRouteRoute: typeof TasksRouteRouteWithChildren
-  AgendaRoute: typeof AgendaRoute
+  AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
-  ProfileRoute: typeof ProfileRoute
   RegisterRoute: typeof RegisterRoute
-  SchedulesRoute: typeof SchedulesRoute
-  StatsRoute: typeof StatsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/stats': {
-      id: '/stats'
-      path: '/stats'
-      fullPath: '/stats'
-      preLoaderRoute: typeof StatsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/schedules': {
-      id: '/schedules'
-      path: '/schedules'
-      fullPath: '/schedules'
-      preLoaderRoute: typeof SchedulesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/register': {
-      id: '/register'
-      path: '/register'
-      fullPath: '/register'
-      preLoaderRoute: typeof RegisterRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/profile': {
-      id: '/profile'
-      path: '/profile'
-      fullPath: '/profile'
-      preLoaderRoute: typeof ProfileRouteImport
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -312,184 +188,109 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/agenda': {
-      id: '/agenda'
-      path: '/agenda'
-      fullPath: '/agenda'
-      preLoaderRoute: typeof AgendaRouteImport
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/tasks': {
-      id: '/tasks'
-      path: '/tasks'
-      fullPath: '/tasks'
-      preLoaderRoute: typeof TasksRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/shared': {
-      id: '/shared'
-      path: '/shared'
-      fullPath: '/shared'
-      preLoaderRoute: typeof SharedRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/notes': {
-      id: '/notes'
-      path: '/notes'
-      fullPath: '/notes'
-      preLoaderRoute: typeof NotesRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/': {
-      id: '/'
+    '/_app/': {
+      id: '/_app/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/tasks/': {
-      id: '/tasks/'
-      path: '/'
+    '/_app/activity': {
+      id: '/_app/activity'
+      path: '/activity'
+      fullPath: '/activity'
+      preLoaderRoute: typeof AppActivityRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/calendar': {
+      id: '/_app/calendar'
+      path: '/calendar'
+      fullPath: '/calendar'
+      preLoaderRoute: typeof AppCalendarRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/notes': {
+      id: '/_app/notes'
+      path: '/notes'
+      fullPath: '/notes'
+      preLoaderRoute: typeof AppNotesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/profile': {
+      id: '/_app/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AppProfileRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/progress': {
+      id: '/_app/progress'
+      path: '/progress'
+      fullPath: '/progress'
+      preLoaderRoute: typeof AppProgressRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/routines': {
+      id: '/_app/routines'
+      path: '/routines'
+      fullPath: '/routines'
+      preLoaderRoute: typeof AppRoutinesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/tasks/': {
+      id: '/_app/tasks/'
+      path: '/tasks'
       fullPath: '/tasks/'
-      preLoaderRoute: typeof TasksIndexRouteImport
-      parentRoute: typeof TasksRouteRoute
+      preLoaderRoute: typeof AppTasksIndexRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/notes/': {
-      id: '/notes/'
-      path: '/'
-      fullPath: '/notes/'
-      preLoaderRoute: typeof NotesIndexRouteImport
-      parentRoute: typeof NotesRouteRoute
-    }
-    '/dashboard/': {
-      id: '/dashboard/'
-      path: '/'
-      fullPath: '/dashboard/'
-      preLoaderRoute: typeof DashboardIndexRouteImport
-      parentRoute: typeof DashboardRouteRoute
-    }
-    '/tasks/new': {
-      id: '/tasks/new'
-      path: '/new'
-      fullPath: '/tasks/new'
-      preLoaderRoute: typeof TasksNewRouteImport
-      parentRoute: typeof TasksRouteRoute
-    }
-    '/tasks/$id': {
-      id: '/tasks/$id'
-      path: '/$id'
+    '/_app/tasks/$id': {
+      id: '/_app/tasks/$id'
+      path: '/tasks/$id'
       fullPath: '/tasks/$id'
-      preLoaderRoute: typeof TasksIdRouteImport
-      parentRoute: typeof TasksRouteRoute
-    }
-    '/shared/$userId': {
-      id: '/shared/$userId'
-      path: '/$userId'
-      fullPath: '/shared/$userId'
-      preLoaderRoute: typeof SharedUserIdRouteImport
-      parentRoute: typeof SharedRouteRoute
-    }
-    '/notes/history': {
-      id: '/notes/history'
-      path: '/history'
-      fullPath: '/notes/history'
-      preLoaderRoute: typeof NotesHistoryRouteImport
-      parentRoute: typeof NotesRouteRoute
-    }
-    '/dashboard/stats': {
-      id: '/dashboard/stats'
-      path: '/stats'
-      fullPath: '/dashboard/stats'
-      preLoaderRoute: typeof DashboardStatsRouteImport
-      parentRoute: typeof DashboardRouteRoute
-    }
-    '/notes/$id/edit': {
-      id: '/notes/$id/edit'
-      path: '/$id/edit'
-      fullPath: '/notes/$id/edit'
-      preLoaderRoute: typeof NotesIdEditRouteImport
-      parentRoute: typeof NotesRouteRoute
+      preLoaderRoute: typeof AppTasksIdRouteImport
+      parentRoute: typeof AppRoute
     }
   }
 }
 
-interface DashboardRouteRouteChildren {
-  DashboardStatsRoute: typeof DashboardStatsRoute
-  DashboardIndexRoute: typeof DashboardIndexRoute
+interface AppRouteChildren {
+  AppActivityRoute: typeof AppActivityRoute
+  AppCalendarRoute: typeof AppCalendarRoute
+  AppNotesRoute: typeof AppNotesRoute
+  AppProfileRoute: typeof AppProfileRoute
+  AppProgressRoute: typeof AppProgressRoute
+  AppRoutinesRoute: typeof AppRoutinesRoute
+  AppIndexRoute: typeof AppIndexRoute
+  AppTasksIdRoute: typeof AppTasksIdRoute
+  AppTasksIndexRoute: typeof AppTasksIndexRoute
 }
 
-const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
-  DashboardStatsRoute: DashboardStatsRoute,
-  DashboardIndexRoute: DashboardIndexRoute,
+const AppRouteChildren: AppRouteChildren = {
+  AppActivityRoute: AppActivityRoute,
+  AppCalendarRoute: AppCalendarRoute,
+  AppNotesRoute: AppNotesRoute,
+  AppProfileRoute: AppProfileRoute,
+  AppProgressRoute: AppProgressRoute,
+  AppRoutinesRoute: AppRoutinesRoute,
+  AppIndexRoute: AppIndexRoute,
+  AppTasksIdRoute: AppTasksIdRoute,
+  AppTasksIndexRoute: AppTasksIndexRoute,
 }
 
-const DashboardRouteRouteWithChildren = DashboardRouteRoute._addFileChildren(
-  DashboardRouteRouteChildren,
-)
-
-interface NotesRouteRouteChildren {
-  NotesHistoryRoute: typeof NotesHistoryRoute
-  NotesIndexRoute: typeof NotesIndexRoute
-  NotesIdEditRoute: typeof NotesIdEditRoute
-}
-
-const NotesRouteRouteChildren: NotesRouteRouteChildren = {
-  NotesHistoryRoute: NotesHistoryRoute,
-  NotesIndexRoute: NotesIndexRoute,
-  NotesIdEditRoute: NotesIdEditRoute,
-}
-
-const NotesRouteRouteWithChildren = NotesRouteRoute._addFileChildren(
-  NotesRouteRouteChildren,
-)
-
-interface SharedRouteRouteChildren {
-  SharedUserIdRoute: typeof SharedUserIdRoute
-}
-
-const SharedRouteRouteChildren: SharedRouteRouteChildren = {
-  SharedUserIdRoute: SharedUserIdRoute,
-}
-
-const SharedRouteRouteWithChildren = SharedRouteRoute._addFileChildren(
-  SharedRouteRouteChildren,
-)
-
-interface TasksRouteRouteChildren {
-  TasksIdRoute: typeof TasksIdRoute
-  TasksNewRoute: typeof TasksNewRoute
-  TasksIndexRoute: typeof TasksIndexRoute
-}
-
-const TasksRouteRouteChildren: TasksRouteRouteChildren = {
-  TasksIdRoute: TasksIdRoute,
-  TasksNewRoute: TasksNewRoute,
-  TasksIndexRoute: TasksIndexRoute,
-}
-
-const TasksRouteRouteWithChildren = TasksRouteRoute._addFileChildren(
-  TasksRouteRouteChildren,
-)
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  DashboardRouteRoute: DashboardRouteRouteWithChildren,
-  NotesRouteRoute: NotesRouteRouteWithChildren,
-  SharedRouteRoute: SharedRouteRouteWithChildren,
-  TasksRouteRoute: TasksRouteRouteWithChildren,
-  AgendaRoute: AgendaRoute,
+  AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
-  ProfileRoute: ProfileRoute,
   RegisterRoute: RegisterRoute,
-  SchedulesRoute: SchedulesRoute,
-  StatsRoute: StatsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

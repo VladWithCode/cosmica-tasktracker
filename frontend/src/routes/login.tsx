@@ -1,17 +1,21 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import LoginForm from "@/components/LoginForm";
-import { checkAuth } from "@/auth/useAuth";
+import { LoginScreen } from "@/features/auth/LoginScreen";
+import { sessionQuery } from "@/queries/session";
+
+type LoginSearch = { redirect?: string };
 
 export const Route = createFileRoute("/login")({
-    component: LoginRoute,
-    beforeLoad: async () => {
-        const isAuthenticated = await checkAuth();
-        if (isAuthenticated) {
-            throw redirect({ to: "/tasks" });
-        }
+    validateSearch: (search: Record<string, unknown>): LoginSearch => ({
+        redirect: typeof search.redirect === "string" ? search.redirect : undefined,
+    }),
+    beforeLoad: async ({ context }) => {
+        const user = await context.queryClient.fetchQuery(sessionQuery).catch(() => null);
+        if (user) throw redirect({ to: "/" });
     },
+    component: LoginRoute,
 });
 
 function LoginRoute() {
-    return <LoginForm />;
+    const { redirect: target } = Route.useSearch();
+    return <LoginScreen redirect={target} />;
 }

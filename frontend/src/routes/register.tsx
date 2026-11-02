@@ -1,17 +1,11 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { checkAuth } from "@/auth/useAuth";
-import { RegisterPage } from "@/pages/RegisterPage";
+import { RegisterScreen } from "@/features/auth/RegisterScreen";
+import { sessionQuery } from "@/queries/session";
 
 export const Route = createFileRoute("/register")({
-    component: RegisterRoute,
-    beforeLoad: async () => {
-        const isAuthenticated = await checkAuth();
-        if (isAuthenticated) {
-            throw redirect({ to: "/tasks" });
-        }
+    beforeLoad: async ({ context }) => {
+        const user = await context.queryClient.fetchQuery(sessionQuery).catch(() => null);
+        if (user) throw redirect({ to: "/" });
     },
+    component: RegisterScreen,
 });
-
-function RegisterRoute() {
-    return <RegisterPage />;
-}

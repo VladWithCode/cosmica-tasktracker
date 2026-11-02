@@ -1,34 +1,19 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
     <head>
         <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <script>
-            // Apply theme before first paint to prevent FOUC
-            (function(){var t=localStorage.getItem('theme-preference');var d=(t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme:dark)').matches));document.documentElement.classList.add(d?'dark':'light');var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',d?'#0d0d18':'#fdf8ff')})();
-        </script>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link
-            href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap"
-            rel="stylesheet"
-        />
-        <link
-            href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=block"
-            rel="stylesheet"
-        />
-        <link rel="icon" href="/favicon.ico" />
-        <meta name="theme-color" content="#0d0d18" />
-        <meta
-            name="description"
-            content="Cosmica Task Tracker"
-        />
-        <link rel="apple-touch-icon" href="/logo192.png" />
-        <link rel="manifest" href="/manifest.json" />
-        <title>Routine Ritual</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta name="description" content="Cosmica: tus tareas y rutinas de cada día." />
+        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f2f2f7" />
+        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Cosmica" />
+        <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+        <title>Cosmica</title>
     </head>
     <body>
-        <div id="app"></div>
+        <div id="root"></div>
         <script type="module" src="/src/main.tsx"></script>
     </body>
 </html>

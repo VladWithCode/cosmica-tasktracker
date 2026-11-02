@@ -1,58 +1,51 @@
-/**
- * Local-calendar date helpers.
- *
- * Every date string in the app is `YYYY-MM-DD` interpreted in the user's local
- * timezone, never UTC. Parsing goes through local noon so that DST shifts and
- * negative UTC offsets cannot move a value onto the neighbouring calendar day.
- */
+import { TZDate } from "@date-fns/tz";
+import { addDays, format, isSameDay, startOfWeek } from "date-fns";
+import { es } from "date-fns/locale/es";
 
-export function toDateString(date: Date): string {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const d = String(date.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
+export const APP_TIME_ZONE = "America/Mexico_City";
+
+export function now(): TZDate {
+    return new TZDate(Date.now(), APP_TIME_ZONE);
 }
 
-/** Parse a `YYYY-MM-DD` string as a local Date anchored at noon. */
-export function parseDateString(value: string): Date {
-    return new Date(value + "T12:00:00");
+export function toISODate(date: Date): string {
+    return format(new TZDate(date, APP_TIME_ZONE), "yyyy-MM-dd");
 }
 
-/** Narrow unknown input (search params, form values) to a real calendar date. */
-export function isValidDateString(value: unknown): value is string {
-    if (typeof value !== "string") return false;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-    const d = parseDateString(value);
-    if (Number.isNaN(d.getTime())) return false;
-    return toDateString(d) === value;
+export function todayISO(): string {
+    return toISODate(now());
 }
 
-export function todayDateString(): string {
-    return toDateString(new Date());
+export function fromISODate(value: string): TZDate {
+    const [year, month, day] = value.split("-").map(Number);
+    return new TZDate(year ?? 1970, (month ?? 1) - 1, day ?? 1, 12, 0, 0, APP_TIME_ZONE);
 }
 
-/** Step a date string by whole days. Negative values step backwards. */
-export function addDays(value: string, days: number): string {
-    const d = parseDateString(value);
-    d.setDate(d.getDate() + days);
-    return toDateString(d);
+export function shiftISODate(value: string, days: number): string {
+    return toISODate(addDays(fromISODate(value), days));
 }
 
-/** "jueves, 26 de agosto de 2026" */
-export function formatDayLong(value: string): string {
-    return parseDateString(value).toLocaleDateString("es-MX", {
-        weekday: "long",
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-    });
+export function weekDays(value: string): string[] {
+    const start = startOfWeek(fromISODate(value), { weekStartsOn: 1 });
+    return Array.from({ length: 7 }, (_, index) => toISODate(addDays(start, index)));
 }
 
-/** "jue, 26 ago" — for narrow viewports where the long form wraps. */
-export function formatDayShort(value: string): string {
-    return parseDateString(value).toLocaleDateString("es-MX", {
-        weekday: "short",
-        day: "2-digit",
-        month: "short",
-    });
+export function isToday(value: string): boolean {
+    return isSameDay(fromISODate(value), now());
+}
+
+export function formatDay(value: string, pattern = "EEEE d 'de' MMMM"): string {
+    const text = format(fromISODate(value), pattern, { locale: es });
+    return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+export function formatClock(value: string): string {
+    const [hours, minutes] = value.split(":").map(Number);
+    const date = new TZDate(2000, 0, 1, hours ?? 0, minutes ?? 0, 0, APP_TIME_ZONE);
+    return format(date, "h:mm a", { locale: es });
+}
+
+export function minutesOfDay(value: string): number {
+    const [hours, minutes] = value.split(":").map(Number);
+    return (hours ?? 0) * 60 + (minutes ?? 0);
 }
