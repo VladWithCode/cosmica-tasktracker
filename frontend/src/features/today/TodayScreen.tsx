@@ -2,7 +2,6 @@ import { lazy, useMemo, useState } from "react";
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
 import { ChevronRight, Sun } from "lucide-react";
 import type { Schedule, TaskItem } from "@/api/schemas";
-import { CreateButton } from "@/components/shell/CreateButton";
 import { OwnerSwitcher } from "@/components/shell/OwnerSwitcher";
 import { Screen } from "@/components/shell/Screen";
 import { Button } from "@/components/ui/Button";
@@ -48,7 +47,7 @@ export function TodayScreen({ taskId, onOpenTask, onCloseTask }: TodayScreenProp
     const tasks = today.data?.tasks;
 
     return (
-        <Screen title="Hoy" actions={<CreateButton />} titleAccessory={
+        <Screen title="Hoy" titleAccessory={
                 <div className="flex flex-col items-start">
                     <p className="text-callout text-label-secondary">{formatDay(today.data?.date || todayISO())}</p>
                     <OwnerSwitcher />

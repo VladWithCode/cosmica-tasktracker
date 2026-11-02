@@ -2,7 +2,6 @@ import { useNavigate } from "@tanstack/react-router";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ChevronRight, Pause, Play, Repeat } from "lucide-react";
 import type { Schedule } from "@/api/schemas";
-import { CreateButton } from "@/components/shell/CreateButton";
 import { OwnerSwitcher } from "@/components/shell/OwnerSwitcher";
 import { Screen } from "@/components/shell/Screen";
 import { Button } from "@/components/ui/Button";
@@ -28,7 +27,7 @@ export function RoutinesScreen() {
     const paused = routines.filter((schedule) => schedule.status === "paused");
 
     return (
-        <Screen title="Rutinas" titleAccessory={<OwnerSwitcher />} actions={<CreateButton />}>
+        <Screen title="Rutinas" titleAccessory={<OwnerSwitcher />}>
             <PullToRefresh onRefresh={() => schedules.refetch()}>
                 {schedules.isPending ? (
                     <div className="flex flex-col gap-3 px-4 pt-2">

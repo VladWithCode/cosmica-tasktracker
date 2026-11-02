@@ -1,14 +1,15 @@
 import { useState } from "react";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { errorMessage } from "@/api/client";
-import type { Note } from "@/api/schemas";
 import { Button } from "@/components/ui/Button";
 import { Sheet } from "@/components/ui/Sheet";
 import { useCreateNote, useUpdateNote } from "@/queries/notes";
+import { useNoteSheetStore, type NoteTarget } from "@/stores/note";
 import { toast } from "@/stores/toast";
 
-export type NoteTarget = { mode: "new" } | { mode: "edit"; note: Note } | null;
-
-export function NoteSheet({ target, onClose }: { target: NoteTarget; onClose: () => void }) {
+export function NoteSheet() {
+    const target = useNoteSheetStore((state) => state.target);
+    const onClose = useNoteSheetStore((state) => state.close);
     return (
         <Sheet
             open={target !== null}
@@ -28,9 +29,13 @@ function NoteEditor({ target, onDone }: { target: Exclude<NoteTarget, null>; onD
     const pending = create.isPending || update.isPending;
     const failure = create.error ?? update.error;
     const trimmed = content.trim();
+    const navigate = useNavigate();
+    const onTodayNotes = useRouterState({
+        select: (state) => state.location.pathname.startsWith("/notes") && !(state.location.search as { date?: unknown }).date,
+    });
 
     const saved = () => {
-        toast.show("Nota guardada");
+        toast.show("Nota guardada", onTodayNotes ? {} : { action: { label: "Ver", onAction: () => void navigate({ to: "/notes" }) } });
         onDone();
     };
 

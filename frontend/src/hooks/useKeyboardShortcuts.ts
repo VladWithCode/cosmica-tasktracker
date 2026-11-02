@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { primaryNav } from "@/components/shell/nav";
 import { useOwnerAccess } from "@/queries/owner";
-import { useCreateStore } from "@/stores/create";
+import { useOpenCreate } from "./useCreateContext";
 
 function isEditable(target: EventTarget | null): boolean {
     if (!(target instanceof HTMLElement)) return false;
@@ -11,7 +11,7 @@ function isEditable(target: EventTarget | null): boolean {
 
 export function useKeyboardShortcuts() {
     const navigate = useNavigate();
-    const openCreate = useCreateStore((state) => state.openCreate);
+    const openCreate = useOpenCreate();
     const access = useOwnerAccess();
 
     useEffect(() => {
@@ -19,7 +19,7 @@ export function useKeyboardShortcuts() {
             if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey || isEditable(event.target)) return;
             if (event.key.toLowerCase() === "k" && access.canCreate) {
                 event.preventDefault();
-                openCreate({ ownerId: access.ownerId });
+                openCreate();
                 return;
             }
             const index = Number(event.key) - 1;
@@ -31,5 +31,5 @@ export function useKeyboardShortcuts() {
         };
         window.addEventListener("keydown", onKeyDown);
         return () => window.removeEventListener("keydown", onKeyDown);
-    }, [navigate, openCreate, access.canCreate, access.ownerId]);
+    }, [navigate, openCreate, access.canCreate]);
 }

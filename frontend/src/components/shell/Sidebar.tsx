@@ -4,9 +4,8 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { useUnreadActivityCount } from "@/queries/activity";
 import { useSession } from "@/queries/session";
-import { useCreateStore } from "@/stores/create";
-import { isActive } from "./TabBar";
-import { primaryNav, scrollToTop } from "./nav";
+import { useOpenCreate } from "@/hooks/useCreateContext";
+import { isActive, primaryNav, scrollToTop } from "./nav";
 
 function SidebarLink({ to, active, children }: { to: string; active: boolean; children: ReactNode }) {
     return (
@@ -32,7 +31,7 @@ export function Sidebar() {
     const pathname = useRouterState({ select: (state) => state.location.pathname });
     const user = useSession();
     const unread = useUnreadActivityCount();
-    const openCreate = useCreateStore((state) => state.openCreate);
+    const openCreate = useOpenCreate();
 
     return (
         <aside className="material-sidebar fixed inset-y-0 left-0 z-40 hidden w-64 flex-col px-3 pt-6 pb-4 lg:flex">

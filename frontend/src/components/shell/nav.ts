@@ -14,6 +14,10 @@ export const primaryNav: NavItem[] = [
     { to: "/notes", label: "Notas", icon: NotebookPen },
 ];
 
+export function isActive(pathname: string, to: string) {
+    return to === "/" ? pathname === "/" || pathname.startsWith("/tasks") : pathname.startsWith(to);
+}
+
 export function scrollToTop() {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });

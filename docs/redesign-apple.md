@@ -22,7 +22,7 @@ manipulation; translucent materials; system typography; restraint.
 | --- | --- |
 | Existing frontend | Delete all of `frontend/`. The new client is written from scratch. No code, tokens or components carry over. |
 | Location | New app is scaffolded at the same path, `frontend/`, so `Dockerfile`, `Caddyfile` and `.github/workflows/ci.yml` keep working without change. |
-| Platform | Phone-first PWA with an iOS-like interaction model (tab bar, sheets, swipe actions). Adapts to sidebar + split view on tablet and desktop. |
+| Platform | Phone-first PWA with an iOS-like interaction model (floating action menu, sheets, swipe actions). Adapts to sidebar + split view on tablet and desktop. |
 | Motion | Add `motion` (springs, gestures, layout animation) and `vaul` (bottom sheets with momentum and snap points). |
 | Backend | Unchanged API contract. The client consumes it as-is. Small backend copy fixes are listed in §11 and need explicit approval. |
 | Language | UI copy in Spanish. No English leftovers. |
@@ -140,48 +140,58 @@ crash.
 
 ## 3. Information architecture
 
-### Phone (< 768 px): tab bar
+### Phone and tablet (< 1024 px): floating menu
 
-| Tab | Icon (lucide) | Content |
-| --- | --- | --- |
-| **Hoy** | `sun` | Today's tasks for the selected owner, progress ring, counters |
-| **Calendario** | `calendar` | Week strip + month view, any day's tasks, day progress |
-| **Rutinas** | `repeat` | All routines grouped Activas / En pausa, pause/resume, edit |
-| **Progreso** | `chart-no-axes-column` | Metrics, streak, best day, history heatmap |
-| **Notas** | `notebook-pen` | Day notes, history |
+A floating action button (bottom right, thumb reach) replaces a tab bar. It
+adapts the menu from the previous client to this design system.
 
-Labels name content, not umbrellas ("Hoy", not "Inicio").
+- **Button:** 56 px accent circle; the plus rotates to a close mark with a
+  spring when open. Pointer-down feedback, light haptic on open.
+- **Menu:** pills grow up and out of the button (`transform-origin` at the
+  button, items nearest the button first), over a dimming scrim. Destinations
+  on top, a divider, then actions next to the thumb:
+
+| Group | Items |
+| --- | --- |
+| Destinations | Hoy, Calendario, Rutinas, Progreso, Notas (current one marked with accent and `aria-current`) |
+| Actions | Nueva tarea (or "Rutina para …" when viewing a shared owner who allows it), Nueva nota |
+
+- **Context:** "Nueva tarea" uses the date selected in Calendario and the
+  owner in view. "Nueva nota" works from any screen; when the note is not
+  visible after saving, the toast offers "Ver".
+- **Closing:** tap the scrim, the button, Escape, or any item. Focus moves to
+  the menu on open and back to the button on close. Reduced motion swaps the
+  springs for a fade.
+- Labels name content ("Hoy", not "Inicio"). The large title says where you
+  are, so the closed menu does not need to show it.
 
 Global chrome:
 
-- **Large-title nav bar** per tab (title collapses into a compact translucent
-  bar on scroll).
-- **Avatar button** (top right) opens Perfil as a sheet. It carries a badge
-  with the unread count of pings + invitations.
-- **"+" button** in the nav bar of Hoy, Calendario and Rutinas opens the New
-  sheet anchored to the button (`transform-origin` at the trigger).
+- **Large-title nav bar** per screen (title collapses into a compact
+  translucent bar on scroll).
+- **Avatar button** (top right) opens Perfil. It carries a badge with the
+  unread count of pings + invitations.
 - **Owner switcher** (Hoy, Calendario, Rutinas): when `shared-with-me` is not
-  empty, the large title becomes a menu: "Mis tareas" / "Tareas de Ana". The
-  chosen owner sets `owner_user_id` on every query of those tabs. A colored
-  pill under the title shows whose data is on screen at all times, so the user
-  always knows where they are.
+  empty, a pill under the large title opens a menu: "Mis tareas" / "Tareas de
+  Ana". The chosen owner sets `owner_user_id` on every query of those screens.
 
 ### Tablet and desktop (≥ 1024 px): sidebar + split view
 
-- Translucent sidebar (heavier material) replaces the tab bar, same five
+- Translucent sidebar (heavier material) replaces the floating menu, same five
   destinations, plus Actividad and Perfil at the bottom.
 - List + detail split: selecting a task or routine opens it in the right pane
   instead of a sheet. Same component, different container.
 - Keyboard: `⌘/Ctrl+K` new, `⌘/Ctrl+1…5` tabs, `Space` toggles complete on
   the focused row, `Enter` opens it, `Esc` closes sheet/pane.
 
-768–1023 px: tab bar stays, content gets a centered readable column
-(max 640 px) and sheets become centered form sheets.
+768–1023 px: the floating menu stays and content keeps a centered readable
+column.
 
 ### Wayfinding check (every screen answers)
 
-Where am I: tab highlight + large title + owner pill. Where can I go: tab bar
-or sidebar always visible except inside a modal sheet. How do I get out:
+Where am I: large title + owner pill (and the marked item in the floating
+menu or sidebar). Where can I go: floating menu on phone, sidebar on
+desktop, both one tap away except inside a modal sheet. How do I get out:
 sheets dismiss by swipe down, "Cerrar" button and `Esc`; every pushed view has
 a back button that names its parent.
 
@@ -381,7 +391,7 @@ avoid brightness jumps.
 
 ### 5.3 Materials and depth
 
-- **Chrome is translucent:** nav bar and tab bar use
+- **Chrome is translucent:** nav bar and sidebar use
   `backdrop-filter: blur(20px) saturate(180%)` on a semi-transparent `bg`;
   content scrolls underneath. Scroll edge effect (soft gradient mask) instead
   of a hard 1 px divider, shown only when content is under the bar.
@@ -515,7 +525,7 @@ frontend/
     lib/            motion.ts, gesture.ts (project, rubberband, velocity tracker), date.ts, sort.ts
     stores/         owner.ts, theme.ts
     components/     primitives (Pressable, Sheet, SwipeRow, WeekStrip, ProgressRing, Stepper,
-                    SegmentedControl, GroupedList, NavBar, TabBar, Sidebar, Toast, EmptyState)
+                    SegmentedControl, GroupedList, NavBar, FloatingMenu, Sidebar, Toast, EmptyState)
     features/       today/, calendar/, routines/, progress/, notes/, profile/, activity/, task/, create/, auth/
     routes/         TanStack file routes (thin: compose features)
     sw/             service-worker.ts
@@ -719,5 +729,6 @@ direction and this branch is independent of it.
 | 2026-11-02 | "Completar" from a notification calls `PUT /tasks/:id` from the service worker with the cookie session, then tells open windows to refetch | Matches the backend's `complete` action; on failure it opens the task instead. |
 | 2026-11-02 | First-load budget revised from 150 to 260 KB gzip | React 19 DOM (~62 KB), Motion (~50 KB) and the router (~23 KB) alone pass 135 KB. Measured 252 KB on Hoy for a user with shares. |
 | 2026-11-02 | New-item shortcut is `⌘/Ctrl+K`, not `⌘N` | Browsers reserve `⌘N` / `Ctrl+N` for a new window. |
+| 2026-11-02 | Floating action menu replaces the phone tab bar; header "+" buttons removed | User decision: keep the previous client's FAB, adapted. Actions and destinations sit in separate groups, the current screen is marked, and create actions read the screen's context. Desktop keeps the sidebar. |
 | 2026-11-02 | Agua goal and "Para" owner choice only for Rutina | Water display and reminders read the schedule's `frequency_config`, which `POST /tasks` does not take; `POST /tasks` has no `owner_user_id`. |
 | 2026-11-02 | New sheet is a bottom sheet (phone) / right pane (desktop), not scaled from the "+" button | Vaul sheets always enter from an edge; enter and exit stay on the same path, which keeps spatial consistency. |

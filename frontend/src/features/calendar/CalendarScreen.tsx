@@ -1,6 +1,5 @@
 import { lazy, useMemo, useState } from "react";
 import { CalendarDays } from "lucide-react";
-import { CreateButton } from "@/components/shell/CreateButton";
 import { OwnerSwitcher } from "@/components/shell/OwnerSwitcher";
 import { Screen } from "@/components/shell/Screen";
 import { Button } from "@/components/ui/Button";
@@ -47,7 +46,6 @@ export function CalendarScreen({ date, taskId, onSelectDate, onOpenTask, onClose
                             Hoy
                         </Button>
                     )}
-                    <CreateButton date={date} />
                 </>
             }
             titleAccessory={

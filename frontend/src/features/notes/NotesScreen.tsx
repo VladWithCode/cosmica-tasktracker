@@ -15,7 +15,7 @@ import { formatDay, isToday, todayISO } from "@/lib/date";
 import { fade, spring } from "@/lib/motion";
 import { useNotesHistory } from "@/queries/history";
 import { useDeleteNoteWithUndo, useNotes } from "@/queries/notes";
-import { NoteSheet, type NoteTarget } from "./NoteSheet";
+import { useNoteSheetStore } from "@/stores/note";
 
 function timeOf(value: string): string {
     return new Date(value).toLocaleTimeString("es-MX", { hour: "numeric", minute: "2-digit", timeZone: "America/Mexico_City" });
@@ -24,7 +24,8 @@ function timeOf(value: string): string {
 export function NotesScreen({ date, onSelectDate }: { date: string; onSelectDate: (date: string) => void }) {
     const reduceMotion = useReducedMotion();
     const [monthOpen, setMonthOpen] = useState(false);
-    const [target, setTarget] = useState<NoteTarget>(null);
+    const openNew = useNoteSheetStore((state) => state.openNew);
+    const openEdit = useNoteSheetStore((state) => state.openEdit);
     const notes = useNotes(date);
     const range = visibleRange(date, monthOpen);
     const history = useNotesHistory(range.from, range.to);
@@ -45,7 +46,7 @@ export function NotesScreen({ date, onSelectDate }: { date: string; onSelectDate
                         </Button>
                     )}
                     {today ? (
-                        <Pressable aria-label="Nueva nota" onClick={() => setTarget({ mode: "new" })} className="flex size-11 items-center justify-center text-accent">
+                        <Pressable aria-label="Nueva nota" onClick={openNew} className="hidden size-11 items-center justify-center text-accent lg:flex">
                             <Plus aria-hidden className="size-6" strokeWidth={2.2} />
                         </Pressable>
                     ) : null}
@@ -67,7 +68,7 @@ export function NotesScreen({ date, onSelectDate }: { date: string; onSelectDate
                         icon={NotebookPen}
                         title={today ? "Sin notas todavía" : "Sin notas este día"}
                         message={today ? "Anota lo que quieras recordar de hoy." : "Solo se pueden añadir notas al día de hoy."}
-                        action={today ? <Button onClick={() => setTarget({ mode: "new" })}>Escribir nota</Button> : undefined}
+                        action={today ? <Button onClick={openNew}>Escribir nota</Button> : undefined}
                     />
                 ) : null}
                 <ul className="flex flex-col gap-3 px-4 pt-2">
@@ -81,13 +82,12 @@ export function NotesScreen({ date, onSelectDate }: { date: string; onSelectDate
                                 exit={{ opacity: 0, transition: fade }}
                                 transition={reduceMotion ? fade : spring.default}
                             >
-                                <NoteCard note={note} onOpen={() => setTarget({ mode: "edit", note })} onDelete={() => removeNote(note)} />
+                                <NoteCard note={note} onOpen={() => openEdit(note)} onDelete={() => removeNote(note)} />
                             </motion.li>
                         ))}
                     </AnimatePresence>
                 </ul>
             </PullToRefresh>
-            <NoteSheet target={target} onClose={() => setTarget(null)} />
         </Screen>
     );
 }
