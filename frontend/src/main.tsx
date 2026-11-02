@@ -34,6 +34,13 @@ setSessionExpiredHandler(() => {
     void router.navigate({ to: "/login", search: { redirect: href } });
 });
 
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.addEventListener("message", (event: MessageEvent<{ type?: string }>) => {
+        if (event.data?.type === "push-received") void queryClient.invalidateQueries({ queryKey: ["activity"] });
+        if (event.data?.type === "task-completed") void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    });
+}
+
 const root = document.getElementById("root");
 if (!root) throw new Error("Missing #root element");
 
