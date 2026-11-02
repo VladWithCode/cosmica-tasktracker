@@ -2,7 +2,7 @@
 
 Branch: `feat/redesign-apple` (from `main` at `feed7f8`)
 Started: 2026-11-02
-Status: Phases 0–2 done (scaffold, foundations, API layer and auth). Next: phase 3 (Hoy).
+Status: Phases 0–3 done (scaffold, foundations, API and auth, Hoy and task sheet). Next: phase 4 (create).
 
 This document is the source of truth for the new client. It records scope,
 design decisions, the API contract the client consumes, and the order of work.
@@ -592,7 +592,7 @@ and a manual check on a phone-width viewport and a desktop viewport.
 - [x] Tokens (color, type, radius, spacing), light/dark, contrast table in decision log.
 - [x] `motion.ts` spring tokens + reduced-motion swap; `gesture.ts` (`project`, `rubberband`, velocity tracker) with unit tests.
 - [x] Primitives: Pressable, Button, TextField, NavBar (`Screen`, large title collapse), TabBar, Sidebar, SegmentedControl, GroupedList, Toast, EmptyState, ErrorState, Skeleton.
-- [ ] Sheet (vaul) primitive: moved to phase 3, where the task sheet first needs it.
+- [x] Sheet (vaul) primitive, built in phase 3 with the task sheet.
 - [ ] A hidden `/dev/primitives` route to tune motion by hand (prototype first).
 
 ### Phase 2: API layer and auth
@@ -600,9 +600,9 @@ and a manual check on a phone-width viewport and a desktop viewport.
 - [x] Sign-in, sign-up, session bootstrap, sign-out, protected routes.
 
 ### Phase 3: Hoy and task sheet
-- [ ] Today list, grouping and sort (tests), progress ring.
-- [ ] Swipe row, check toggle, counter stepper, water bottles, optimistic mutations.
-- [ ] Task sheet: read, status, edit with "Solo hoy / Toda la rutina", notes, delete.
+- [x] Today list, grouping and sort (tests), progress ring, pull-to-refresh.
+- [x] Swipe row, check toggle, counter stepper, water bottles, long-press menu, optimistic mutations.
+- [x] Task sheet: read, status, edit with "Solo hoy / Toda la rutina", notes, delete (one-off tasks only).
 
 ### Phase 4: Create
 - [ ] New sheet with Una vez / Rutina, progressive fields, Agua preset, owner selection.
@@ -683,3 +683,10 @@ separate direction and this branch is independent of it.
 | 2026-11-02 | Contrast checked: all text tokens ≥ 4.5:1 in both themes (label-secondary 4.69 light on grouped bg, 6.63 dark); label-tertiary 3.26 / 4.10 used only for placeholders and decorative glyphs | WCAG AA. |
 | 2026-11-02 | "Rutina" always repeats; one-off work goes through `POST /tasks` | Backend generation (`shouldRepeatToday`) never generates a non-repeating schedule with a frequency set. |
 | 2026-11-02 | CI Node 20 → 22 | vitest 5 and jsdom 30 require Node 22+. |
+| 2026-11-02 | Hoy progress computed from the day list, not `/tasks/progress` | Same formula as the backend (completed / total); works for shared owners (the endpoint has no `owner_user_id`) and stays in step with optimistic updates. |
+| 2026-11-02 | Delete only for one-off tasks; routine tasks use Omitir | `/tasks/today` regenerates a deleted routine task on the next load, so delete would silently undo itself. |
+| 2026-11-02 | "Solo hoy" edits title, description and goal only; schedule, priority, required and category appear under "Toda la rutina" | Matches `tasks.Service.Update`: those fields only change on the schedule. |
+| 2026-11-02 | Full swipe needs real travel (35% width) plus projection; open/close uses projection alone; release velocity clamped to 4000 px/s | A short fast flick should reveal actions, not fire Omitir. |
+| 2026-11-02 | Vaul keeps its own CSS easing for sheet open/close | Vaul already hands off drag velocity and snaps with momentum; replacing its animation engine is not worth the cost. |
+| 2026-11-02 | Dev proxy strips the `Origin` header | Browser talks same-origin to Vite; backend CORS rejected `127.0.0.1:3000`. Production is unaffected (Caddy serves both). |
+| 2026-11-02 | Counter updates run serially per task (mutation scope) | Fast taps on + must reach the server in order. |
