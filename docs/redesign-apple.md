@@ -2,7 +2,7 @@
 
 Branch: `feat/redesign-apple` (from `main` at `feed7f8`)
 Started: 2026-11-02
-Status: All phases (0–9) implemented. Open follow-ups are in section 12; backend limits are in `docs/backend-gaps.md`. Backend limits are tracked in `docs/backend-gaps.md`.
+Status: All phases (0–9) implemented. Open follow-ups are in section 12; backend limits are in `docs/backend-gaps.md`.
 
 This document is the source of truth for the new client. It records scope,
 design decisions, the API contract the client consumes, and the order of work.
