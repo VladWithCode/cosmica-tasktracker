@@ -2,7 +2,9 @@ import { useMemo, useState } from "react";
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
 import { ChevronRight, Sun } from "lucide-react";
 import type { Schedule, TaskItem } from "@/api/schemas";
+import { CreateButton } from "@/components/shell/CreateButton";
 import { Screen } from "@/components/shell/Screen";
+import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { ProgressRing } from "@/components/ui/ProgressRing";
@@ -13,6 +15,7 @@ import { formatDay, todayISO } from "@/lib/date";
 import { fade, spring } from "@/lib/motion";
 import { groupTasks, summarize } from "@/lib/tasks";
 import { useSchedules, useTodayTasks } from "@/queries/tasks";
+import { useCreateStore } from "@/stores/create";
 import { useOwnerStore } from "@/stores/owner";
 import { TaskRow, type WaterConfig } from "@/features/task/TaskRow";
 import { TaskSheet } from "@/features/task/TaskSheet";
@@ -32,18 +35,24 @@ export function waterConfigs(schedules: Schedule[] | undefined): Map<string, Wat
 
 export function TodayScreen({ taskId, onOpenTask, onCloseTask }: TodayScreenProps) {
     const ownerId = useOwnerStore((state) => state.ownerId);
+    const openCreate = useCreateStore((state) => state.openCreate);
     const today = useTodayTasks(ownerId);
     const schedules = useSchedules(ownerId);
     const water = useMemo(() => waterConfigs(schedules.data), [schedules.data]);
     const tasks = today.data?.tasks;
 
     return (
-        <Screen title="Hoy" titleAccessory={<p className="text-callout text-label-secondary">{formatDay(today.data?.date || todayISO())}</p>}>
+        <Screen title="Hoy" actions={<CreateButton />} titleAccessory={<p className="text-callout text-label-secondary">{formatDay(today.data?.date || todayISO())}</p>}>
             <PullToRefresh onRefresh={() => Promise.all([today.refetch(), schedules.refetch()])}>
                 {today.isPending ? <TodaySkeleton /> : null}
                 {today.isError ? <ErrorState error={today.error} onRetry={() => void today.refetch()} /> : null}
                 {tasks && tasks.length === 0 ? (
-                    <EmptyState icon={Sun} title="Nada para hoy" message="Cuando crees rutinas o tareas, aparecerán aquí." />
+                    <EmptyState
+                        icon={Sun}
+                        title="Nada para hoy"
+                        message="Crea una tarea o una rutina y aparecerá aquí."
+                        action={<Button onClick={() => openCreate()}>Nueva tarea</Button>}
+                    />
                 ) : null}
                 {tasks && tasks.length > 0 ? <TodayList tasks={tasks} water={water} canEdit onOpenTask={onOpenTask} /> : null}
             </PullToRefresh>

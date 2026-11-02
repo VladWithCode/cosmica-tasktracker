@@ -1,4 +1,5 @@
 import { Outlet } from "@tanstack/react-router";
+import { CreateSheet } from "@/features/create/CreateSheet";
 import { Sidebar } from "./Sidebar";
 import { TabBar } from "./TabBar";
 
@@ -8,6 +9,7 @@ export function AppShell() {
             <Sidebar />
             <Outlet />
             <TabBar />
+            <CreateSheet />
         </div>
     );
 }

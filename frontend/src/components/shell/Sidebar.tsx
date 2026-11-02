@@ -1,9 +1,10 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Bell, CircleUserRound } from "lucide-react";
+import { Bell, CircleUserRound, Plus } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { useUnreadActivityCount } from "@/queries/activity";
 import { useSession } from "@/queries/session";
+import { useCreateStore } from "@/stores/create";
 import { isActive } from "./TabBar";
 import { primaryNav, scrollToTop } from "./nav";
 
@@ -29,6 +30,7 @@ export function Sidebar() {
     const pathname = useRouterState({ select: (state) => state.location.pathname });
     const user = useSession();
     const unread = useUnreadActivityCount();
+    const openCreate = useCreateStore((state) => state.openCreate);
 
     return (
         <aside className="material-sidebar fixed inset-y-0 left-0 z-40 hidden w-64 flex-col px-3 pt-6 pb-4 lg:flex">
@@ -36,6 +38,14 @@ export function Sidebar() {
                 <img src="/icon.svg" alt="" className="size-7 rounded-[0.45rem]" />
                 <span className="text-headline">Cosmica</span>
             </div>
+            <button
+                type="button"
+                onClick={() => openCreate()}
+                className="mb-4 flex h-10 items-center gap-2 rounded-control bg-accent px-3 text-callout font-semibold text-on-accent active:opacity-80"
+            >
+                <Plus aria-hidden className="size-5" strokeWidth={2.2} />
+                Nueva
+            </button>
             <nav aria-label="Principal" className="flex flex-1 flex-col gap-1">
                 {primaryNav.map(({ to, label, icon: Icon }) => (
                     <SidebarLink key={to} to={to} active={isActive(pathname, to)}>
