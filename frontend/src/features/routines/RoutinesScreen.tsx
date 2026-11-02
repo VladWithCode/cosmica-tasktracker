@@ -3,6 +3,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ChevronRight, Pause, Play, Repeat } from "lucide-react";
 import type { Schedule } from "@/api/schemas";
 import { CreateButton } from "@/components/shell/CreateButton";
+import { OwnerSwitcher } from "@/components/shell/OwnerSwitcher";
 import { Screen } from "@/components/shell/Screen";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -27,7 +28,7 @@ export function RoutinesScreen() {
     const paused = routines.filter((schedule) => schedule.status === "paused");
 
     return (
-        <Screen title="Rutinas" actions={readOnly ? undefined : <CreateButton />}>
+        <Screen title="Rutinas" titleAccessory={<OwnerSwitcher />} actions={<CreateButton />}>
             <PullToRefresh onRefresh={() => schedules.refetch()}>
                 {schedules.isPending ? (
                     <div className="flex flex-col gap-3 px-4 pt-2">

@@ -1,5 +1,5 @@
 import * as ContextMenu from "@radix-ui/react-context-menu";
-import { Ban, Check, CircleDot, CircleX, NotebookPen, RotateCcw, SquarePen } from "lucide-react";
+import { Ban, BellRing, Check, CircleDot, CircleX, NotebookPen, RotateCcw, SquarePen } from "lucide-react";
 import type { TaskItem, TaskStatus } from "@/api/schemas";
 import { SwipeRow, type SwipeAction } from "@/components/ui/SwipeRow";
 import { cn } from "@/lib/cn";
@@ -15,14 +15,16 @@ export type WaterConfig = { unit: string };
 type TaskRowProps = {
     task: TaskItem;
     canEdit: boolean;
+    canPing?: boolean;
     water?: WaterConfig;
     onOpen: (id: string) => void;
+    onPing?: (task: TaskItem) => void;
 };
 
 const menuItem =
     "flex min-h-11 cursor-default items-center gap-3 rounded-[0.5rem] px-3 text-body text-label outline-none select-none data-[highlighted]:bg-fill-secondary data-[disabled]:opacity-40";
 
-export function TaskRow({ task, canEdit, water, onOpen }: TaskRowProps) {
+export function TaskRow({ task, canEdit, canPing = false, water, onOpen, onPing }: TaskRowProps) {
     const update = useUpdateTask(task.id);
     const done = task.status === "completed";
 
@@ -50,7 +52,11 @@ export function TaskRow({ task, canEdit, water, onOpen }: TaskRowProps) {
         : { id: "complete", label: "Completar", icon: Check, tone: "success", onTrigger: toggle };
     const skip: SwipeAction = { id: "skip", label: "Omitir", icon: Ban, tone: "neutral", onTrigger: () => setStatus("skipped") };
     const fail: SwipeAction = { id: "fail", label: "Fallida", icon: CircleX, tone: "danger", onTrigger: () => setStatus("failed") };
-    const trailing = [skip, fail].filter((action) => !(action === skip && task.status === "skipped") && !(action === fail && task.status === "failed"));
+    const pingable = canPing && Boolean(onPing) && !done;
+    const ping: SwipeAction = { id: "ping", label: "Recordar", icon: BellRing, tone: "accent", onTrigger: () => onPing?.(task) };
+    const editActions = canEdit ? [skip, fail].filter((action) => !(action === skip && task.status === "skipped") && !(action === fail && task.status === "failed")) : [];
+    const trailing = pingable ? [ping, ...editActions] : editActions;
+    const hasMenu = canEdit || pingable;
 
     const meta = [scheduleLabel(task)];
     if (task.status === "in_progress") meta.unshift("En curso");
@@ -58,8 +64,8 @@ export function TaskRow({ task, canEdit, water, onOpen }: TaskRowProps) {
 
     return (
         <ContextMenu.Root>
-            <SwipeRow leading={canEdit ? leading : undefined} trailing={canEdit ? trailing : []} disabled={!canEdit}>
-                <ContextMenu.Trigger asChild disabled={!canEdit}>
+            <SwipeRow leading={canEdit ? leading : undefined} trailing={trailing} disabled={trailing.length === 0 && !canEdit}>
+                <ContextMenu.Trigger asChild disabled={!hasMenu}>
                     <div
                         role="button"
                         tabIndex={0}
@@ -109,6 +115,16 @@ export function TaskRow({ task, canEdit, water, onOpen }: TaskRowProps) {
                     collisionPadding={12}
                     className="z-50 min-w-56 origin-[var(--radix-context-menu-content-transform-origin)] rounded-card bg-bg-elevated p-1.5 shadow-float ring-1 ring-separator data-[state=open]:animate-[menu-in_180ms_cubic-bezier(0.2,0.9,0.3,1)] motion-reduce:animate-none"
                 >
+                    {pingable ? (
+                        <>
+                            <ContextMenu.Item className={menuItem} onSelect={() => onPing?.(task)}>
+                                <BellRing aria-hidden className="size-5 text-accent" /> Enviar recordatorio
+                            </ContextMenu.Item>
+                            {canEdit ? <ContextMenu.Separator className="my-1 h-px bg-separator" /> : null}
+                        </>
+                    ) : null}
+                    {canEdit ? (
+                    <>
                     <ContextMenu.Item className={menuItem} disabled={task.status === "in_progress"} onSelect={() => setStatus("in_progress")}>
                         <CircleDot aria-hidden className="size-5 text-warning" /> Iniciar
                     </ContextMenu.Item>
@@ -129,6 +145,8 @@ export function TaskRow({ task, canEdit, water, onOpen }: TaskRowProps) {
                     <ContextMenu.Item className={menuItem} onSelect={() => onOpen(task.id)}>
                         <SquarePen aria-hidden className="size-5 text-label-secondary" /> Ver y editar
                     </ContextMenu.Item>
+                    </>
+                    ) : null}
                 </ContextMenu.Content>
             </ContextMenu.Portal>
         </ContextMenu.Root>

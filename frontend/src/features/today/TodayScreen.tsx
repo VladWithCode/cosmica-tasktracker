@@ -3,6 +3,7 @@ import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/r
 import { ChevronRight, Sun } from "lucide-react";
 import type { Schedule, TaskItem } from "@/api/schemas";
 import { CreateButton } from "@/components/shell/CreateButton";
+import { OwnerSwitcher } from "@/components/shell/OwnerSwitcher";
 import { Screen } from "@/components/shell/Screen";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -20,6 +21,7 @@ import { useSchedules } from "@/queries/schedules";
 import { useTodayTasks } from "@/queries/tasks";
 import { useCreateStore } from "@/stores/create";
 import { TaskRow, type WaterConfig } from "@/features/task/TaskRow";
+import { PingSheet } from "@/features/task/PingSheet";
 import { TaskSheet } from "@/features/task/TaskSheet";
 
 type TodayScreenProps = { taskId?: string; onOpenTask: (id: string) => void; onCloseTask: () => void };
@@ -44,7 +46,12 @@ export function TodayScreen({ taskId, onOpenTask, onCloseTask }: TodayScreenProp
     const tasks = today.data?.tasks;
 
     return (
-        <Screen title="Hoy" actions={access.isSelf ? <CreateButton /> : undefined} titleAccessory={<p className="text-callout text-label-secondary">{formatDay(today.data?.date || todayISO())}</p>}>
+        <Screen title="Hoy" actions={<CreateButton />} titleAccessory={
+                <div className="flex flex-col items-start">
+                    <p className="text-callout text-label-secondary">{formatDay(today.data?.date || todayISO())}</p>
+                    <OwnerSwitcher />
+                </div>
+            }>
             <PullToRefresh onRefresh={() => Promise.all([today.refetch(), schedules.refetch()])}>
                 {today.isPending ? <TodaySkeleton /> : null}
                 {today.isError ? <ErrorState error={today.error} onRetry={() => void today.refetch()} /> : null}
@@ -53,10 +60,10 @@ export function TodayScreen({ taskId, onOpenTask, onCloseTask }: TodayScreenProp
                         icon={Sun}
                         title="Nada para hoy"
                         message="Crea una tarea o una rutina y aparecerá aquí."
-                        action={<Button onClick={() => openCreate()}>Nueva tarea</Button>}
+                        action={access.isSelf ? <Button onClick={() => openCreate()}>Nueva tarea</Button> : undefined}
                     />
                 ) : null}
-                {tasks && tasks.length > 0 ? <TodayList tasks={tasks} water={water} canEdit={access.canEdit} onOpenTask={onOpenTask} /> : null}
+                {tasks && tasks.length > 0 ? <TodayList tasks={tasks} water={water} canEdit={access.canEdit} canPing={access.canPing} ownerName={access.name} onOpenTask={onOpenTask} /> : null}
             </PullToRefresh>
             <TaskSheet taskId={taskId} onClose={onCloseTask} />
         </Screen>
@@ -93,11 +100,19 @@ function SummaryCard({ tasks }: { tasks: TaskItem[] }) {
     );
 }
 
-type TodayListProps = { tasks: TaskItem[]; water: Map<string, WaterConfig>; canEdit: boolean; onOpenTask: (id: string) => void };
+type TodayListProps = {
+    tasks: TaskItem[];
+    water: Map<string, WaterConfig>;
+    canEdit: boolean;
+    canPing?: boolean;
+    ownerName?: string | null;
+    onOpenTask: (id: string) => void;
+};
 
-export function TodayList({ tasks, water, canEdit, onOpenTask }: TodayListProps) {
+export function TodayList({ tasks, water, canEdit, canPing = false, ownerName = null, onOpenTask }: TodayListProps) {
     const reduceMotion = useReducedMotion();
     const [showDone, setShowDone] = useState(false);
+    const [pingTask, setPingTask] = useState<TaskItem | null>(null);
     const { sections, done } = groupTasks(tasks);
     const rowTransition = reduceMotion ? fade : spring.default;
 
@@ -112,7 +127,7 @@ export function TodayList({ tasks, water, canEdit, onOpenTask }: TodayListProps)
             transition={rowTransition}
             className="[&+&]:border-t [&+&]:border-separator"
         >
-            <TaskRow task={task} canEdit={canEdit} water={water.get(task.scheduleId)} onOpen={onOpenTask} />
+            <TaskRow task={task} canEdit={canEdit} canPing={canPing} water={water.get(task.scheduleId)} onOpen={onOpenTask} onPing={setPingTask} />
         </motion.li>
     );
 
@@ -159,6 +174,7 @@ export function TodayList({ tasks, water, canEdit, onOpenTask }: TodayListProps)
                     </AnimatePresence>
                 </motion.section>
             ) : null}
+            <PingSheet task={pingTask} ownerName={ownerName} onClose={() => setPingTask(null)} />
         </LayoutGroup>
     );
 }

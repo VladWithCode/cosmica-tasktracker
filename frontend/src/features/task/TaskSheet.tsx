@@ -12,7 +12,8 @@ import { formatDay } from "@/lib/date";
 import { haptic } from "@/lib/haptics";
 import { spring } from "@/lib/motion";
 import { formatDuration, scheduleLabel, statusForCount, statusLabels } from "@/lib/tasks";
-import { useDeleteTask, useTask, useUpdateTask } from "@/queries/tasks";
+import { useAccessForUser } from "@/queries/owner";
+import { useDeleteTask, usePingTask, useTask, useUpdateTask } from "@/queries/tasks";
 import { toast } from "@/stores/toast";
 import { CounterControl } from "./CounterControl";
 import { TaskEditForm } from "./TaskEditForm";
@@ -103,6 +104,7 @@ function DetailView({ task, onEdit, onDeleted }: { task: TaskDetail; onEdit: () 
     const [confirmDelete, setConfirmDelete] = useState(false);
     const canEdit = task.canEdit;
     const isOneOff = task.frequency === "custom";
+    const access = useAccessForUser(task.userId);
 
     useEffect(() => setNotes(task.notes), [task.notes]);
 
@@ -170,6 +172,8 @@ function DetailView({ task, onEdit, onDeleted }: { task: TaskDetail; onEdit: () 
                 </div>
             </GroupedSection>
 
+            {access.canPing && task.status !== "completed" ? <PingSection taskId={task.id} ownerName={access.name} /> : null}
+
             <GroupedSection title="Notas" footer={canEdit ? "Se guardan al salir del campo." : undefined}>
                 <InlineTextArea
                     label="Añade una nota"
@@ -236,5 +240,25 @@ function DetailView({ task, onEdit, onDeleted }: { task: TaskDetail; onEdit: () 
                 </div>
             ) : null}
         </div>
+    );
+}
+
+function PingSection({ taskId, ownerName }: { taskId: string; ownerName: string | null }) {
+    const [message, setMessage] = useState("");
+    const ping = usePingTask();
+    return (
+        <GroupedSection title="Recordatorio" footer={`${ownerName ?? "La persona"} recibirá una notificación.`}>
+            <InlineTextArea label="Mensaje opcional" rows={2} maxLength={280} value={message} onChange={(event) => setMessage(event.target.value)} />
+            <div className="px-4 py-2.5">
+                <Button
+                    variant="tinted"
+                    className="w-full"
+                    loading={ping.isPending}
+                    onClick={() => ping.mutate({ id: taskId, message: message.trim() }, { onSuccess: () => setMessage("") })}
+                >
+                    Enviar recordatorio
+                </Button>
+            </div>
+        </GroupedSection>
     );
 }

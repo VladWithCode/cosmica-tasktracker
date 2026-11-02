@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Placeholder } from "@/components/shell/Placeholder";
+import { ActivityScreen } from "@/features/activity/ActivityScreen";
 
 export const Route = createFileRoute("/_app/activity")({
-    component: () => <Placeholder title="Actividad" />,
+    component: ActivityScreen,
 });

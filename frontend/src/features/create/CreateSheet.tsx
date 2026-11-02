@@ -9,15 +9,15 @@ import { defaultCreateValues, toOneOffInput, toScheduleInput } from "./createFor
 import { TaskForm } from "./TaskForm";
 
 export function CreateSheet() {
-    const { open, date, closeCreate } = useCreateStore();
+    const { open, date, ownerId, closeCreate } = useCreateStore();
     return (
         <Sheet open={open} onOpenChange={(next) => (next ? undefined : closeCreate())} title="Nueva" description="Crear una tarea o rutina">
-            {open ? <CreateContent initialDate={date ?? todayISO()} onDone={closeCreate} /> : null}
+            {open ? <CreateContent initialDate={date ?? todayISO()} ownerId={ownerId} onDone={closeCreate} /> : null}
         </Sheet>
     );
 }
 
-function CreateContent({ initialDate, onDone }: { initialDate: string; onDone: () => void }) {
+function CreateContent({ initialDate, ownerId, onDone }: { initialDate: string; ownerId: string | null; onDone: () => void }) {
     const navigate = useNavigate();
     const createOneOff = useCreateOneOff();
     const createRoutine = useCreateSchedule();
@@ -26,7 +26,10 @@ function CreateContent({ initialDate, onDone }: { initialDate: string; onDone: (
     return (
         <TaskForm
             mode="create"
-            defaultValues={defaultCreateValues(initialDate, fromISODate(initialDate).getDay())}
+            defaultValues={{
+                ...defaultCreateValues(initialDate, fromISODate(initialDate).getDay()),
+                ...(ownerId ? { kind: "routine" as const, ownerId } : {}),
+            }}
             owners={owners}
             pending={createOneOff.isPending || createRoutine.isPending}
             error={createOneOff.error ?? createRoutine.error}

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { CalendarDays } from "lucide-react";
 import { CreateButton } from "@/components/shell/CreateButton";
+import { OwnerSwitcher } from "@/components/shell/OwnerSwitcher";
 import { Screen } from "@/components/shell/Screen";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -44,10 +45,15 @@ export function CalendarScreen({ date, taskId, onSelectDate, onOpenTask, onClose
                             Hoy
                         </Button>
                     )}
-                    {access.isSelf ? <CreateButton date={date} /> : null}
+                    <CreateButton date={date} />
                 </>
             }
-            titleAccessory={<MonthToggle date={date} open={monthOpen} onToggle={() => setMonthOpen((value) => !value)} />}
+            titleAccessory={
+                <div className="flex flex-col items-start">
+                    <MonthToggle date={date} open={monthOpen} onToggle={() => setMonthOpen((value) => !value)} />
+                    <OwnerSwitcher />
+                </div>
+            }
         >
             <DayPicker date={date} monthOpen={monthOpen} onSelect={onSelectDate} marks={marks} />
 
@@ -61,7 +67,7 @@ export function CalendarScreen({ date, taskId, onSelectDate, onOpenTask, onClose
                 ) : null}
                 {day.isError ? <ErrorState error={day.error} onRetry={() => void day.refetch()} /> : null}
                 {tasks && tasks.length === 0 ? <EmptyState icon={CalendarDays} title="Día libre" message="No hay tareas para este día." /> : null}
-                {tasks && tasks.length > 0 ? <TodayList tasks={tasks} water={water} canEdit={access.canEdit} onOpenTask={onOpenTask} /> : null}
+                {tasks && tasks.length > 0 ? <TodayList tasks={tasks} water={water} canEdit={access.canEdit} canPing={access.canPing} ownerName={access.name} onOpenTask={onOpenTask} /> : null}
             </PullToRefresh>
             <TaskSheet taskId={taskId} onClose={onCloseTask} />
         </Screen>
