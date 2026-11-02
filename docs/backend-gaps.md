@@ -126,17 +126,7 @@ Last updated: 2026-11-02
 - **Client today:** routine detail shows configuration only.
 - **Backend change:** `GET /schedules/:id/history?from&to`.
 
-### 11. Push notification buttons are in English
-
-- **User impact:** task reminders show "View Task" / "Mark Complete" in an
-  otherwise Spanish app.
-- **Where:** `internal/notifications/scheduler.go:114`.
-- **Client today:** nothing to do; the service worker shows what the backend
-  sends.
-- **Backend change:** "Ver tarea" / "Completar". Action IDs stay the same.
-  Pending approval.
-
-### 12. Profile update has no validation
+### 11. Profile update has no validation
 
 - **User impact:** a duplicate or malformed email returns a generic "Error
   inesperado" instead of a field message.
@@ -148,7 +138,7 @@ Last updated: 2026-11-02
 - **Backend change:** reuse the register validation and return
   `422 validation_error` / `409 email_taken` like `HandleRegister`.
 
-### 13. Admin console
+### 12. Admin console
 
 - **User impact:** no UI for managing users.
 - **Where:** `POST/PUT/DELETE /users` exist, but there is no `GET /users`;
@@ -176,4 +166,6 @@ Last updated: 2026-11-02
 
 ## Closed
 
-None yet.
+- **Push notification buttons in English** (closed 2026-11-02). Task
+  reminder actions in `internal/notifications/scheduler.go` now read
+  "Ver tarea" / "Completar". Action IDs (`view`, `complete`) unchanged.

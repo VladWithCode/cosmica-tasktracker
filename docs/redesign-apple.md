@@ -661,13 +661,12 @@ and a manual check on a phone-width viewport and a desktop viewport.
 
 ## 11. Open questions
 
-1. **Backend copy fix (needs approval):** English push action titles
-   "View Task" / "Mark Complete" (`internal/notifications/scheduler.go:114`)
-   show in Spanish UI notifications. Proposed: "Ver tarea" / "Completar".
+None.
 
 Resolved 2026-11-02: name is Cosmica (Routine Ritual removed, including the
-backend push test title); admin UI deferred; `feat/redesign` continues as a
-separate direction and this branch is independent of it.
+backend push test title); push action buttons translated to "Ver tarea" /
+"Completar"; admin UI deferred; `feat/redesign` continues as a separate
+direction and this branch is independent of it.
 
 ---
 
