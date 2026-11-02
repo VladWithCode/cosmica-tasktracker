@@ -4,7 +4,7 @@ import { TabBar } from "./TabBar";
 
 export function AppShell() {
     return (
-        <div className="min-h-dvh lg:pl-64">
+        <div data-vaul-drawer-wrapper="" className="min-h-dvh bg-bg lg:pl-64">
             <Sidebar />
             <Outlet />
             <TabBar />

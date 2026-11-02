@@ -178,3 +178,14 @@ html.theme-transition * {
         color 200ms ease,
         border-color 200ms ease !important;
 }
+
+@keyframes menu-in {
+    from {
+        opacity: 0;
+        transform: scale(0.92);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
