@@ -2,7 +2,7 @@
 
 Branch: `feat/redesign-apple` (from `main` at `feed7f8`)
 Started: 2026-11-02
-Status: Phases 0–6 done (scaffold, foundations, API and auth, Hoy and task sheet, create, Calendario and Rutinas, Progreso and Notas). Next: phase 7 (sharing, Actividad, Perfil). Backend limits are tracked in `docs/backend-gaps.md`.
+Status: Phases 0–7 done (scaffold, foundations, API and auth, Hoy and task sheet, create, Calendario and Rutinas, Progreso and Notas, sharing, Actividad, Perfil). Next: phase 8 (PWA and push). Backend limits are tracked in `docs/backend-gaps.md`.
 
 This document is the source of truth for the new client. It records scope,
 design decisions, the API contract the client consumes, and the order of work.
@@ -125,9 +125,11 @@ Out of scope: `POST/PUT/DELETE /users`, `POST /admin`, `GET /system`
 A grant has `access_level` and derived flags `can_view`, `can_create`,
 `can_edit_tasks`, `can_ping`:
 
-- `view`: read routines and days, ping.
-- `manage`: view plus create routines and edit tasks for the owner.
-- `ping_only`: can ping only.
+- `view` ("Ver"): read routines and days.
+- `ping_only` ("Ver y recordar"): read, plus ping. The backend sets
+  `can_view` for it (`20260508090000_ping_only_grant_can_view.sql`).
+- `manage` ("Gestionar"): read, ping, create routines and edit tasks for the
+  owner.
 
 The client reads the flags, not the level name, to show or hide actions.
 `DetailedTask.canEdit` and `canApplyToSchedule` gate the task sheet. A 403 with
@@ -616,9 +618,9 @@ and a manual check on a phone-width viewport and a desktop viewport.
 - [x] Notes per day, quick note, edit, delete with undo.
 
 ### Phase 7: Sharing, Actividad, Perfil
-- [ ] Owner switcher and owner pill across Hoy, Calendario, Rutinas; permission-gated actions; ping sheet.
-- [ ] Perfil sections, invite flow, revoke, password change, appearance.
-- [ ] Actividad list, unread badge, mark read, deep links.
+- [x] Owner switcher and owner pill across Hoy, Calendario, Rutinas; permission-gated actions; ping sheet.
+- [x] Perfil sections, invite flow, revoke, password change, appearance.
+- [x] Actividad list, unread badge, mark read, deep links.
 
 ### Phase 8: PWA and push
 - [ ] Manifest, icons, service worker, push subscribe/unsubscribe/test, notification actions, `/tasks` deep links.
@@ -697,5 +699,8 @@ separate direction and this branch is independent of it.
 | 2026-11-02 | Progreso status breakdown as labeled count tiles, not a segmented bar | The dataviz validator fails the status colors as a categorical set (danger vs warning ΔE 2.9 under protanopia). Counts with icons and labels need no color separation. |
 | 2026-11-02 | Charts are HTML/CSS, not SVG: single-series columns (7 and 30 days) and a one-hue heatmap (3 months, `color-mix` steps of the accent) | One series needs no legend; the heatmap ramp is monotonic in lightness by construction in both themes. Every mark has a hover/focus tooltip and a table view. |
 | 2026-11-02 | Notes add button only on today | `POST /notes` has no date (gap 7). |
+| 2026-11-02 | Owner switcher is a pill under the large title with a pull-down menu; no per-owner hue | The pill names the owner in text, so color adds nothing; a filled accent pill marks "viewing someone else". |
+| 2026-11-02 | Perfil is a pushed page (back button on phone), not a sheet | It holds its own sheets (account, password, invite); nesting sheets in a sheet hurts gesture clarity. |
+| 2026-11-02 | Revoking a share uses swipe + 5 s undo, like notes | The action is recoverable within the window; a confirm dialog would train people to tap through. |
 | 2026-11-02 | Agua goal and "Para" owner choice only for Rutina | Water display and reminders read the schedule's `frequency_config`, which `POST /tasks` does not take; `POST /tasks` has no `owner_user_id`. |
 | 2026-11-02 | New sheet is a bottom sheet (phone) / right pane (desktop), not scaled from the "+" button | Vaul sheets always enter from an edge; enter and exit stay on the same path, which keeps spatial consistency. |

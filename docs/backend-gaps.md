@@ -136,7 +136,19 @@ Last updated: 2026-11-02
 - **Backend change:** "Ver tarea" / "Completar". Action IDs stay the same.
   Pending approval.
 
-### 12. Admin console
+### 12. Profile update has no validation
+
+- **User impact:** a duplicate or malformed email returns a generic "Error
+  inesperado" instead of a field message.
+- **Where:** `users.Service.UpdateProfile` (`internal/users/service.go`)
+  writes `fullname` and `email` without the checks `validateRegisterInput`
+  runs, and `UpdateProfile` maps every error to 500.
+- **Client today:** validates name (2–80) and email format before sending;
+  a duplicate email still shows the generic message.
+- **Backend change:** reuse the register validation and return
+  `422 validation_error` / `409 email_taken` like `HandleRegister`.
+
+### 13. Admin console
 
 - **User impact:** no UI for managing users.
 - **Where:** `POST/PUT/DELETE /users` exist, but there is no `GET /users`;
