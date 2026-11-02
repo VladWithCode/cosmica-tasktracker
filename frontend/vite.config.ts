@@ -18,7 +18,13 @@ export default defineConfig({
     server: {
         host: true,
         proxy: {
-            "/api": { target: backendUrl, changeOrigin: true },
+            "/api": {
+                target: backendUrl,
+                changeOrigin: true,
+                configure: (proxy) => {
+                    proxy.on("proxyReq", (request) => request.removeHeader("origin"));
+                },
+            },
         },
     },
 });
