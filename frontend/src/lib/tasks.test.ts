@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TaskItem } from "@/api/schemas";
-import { groupTasks, scheduleLabel, statusForCount, summarize } from "./tasks";
+import { groupTasks, pendingVital, scheduleLabel, statusForCount, summarize } from "./tasks";
 
 function task(partial: Partial<TaskItem> & { id: string }): TaskItem {
     return {
@@ -42,6 +42,26 @@ describe("groupTasks", () => {
             task({ id: "c", startTime: "07:30" }),
         ]);
         expect(sections[0]?.tasks.map((item) => item.id)).toEqual(["c", "a", "b"]);
+    });
+});
+
+describe("vital tasks", () => {
+    const tasks = [
+        task({ id: "late", isRequired: true, startTime: "20:00" }),
+        task({ id: "early", isRequired: true, startTime: "07:00", status: "in_progress" }),
+        task({ id: "done", isRequired: true, status: "completed" }),
+        task({ id: "skipped", isRequired: true, status: "skipped" }),
+        task({ id: "normal", startTime: "09:00" }),
+    ];
+
+    it("lists only pending and in-progress required tasks, in schedule order", () => {
+        expect(pendingVital(tasks).map((item) => item.id)).toEqual(["early", "late"]);
+    });
+
+    it("can leave pending vital tasks out of the list while keeping finished ones", () => {
+        const { sections, done } = groupTasks(tasks, { vitalSeparately: true });
+        expect(sections.map((section) => section.id)).toEqual(["morning"]);
+        expect(done.map((item) => item.id)).toEqual(["done", "skipped"]);
     });
 });
 

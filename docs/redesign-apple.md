@@ -217,7 +217,13 @@ for lists), empty, error (inline message from the envelope `message`, plus
 - Header: progress ring (completed / total, from `/tasks/progress`), text
   "5 de 8 completadas", date. Ring fills with a critically damped spring on
   change.
-- Required tasks first in a "Imprescindibles" group, then by time sections:
+- **"Sí o sí" stack (new feature):** pending and in-progress required tasks
+  appear first, as accent-filled floating cards. With two or more, they stack
+  (top card in full, up to two peeking behind); tapping the stack springs the
+  cards into a list, "Agrupar" folds them back. Each card has a complete
+  button and opens the task sheet. The stack only exists while vital tasks
+  are pending, and those tasks leave the list below so nothing repeats.
+- Remaining tasks by time sections:
   "Mañana", "Tarde", "Noche", "Cualquier hora" (no `schedule_start_time`).
   Within a section: start time, then priority (`urgent` before `medium`).
 - **Task row:** check circle (left), title, time range or duration, priority
@@ -730,5 +736,6 @@ direction and this branch is independent of it.
 | 2026-11-02 | First-load budget revised from 150 to 260 KB gzip | React 19 DOM (~62 KB), Motion (~50 KB) and the router (~23 KB) alone pass 135 KB. Measured 252 KB on Hoy for a user with shares. |
 | 2026-11-02 | New-item shortcut is `⌘/Ctrl+K`, not `⌘N` | Browsers reserve `⌘N` / `Ctrl+N` for a new window. |
 | 2026-11-02 | Floating action menu replaces the phone tab bar; header "+" buttons removed | User decision: keep the previous client's FAB, adapted. Actions and destinations sit in separate groups, the current screen is marked, and create actions read the screen's context. Desktop keeps the sidebar. |
+| 2026-11-02 | "Sí o sí" stack for pending required tasks on Hoy | User request: vital tasks must stand out. Accent fill and glow are reserved for them; secondary text at 85% opacity keeps 4.86:1 (light) and 5.4:1 (dark). Calendario keeps the plain Imprescindibles section. |
 | 2026-11-02 | Agua goal and "Para" owner choice only for Rutina | Water display and reminders read the schedule's `frequency_config`, which `POST /tasks` does not take; `POST /tasks` has no `owner_user_id`. |
 | 2026-11-02 | New sheet is a bottom sheet (phone) / right pane (desktop), not scaled from the "+" button | Vaul sheets always enter from an edge; enter and exit stay on the same path, which keeps spatial consistency. |

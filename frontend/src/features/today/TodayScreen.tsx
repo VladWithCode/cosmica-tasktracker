@@ -14,11 +14,12 @@ import { cn } from "@/lib/cn";
 import { formatDay, todayISO } from "@/lib/date";
 import { fade, spring } from "@/lib/motion";
 import { isWaterSchedule } from "@/lib/schedules";
-import { groupTasks, summarize } from "@/lib/tasks";
+import { groupTasks, pendingVital, summarize } from "@/lib/tasks";
 import { useOwnerAccess } from "@/queries/owner";
 import { useSchedules } from "@/queries/schedules";
 import { useTodayTasks } from "@/queries/tasks";
 import { useCreateStore } from "@/stores/create";
+import { VitalStack } from "./VitalStack";
 import { TaskRow, type WaterConfig } from "@/features/task/TaskRow";
 import { Deferred } from "@/components/ui/Deferred";
 
@@ -64,7 +65,20 @@ export function TodayScreen({ taskId, onOpenTask, onCloseTask }: TodayScreenProp
                         action={access.isSelf ? <Button onClick={() => openCreate()}>Nueva tarea</Button> : undefined}
                     />
                 ) : null}
-                {tasks && tasks.length > 0 ? <TodayList tasks={tasks} water={water} canEdit={access.canEdit} canPing={access.canPing} ownerName={access.name} onOpenTask={onOpenTask} /> : null}
+                {tasks && tasks.length > 0 ? (
+                    <>
+                        <VitalStack tasks={pendingVital(tasks)} canEdit={access.canEdit} onOpenTask={onOpenTask} />
+                        <TodayList
+                            tasks={tasks}
+                            vitalSeparately
+                            water={water}
+                            canEdit={access.canEdit}
+                            canPing={access.canPing}
+                            ownerName={access.name}
+                            onOpenTask={onOpenTask}
+                        />
+                    </>
+                ) : null}
             </PullToRefresh>
             <Deferred when={Boolean(taskId)}>
                 <TaskSheet taskId={taskId} onClose={onCloseTask} />
@@ -105,6 +119,7 @@ function SummaryCard({ tasks }: { tasks: TaskItem[] }) {
 
 type TodayListProps = {
     tasks: TaskItem[];
+    vitalSeparately?: boolean;
     water: Map<string, WaterConfig>;
     canEdit: boolean;
     canPing?: boolean;
@@ -112,11 +127,11 @@ type TodayListProps = {
     onOpenTask: (id: string) => void;
 };
 
-export function TodayList({ tasks, water, canEdit, canPing = false, ownerName = null, onOpenTask }: TodayListProps) {
+export function TodayList({ tasks, vitalSeparately = false, water, canEdit, canPing = false, ownerName = null, onOpenTask }: TodayListProps) {
     const reduceMotion = useReducedMotion();
     const [showDone, setShowDone] = useState(false);
     const [pingTask, setPingTask] = useState<TaskItem | null>(null);
-    const { sections, done } = groupTasks(tasks);
+    const { sections, done } = groupTasks(tasks, { vitalSeparately });
     const rowTransition = reduceMotion ? fade : spring.default;
 
     const renderRow = (task: TaskItem) => (

@@ -36,7 +36,11 @@ export function compareTasks(a: TaskItem, b: TaskItem): number {
     return a.title.localeCompare(b.title, "es");
 }
 
-export function groupTasks(tasks: TaskItem[]): { sections: TaskSection[]; done: TaskItem[] } {
+export function pendingVital(tasks: TaskItem[]): TaskItem[] {
+    return tasks.filter((task) => task.isRequired && !isDone(task.status)).sort(compareTasks);
+}
+
+export function groupTasks(tasks: TaskItem[], options: { vitalSeparately?: boolean } = {}): { sections: TaskSection[]; done: TaskItem[] } {
     const buckets = new Map<SectionId, TaskItem[]>();
     const done: TaskItem[] = [];
     for (const task of tasks) {
@@ -44,6 +48,7 @@ export function groupTasks(tasks: TaskItem[]): { sections: TaskSection[]; done: 
             done.push(task);
             continue;
         }
+        if (options.vitalSeparately && task.isRequired) continue;
         const id = sectionFor(task);
         buckets.set(id, [...(buckets.get(id) ?? []), task]);
     }

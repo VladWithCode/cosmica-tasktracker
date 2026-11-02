@@ -1,13 +1,12 @@
 import * as ContextMenu from "@radix-ui/react-context-menu";
 import { Ban, BellRing, Check, CircleDot, CircleX, NotebookPen, RotateCcw, SquarePen } from "lucide-react";
-import type { TaskItem, TaskStatus } from "@/api/schemas";
+import type { TaskItem } from "@/api/schemas";
 import { SwipeRow, type SwipeAction } from "@/components/ui/SwipeRow";
 import { cn } from "@/lib/cn";
-import { haptic } from "@/lib/haptics";
-import { scheduleLabel, statusForCount, statusLabels } from "@/lib/tasks";
-import { useUpdateTask } from "@/queries/tasks";
+import { scheduleLabel, statusLabels } from "@/lib/tasks";
 import { CounterControl } from "./CounterControl";
 import { StatusCheck } from "./StatusCheck";
+import { useTaskActions } from "./useTaskActions";
 import { WaterBottles } from "./WaterBottles";
 
 export type WaterConfig = { unit: string };
@@ -25,27 +24,7 @@ const menuItem =
     "flex min-h-11 cursor-default items-center gap-3 rounded-[0.5rem] px-3 text-body text-label outline-none select-none data-[highlighted]:bg-fill-secondary data-[disabled]:opacity-40";
 
 export function TaskRow({ task, canEdit, canPing = false, water, onOpen, onPing }: TaskRowProps) {
-    const update = useUpdateTask(task.id);
-    const done = task.status === "completed";
-
-    const setStatus = (status: TaskStatus) => {
-        if (status === "completed") haptic();
-        update.mutate({ status });
-    };
-
-    const setCount = (count: number) => {
-        const status = statusForCount(count, task.targetCount, task.status);
-        if (status === "completed" && task.status !== "completed") haptic();
-        update.mutate({ currentCount: count, ...(status !== task.status ? { status } : {}) });
-    };
-
-    const toggle = () => {
-        if (task.targetCount !== null && !done) {
-            setCount(task.targetCount);
-            return;
-        }
-        setStatus(done ? "pending" : "completed");
-    };
+    const { done, setStatus, setCount, toggle } = useTaskActions(task);
 
     const leading: SwipeAction = done
         ? { id: "undo", label: "Pendiente", icon: RotateCcw, tone: "neutral", onTrigger: () => setStatus("pending") }
