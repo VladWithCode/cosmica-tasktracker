@@ -2,7 +2,7 @@
 
 Branch: `feat/redesign-apple` (from `main` at `feed7f8`)
 Started: 2026-11-02
-Status: Phases 0–8 done (scaffold, foundations, API and auth, Hoy and task sheet, create, Calendario and Rutinas, Progreso and Notas, sharing, Actividad, Perfil, PWA and push). Next: phase 9 (adaptive layout and polish). Backend limits are tracked in `docs/backend-gaps.md`.
+Status: All phases (0–9) implemented. Open follow-ups are in section 12; backend limits are in `docs/backend-gaps.md`. Backend limits are tracked in `docs/backend-gaps.md`.
 
 This document is the source of truth for the new client. It records scope,
 design decisions, the API contract the client consumes, and the order of work.
@@ -172,8 +172,8 @@ Global chrome:
   destinations, plus Actividad and Perfil at the bottom.
 - List + detail split: selecting a task or routine opens it in the right pane
   instead of a sheet. Same component, different container.
-- Keyboard: `⌘/Ctrl+N` new, `⌘/Ctrl+1…5` tabs, `Space` toggles complete on
-  the focused row, arrows move focus, `Esc` closes sheet/pane.
+- Keyboard: `⌘/Ctrl+K` new, `⌘/Ctrl+1…5` tabs, `Space` toggles complete on
+  the focused row, `Enter` opens it, `Esc` closes sheet/pane.
 
 768–1023 px: tab bar stays, content gets a centered readable column
 (max 640 px) and sheets become centered form sheets.
@@ -627,9 +627,9 @@ and a manual check on a phone-width viewport and a desktop viewport.
 - [x] iOS Home Screen guidance.
 
 ### Phase 9: Adaptive layout and polish
-- [ ] Sidebar + split view ≥ 1024 px, keyboard shortcuts, focus management.
-- [ ] Accessibility pass (VoiceOver, keyboard only, 200% text, reduced motion/transparency/contrast).
-- [ ] Motion review in slow motion; performance budget check; bundle size check.
+- [x] Sidebar + right-pane sheets ≥ 1024 px, keyboard shortcuts, focus management (Radix/Vaul focus traps).
+- [x] Accessibility pass in code (labels, roles, focus rings, rem type, reduced motion/transparency/contrast). Screen-reader run on a real device still pending.
+- [x] Bundle check: Hoy first load 292 → 252 KB gzip (lazy sheets and owner menu, `zod/mini` for API schemas, form code off the Hoy path). Budget revised; see decision log.
 
 ---
 
@@ -671,7 +671,21 @@ separate direction and this branch is independent of it.
 
 ---
 
-## 12. Decision log
+## 12. Follow-ups
+
+- **Bundle:** move to `LazyMotion` + `m` components, and load the Radix
+  context menu on first long-press. Expected saving ~30–40 KB gzip.
+- **Device testing:** real iPhone (Home Screen PWA, push, swipe vs. back
+  gesture, VoiceOver) and an Android phone. Gestures so far were checked with
+  simulated pointer events and desktop Chrome.
+- **Push end to end:** enable notifications on a device and confirm task
+  reminders, water reminders, pings and the "Completar" action.
+- **Formatting:** the new client has no formatter config; add Prettier if
+  wanted.
+
+---
+
+## 13. Decision log
 
 | Date | Decision | Why |
 | --- | --- | --- |
@@ -704,5 +718,7 @@ separate direction and this branch is independent of it.
 | 2026-11-02 | Revoking a share uses swipe + 5 s undo, like notes | The action is recoverable within the window; a confirm dialog would train people to tap through. |
 | 2026-11-02 | Service worker does not cache `/api`; it precaches the shell and serves `index.html` for navigations | Task data must be live; an offline write queue is a non-goal. |
 | 2026-11-02 | "Completar" from a notification calls `PUT /tasks/:id` from the service worker with the cookie session, then tells open windows to refetch | Matches the backend's `complete` action; on failure it opens the task instead. |
+| 2026-11-02 | First-load budget revised from 150 to 260 KB gzip | React 19 DOM (~62 KB), Motion (~50 KB) and the router (~23 KB) alone pass 135 KB. Measured 252 KB on Hoy for a user with shares. |
+| 2026-11-02 | New-item shortcut is `⌘/Ctrl+K`, not `⌘N` | Browsers reserve `⌘N` / `Ctrl+N` for a new window. |
 | 2026-11-02 | Agua goal and "Para" owner choice only for Rutina | Water display and reminders read the schedule's `frequency_config`, which `POST /tasks` does not take; `POST /tasks` has no `owner_user_id`. |
 | 2026-11-02 | New sheet is a bottom sheet (phone) / right pane (desktop), not scaled from the "+" button | Vaul sheets always enter from an edge; enter and exit stay on the same path, which keeps spatial consistency. |
