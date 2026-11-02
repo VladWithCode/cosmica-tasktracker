@@ -128,7 +128,7 @@ func SendTestNotification(c *gin.Context) {
 	}
 
 	payload := &notifications.NotificationPayload{
-		Title:              "Routine Ritual",
+		Title:              "Cosmica",
 		Body:               "Notificación de prueba activada correctamente.",
 		Icon:               "/icon-192x192.png",
 		Badge:              "/badge-72x72.png",
