@@ -70,7 +70,7 @@ export function summarize(tasks: TaskItem[]): DaySummary {
 export function scheduleLabel(task: Pick<TaskItem, "startTime" | "endTime" | "durationMinutes">): string {
     const parts: string[] = [];
     if (task.startTime) parts.push(task.endTime ? `${formatClock(task.startTime)} – ${formatClock(task.endTime)}` : formatClock(task.startTime));
-    if (task.durationMinutes) parts.push(formatDuration(task.durationMinutes));
+    if (task.durationMinutes && !task.endTime) parts.push(formatDuration(task.durationMinutes));
     return parts.join(" · ") || "Cualquier hora";
 }
 

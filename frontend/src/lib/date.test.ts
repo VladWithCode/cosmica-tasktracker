@@ -28,3 +28,23 @@ describe("date helpers", () => {
         expect(minutesOfDay("13:30")).toBe(810);
     });
 });
+
+import { formatMonth, monthGrid, shiftMonth } from "./date";
+
+describe("month helpers", () => {
+    it("builds Monday-first month grids that cover the month", () => {
+        const grid = monthGrid("2026-11-15");
+        expect(grid[0]?.[0]).toBe("2026-10-26");
+        expect(grid.flat()).toContain("2026-11-30");
+        expect(grid.every((week) => week.length === 7)).toBe(true);
+    });
+
+    it("clamps the day when shifting months", () => {
+        expect(shiftMonth("2026-01-31", 1)).toBe("2026-02-28");
+        expect(shiftMonth("2026-11-02", -1)).toBe("2026-10-02");
+    });
+
+    it("formats month names in Spanish", () => {
+        expect(formatMonth("2026-11-02")).toBe("Noviembre 2026");
+    });
+});

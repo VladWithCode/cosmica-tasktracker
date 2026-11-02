@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { errorMessage } from "@/api/client";
-import { getSchedules } from "@/api/schedules";
 import type { DayTasks, TaskDetail, TaskItem } from "@/api/schemas";
 import { deleteTask, getDayTasks, getTask, getTodayTasks, pingTask, updateTask, type TaskUpdate } from "@/api/tasks";
 import { toast } from "@/stores/toast";
@@ -16,10 +15,6 @@ export function useDayTasks(ownerId: string | null, date: string) {
 
 export function useTask(id: string | undefined) {
     return useQuery({ queryKey: queryKeys.task(id ?? ""), queryFn: () => getTask(id ?? ""), enabled: Boolean(id) });
-}
-
-export function useSchedules(ownerId: string | null) {
-    return useQuery({ queryKey: queryKeys.schedules(ownerId), queryFn: () => getSchedules(ownerId ?? undefined) });
 }
 
 function patchItem(item: TaskItem, update: TaskUpdate): TaskItem {

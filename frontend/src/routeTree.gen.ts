@@ -18,7 +18,8 @@ import { Route as AppCalendarRouteImport } from './routes/_app/calendar'
 import { Route as AppNotesRouteImport } from './routes/_app/notes'
 import { Route as AppProfileRouteImport } from './routes/_app/profile'
 import { Route as AppProgressRouteImport } from './routes/_app/progress'
-import { Route as AppRoutinesRouteImport } from './routes/_app/routines'
+import { Route as AppRoutinesIndexRouteImport } from './routes/_app/routines/index'
+import { Route as AppRoutinesIdRouteImport } from './routes/_app/routines/$id'
 import { Route as AppTasksIndexRouteImport } from './routes/_app/tasks/index'
 import { Route as AppTasksIdRouteImport } from './routes/_app/tasks/$id'
 
@@ -66,9 +67,14 @@ const AppProgressRoute = AppProgressRouteImport.update({
   path: '/progress',
   getParentRoute: () => AppRoute,
 } as any)
-const AppRoutinesRoute = AppRoutinesRouteImport.update({
-  id: '/routines',
-  path: '/routines',
+const AppRoutinesIndexRoute = AppRoutinesIndexRouteImport.update({
+  id: '/routines/',
+  path: '/routines/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppRoutinesIdRoute = AppRoutinesIdRouteImport.update({
+  id: '/routines/$id',
+  path: '/routines/$id',
   getParentRoute: () => AppRoute,
 } as any)
 const AppTasksIndexRoute = AppTasksIndexRouteImport.update({
@@ -91,8 +97,9 @@ export interface FileRoutesByFullPath {
   '/notes': typeof AppNotesRoute
   '/profile': typeof AppProfileRoute
   '/progress': typeof AppProgressRoute
-  '/routines': typeof AppRoutinesRoute
+  '/routines/$id': typeof AppRoutinesIdRoute
   '/tasks/$id': typeof AppTasksIdRoute
+  '/routines/': typeof AppRoutinesIndexRoute
   '/tasks/': typeof AppTasksIndexRoute
 }
 export interface FileRoutesByTo {
@@ -103,9 +110,10 @@ export interface FileRoutesByTo {
   '/notes': typeof AppNotesRoute
   '/profile': typeof AppProfileRoute
   '/progress': typeof AppProgressRoute
-  '/routines': typeof AppRoutinesRoute
   '/': typeof AppIndexRoute
+  '/routines/$id': typeof AppRoutinesIdRoute
   '/tasks/$id': typeof AppTasksIdRoute
+  '/routines': typeof AppRoutinesIndexRoute
   '/tasks': typeof AppTasksIndexRoute
 }
 export interface FileRoutesById {
@@ -118,9 +126,10 @@ export interface FileRoutesById {
   '/_app/notes': typeof AppNotesRoute
   '/_app/profile': typeof AppProfileRoute
   '/_app/progress': typeof AppProgressRoute
-  '/_app/routines': typeof AppRoutinesRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/routines/$id': typeof AppRoutinesIdRoute
   '/_app/tasks/$id': typeof AppTasksIdRoute
+  '/_app/routines/': typeof AppRoutinesIndexRoute
   '/_app/tasks/': typeof AppTasksIndexRoute
 }
 export interface FileRouteTypes {
@@ -134,8 +143,9 @@ export interface FileRouteTypes {
     | '/notes'
     | '/profile'
     | '/progress'
-    | '/routines'
+    | '/routines/$id'
     | '/tasks/$id'
+    | '/routines/'
     | '/tasks/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -146,9 +156,10 @@ export interface FileRouteTypes {
     | '/notes'
     | '/profile'
     | '/progress'
-    | '/routines'
     | '/'
+    | '/routines/$id'
     | '/tasks/$id'
+    | '/routines'
     | '/tasks'
   id:
     | '__root__'
@@ -160,9 +171,10 @@ export interface FileRouteTypes {
     | '/_app/notes'
     | '/_app/profile'
     | '/_app/progress'
-    | '/_app/routines'
     | '/_app/'
+    | '/_app/routines/$id'
     | '/_app/tasks/$id'
+    | '/_app/routines/'
     | '/_app/tasks/'
   fileRoutesById: FileRoutesById
 }
@@ -237,11 +249,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppProgressRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/routines': {
-      id: '/_app/routines'
+    '/_app/routines/': {
+      id: '/_app/routines/'
       path: '/routines'
-      fullPath: '/routines'
-      preLoaderRoute: typeof AppRoutinesRouteImport
+      fullPath: '/routines/'
+      preLoaderRoute: typeof AppRoutinesIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/routines/$id': {
+      id: '/_app/routines/$id'
+      path: '/routines/$id'
+      fullPath: '/routines/$id'
+      preLoaderRoute: typeof AppRoutinesIdRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/tasks/': {
@@ -267,9 +286,10 @@ interface AppRouteChildren {
   AppNotesRoute: typeof AppNotesRoute
   AppProfileRoute: typeof AppProfileRoute
   AppProgressRoute: typeof AppProgressRoute
-  AppRoutinesRoute: typeof AppRoutinesRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppRoutinesIdRoute: typeof AppRoutinesIdRoute
   AppTasksIdRoute: typeof AppTasksIdRoute
+  AppRoutinesIndexRoute: typeof AppRoutinesIndexRoute
   AppTasksIndexRoute: typeof AppTasksIndexRoute
 }
 
@@ -279,9 +299,10 @@ const AppRouteChildren: AppRouteChildren = {
   AppNotesRoute: AppNotesRoute,
   AppProfileRoute: AppProfileRoute,
   AppProgressRoute: AppProgressRoute,
-  AppRoutinesRoute: AppRoutinesRoute,
   AppIndexRoute: AppIndexRoute,
+  AppRoutinesIdRoute: AppRoutinesIdRoute,
   AppTasksIdRoute: AppTasksIdRoute,
+  AppRoutinesIndexRoute: AppRoutinesIndexRoute,
   AppTasksIndexRoute: AppTasksIndexRoute,
 }
 

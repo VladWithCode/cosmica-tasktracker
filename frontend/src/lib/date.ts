@@ -49,3 +49,28 @@ export function minutesOfDay(value: string): number {
     const [hours, minutes] = value.split(":").map(Number);
     return (hours ?? 0) * 60 + (minutes ?? 0);
 }
+
+export function monthGrid(value: string): string[][] {
+    const date = fromISODate(value);
+    const first = new TZDate(date.getFullYear(), date.getMonth(), 1, 12, 0, 0, APP_TIME_ZONE);
+    const start = startOfWeek(first, { weekStartsOn: 1 });
+    const weeks: string[][] = [];
+    for (let week = 0; week < 6; week++) {
+        const days = Array.from({ length: 7 }, (_, index) => toISODate(addDays(start, week * 7 + index)));
+        if (week > 3 && !days.some((day) => day.slice(0, 7) === value.slice(0, 7))) break;
+        weeks.push(days);
+    }
+    return weeks;
+}
+
+export function shiftMonth(value: string, months: number): string {
+    const date = fromISODate(value);
+    const target = new TZDate(date.getFullYear(), date.getMonth() + months, 1, 12, 0, 0, APP_TIME_ZONE);
+    const lastDay = new TZDate(target.getFullYear(), target.getMonth() + 1, 0, 12, 0, 0, APP_TIME_ZONE).getDate();
+    return toISODate(new TZDate(target.getFullYear(), target.getMonth(), Math.min(date.getDate(), lastDay), 12, 0, 0, APP_TIME_ZONE));
+}
+
+export function formatMonth(value: string): string {
+    const text = format(fromISODate(value), "MMMM yyyy", { locale: es });
+    return text.charAt(0).toUpperCase() + text.slice(1);
+}

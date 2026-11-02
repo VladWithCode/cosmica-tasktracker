@@ -13,10 +13,12 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { cn } from "@/lib/cn";
 import { formatDay, todayISO } from "@/lib/date";
 import { fade, spring } from "@/lib/motion";
+import { isWaterSchedule } from "@/lib/schedules";
 import { groupTasks, summarize } from "@/lib/tasks";
-import { useSchedules, useTodayTasks } from "@/queries/tasks";
+import { useOwnerAccess } from "@/queries/owner";
+import { useSchedules } from "@/queries/schedules";
+import { useTodayTasks } from "@/queries/tasks";
 import { useCreateStore } from "@/stores/create";
-import { useOwnerStore } from "@/stores/owner";
 import { TaskRow, type WaterConfig } from "@/features/task/TaskRow";
 import { TaskSheet } from "@/features/task/TaskSheet";
 
@@ -25,16 +27,16 @@ type TodayScreenProps = { taskId?: string; onOpenTask: (id: string) => void; onC
 export function waterConfigs(schedules: Schedule[] | undefined): Map<string, WaterConfig> {
     const map = new Map<string, WaterConfig>();
     for (const schedule of schedules ?? []) {
-        const config = schedule.frequencyConfig;
-        if ("waterUnit" in config || "waterReminder" in config) {
-            map.set(schedule.id, { unit: typeof config.waterUnit === "string" && config.waterUnit ? config.waterUnit : "L" });
-        }
+        if (!isWaterSchedule(schedule)) continue;
+        const unit = schedule.frequencyConfig.waterUnit;
+        map.set(schedule.id, { unit: typeof unit === "string" && unit ? unit : "L" });
     }
     return map;
 }
 
 export function TodayScreen({ taskId, onOpenTask, onCloseTask }: TodayScreenProps) {
-    const ownerId = useOwnerStore((state) => state.ownerId);
+    const access = useOwnerAccess();
+    const ownerId = access.ownerId;
     const openCreate = useCreateStore((state) => state.openCreate);
     const today = useTodayTasks(ownerId);
     const schedules = useSchedules(ownerId);
@@ -42,7 +44,7 @@ export function TodayScreen({ taskId, onOpenTask, onCloseTask }: TodayScreenProp
     const tasks = today.data?.tasks;
 
     return (
-        <Screen title="Hoy" actions={<CreateButton />} titleAccessory={<p className="text-callout text-label-secondary">{formatDay(today.data?.date || todayISO())}</p>}>
+        <Screen title="Hoy" actions={access.isSelf ? <CreateButton /> : undefined} titleAccessory={<p className="text-callout text-label-secondary">{formatDay(today.data?.date || todayISO())}</p>}>
             <PullToRefresh onRefresh={() => Promise.all([today.refetch(), schedules.refetch()])}>
                 {today.isPending ? <TodaySkeleton /> : null}
                 {today.isError ? <ErrorState error={today.error} onRetry={() => void today.refetch()} /> : null}
@@ -54,7 +56,7 @@ export function TodayScreen({ taskId, onOpenTask, onCloseTask }: TodayScreenProp
                         action={<Button onClick={() => openCreate()}>Nueva tarea</Button>}
                     />
                 ) : null}
-                {tasks && tasks.length > 0 ? <TodayList tasks={tasks} water={water} canEdit onOpenTask={onOpenTask} /> : null}
+                {tasks && tasks.length > 0 ? <TodayList tasks={tasks} water={water} canEdit={access.canEdit} onOpenTask={onOpenTask} /> : null}
             </PullToRefresh>
             <TaskSheet taskId={taskId} onClose={onCloseTask} />
         </Screen>

@@ -26,7 +26,7 @@ const frequencyFor: Record<RepeatFrequency, string> = {
     biweekly: "weekly",
     monthly: "monthly",
     bimonthly: "monthly",
-    yearly: "custom",
+    yearly: "monthly",
 };
 
 export function toScheduleBody(input: ScheduleInput): Record<string, unknown> {
