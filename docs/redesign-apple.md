@@ -2,7 +2,7 @@
 
 Branch: `feat/redesign-apple` (from `main` at `feed7f8`)
 Started: 2026-11-02
-Status: Phases 0–7 done (scaffold, foundations, API and auth, Hoy and task sheet, create, Calendario and Rutinas, Progreso and Notas, sharing, Actividad, Perfil). Next: phase 8 (PWA and push). Backend limits are tracked in `docs/backend-gaps.md`.
+Status: Phases 0–8 done (scaffold, foundations, API and auth, Hoy and task sheet, create, Calendario and Rutinas, Progreso and Notas, sharing, Actividad, Perfil, PWA and push). Next: phase 9 (adaptive layout and polish). Backend limits are tracked in `docs/backend-gaps.md`.
 
 This document is the source of truth for the new client. It records scope,
 design decisions, the API contract the client consumes, and the order of work.
@@ -623,8 +623,8 @@ and a manual check on a phone-width viewport and a desktop viewport.
 - [x] Actividad list, unread badge, mark read, deep links.
 
 ### Phase 8: PWA and push
-- [ ] Manifest, icons, service worker, push subscribe/unsubscribe/test, notification actions, `/tasks` deep links.
-- [ ] iOS Home Screen guidance.
+- [x] Manifest, icons, service worker, push subscribe/unsubscribe/test, notification actions, `/tasks` deep links.
+- [x] iOS Home Screen guidance.
 
 ### Phase 9: Adaptive layout and polish
 - [ ] Sidebar + split view ≥ 1024 px, keyboard shortcuts, focus management.
@@ -702,5 +702,7 @@ separate direction and this branch is independent of it.
 | 2026-11-02 | Owner switcher is a pill under the large title with a pull-down menu; no per-owner hue | The pill names the owner in text, so color adds nothing; a filled accent pill marks "viewing someone else". |
 | 2026-11-02 | Perfil is a pushed page (back button on phone), not a sheet | It holds its own sheets (account, password, invite); nesting sheets in a sheet hurts gesture clarity. |
 | 2026-11-02 | Revoking a share uses swipe + 5 s undo, like notes | The action is recoverable within the window; a confirm dialog would train people to tap through. |
+| 2026-11-02 | Service worker does not cache `/api`; it precaches the shell and serves `index.html` for navigations | Task data must be live; an offline write queue is a non-goal. |
+| 2026-11-02 | "Completar" from a notification calls `PUT /tasks/:id` from the service worker with the cookie session, then tells open windows to refetch | Matches the backend's `complete` action; on failure it opens the task instead. |
 | 2026-11-02 | Agua goal and "Para" owner choice only for Rutina | Water display and reminders read the schedule's `frequency_config`, which `POST /tasks` does not take; `POST /tasks` has no `owner_user_id`. |
 | 2026-11-02 | New sheet is a bottom sheet (phone) / right pane (desktop), not scaled from the "+" button | Vaul sheets always enter from an edge; enter and exit stay on the same path, which keeps spatial consistency. |
