@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { lazy, useMemo, useState } from "react";
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
 import { ChevronRight, Sun } from "lucide-react";
 import type { Schedule, TaskItem } from "@/api/schemas";
@@ -21,8 +21,10 @@ import { useSchedules } from "@/queries/schedules";
 import { useTodayTasks } from "@/queries/tasks";
 import { useCreateStore } from "@/stores/create";
 import { TaskRow, type WaterConfig } from "@/features/task/TaskRow";
-import { PingSheet } from "@/features/task/PingSheet";
-import { TaskSheet } from "@/features/task/TaskSheet";
+import { Deferred } from "@/components/ui/Deferred";
+
+const TaskSheet = lazy(() => import("@/features/task/TaskSheet").then((module) => ({ default: module.TaskSheet })));
+const PingSheet = lazy(() => import("@/features/task/PingSheet").then((module) => ({ default: module.PingSheet })));
 
 type TodayScreenProps = { taskId?: string; onOpenTask: (id: string) => void; onCloseTask: () => void };
 
@@ -65,7 +67,9 @@ export function TodayScreen({ taskId, onOpenTask, onCloseTask }: TodayScreenProp
                 ) : null}
                 {tasks && tasks.length > 0 ? <TodayList tasks={tasks} water={water} canEdit={access.canEdit} canPing={access.canPing} ownerName={access.name} onOpenTask={onOpenTask} /> : null}
             </PullToRefresh>
-            <TaskSheet taskId={taskId} onClose={onCloseTask} />
+            <Deferred when={Boolean(taskId)}>
+                <TaskSheet taskId={taskId} onClose={onCloseTask} />
+            </Deferred>
         </Screen>
     );
 }
@@ -174,7 +178,9 @@ export function TodayList({ tasks, water, canEdit, canPing = false, ownerName = 
                     </AnimatePresence>
                 </motion.section>
             ) : null}
-            <PingSheet task={pingTask} ownerName={ownerName} onClose={() => setPingTask(null)} />
+            <Deferred when={pingTask !== null}>
+                <PingSheet task={pingTask} ownerName={ownerName} onClose={() => setPingTask(null)} />
+            </Deferred>
         </LayoutGroup>
     );
 }

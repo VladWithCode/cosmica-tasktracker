@@ -26,6 +26,8 @@ function SidebarLink({ to, active, children }: { to: string; active: boolean; ch
     );
 }
 
+const shortcutLabel = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘K" : "Ctrl K";
+
 export function Sidebar() {
     const pathname = useRouterState({ select: (state) => state.location.pathname });
     const user = useSession();
@@ -44,7 +46,8 @@ export function Sidebar() {
                 className="mb-4 flex h-10 items-center gap-2 rounded-control bg-accent px-3 text-callout font-semibold text-on-accent active:opacity-80"
             >
                 <Plus aria-hidden className="size-5" strokeWidth={2.2} />
-                Nueva
+                <span className="flex-1 text-left">Nueva</span>
+                <kbd className="text-caption font-normal opacity-70">{shortcutLabel}</kbd>
             </button>
             <nav aria-label="Principal" className="flex flex-1 flex-col gap-1">
                 {primaryNav.map(({ to, label, icon: Icon }) => (

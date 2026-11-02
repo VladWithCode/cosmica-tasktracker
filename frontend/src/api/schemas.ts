@@ -1,25 +1,14 @@
-import { z } from "zod";
+import * as z from "zod/mini";
 
-const text = z
-    .string()
-    .nullish()
-    .transform((value) => value ?? "");
-const optionalText = z
-    .string()
-    .nullish()
-    .transform((value) => (value ? value : null));
-const flag = z
-    .boolean()
-    .nullish()
-    .transform((value) => value ?? false);
-const count = z
-    .number()
-    .nullish()
-    .transform((value) => value ?? 0);
-const optionalCount = z
-    .number()
-    .nullish()
-    .transform((value) => (value === undefined || value === null ? null : value));
+function map<S extends z.ZodMiniType, O>(schema: S, fn: (value: z.output<S>) => O) {
+    return z.pipe(schema, z.transform((value: z.output<S>) => fn(value)));
+}
+
+const text = map(z.nullish(z.string()), (value) => value ?? "");
+const optionalText = map(z.nullish(z.string()), (value) => (value ? value : null));
+const flag = map(z.nullish(z.boolean()), (value) => value ?? false);
+const count = map(z.nullish(z.number()), (value) => value ?? 0);
+const optionalCount = map(z.nullish(z.number()), (value) => (value === undefined || value === null ? null : value));
 
 export function clockFromWire(value: string | null | undefined): string | null {
     if (!value) return null;
@@ -34,46 +23,25 @@ export function dateFromWire(value: string | null | undefined): string | null {
     return date[1];
 }
 
-const clock = z
-    .string()
-    .nullish()
-    .transform((value) => clockFromWire(value));
-const isoDate = z
-    .string()
-    .nullish()
-    .transform((value) => dateFromWire(value));
+const clock = map(z.nullish(z.string()), (value) => clockFromWire(value));
+const isoDate = map(z.nullish(z.string()), (value) => dateFromWire(value));
 
 export const taskStatuses = ["pending", "in_progress", "completed", "skipped", "failed"] as const;
 export type TaskStatus = (typeof taskStatuses)[number];
-const taskStatus = z
-    .string()
-    .nullish()
-    .transform((value): TaskStatus => (taskStatuses as readonly string[]).includes(value ?? "") ? (value as TaskStatus) : "pending");
+const taskStatus = map(z.nullish(z.string()), (value): TaskStatus => (taskStatuses as readonly string[]).includes(value ?? "") ? (value as TaskStatus) : "pending");
 
 export type Priority = "urgent" | "medium";
-const priority = z
-    .string()
-    .nullish()
-    .transform((value): Priority => (value === "urgent" || value === "high" ? "urgent" : "medium"));
+const priority = map(z.nullish(z.string()), (value): Priority => (value === "urgent" || value === "high" ? "urgent" : "medium"));
 
 export const scheduleStatuses = ["active", "paused", "cancelled"] as const;
 export type ScheduleStatus = (typeof scheduleStatuses)[number];
-const scheduleStatus = z
-    .string()
-    .nullish()
-    .transform((value): ScheduleStatus => (scheduleStatuses as readonly string[]).includes(value ?? "") ? (value as ScheduleStatus) : "active");
+const scheduleStatus = map(z.nullish(z.string()), (value): ScheduleStatus => (scheduleStatuses as readonly string[]).includes(value ?? "") ? (value as ScheduleStatus) : "active");
 
 export const repeatFrequencies = ["daily", "weekly", "biweekly", "monthly", "bimonthly", "yearly"] as const;
 export type RepeatFrequency = (typeof repeatFrequencies)[number];
-const repeatFrequency = z
-    .string()
-    .nullish()
-    .transform((value): RepeatFrequency | null => (repeatFrequencies as readonly string[]).includes(value ?? "") ? (value as RepeatFrequency) : null);
+const repeatFrequency = map(z.nullish(z.string()), (value): RepeatFrequency | null => (repeatFrequencies as readonly string[]).includes(value ?? "") ? (value as RepeatFrequency) : null);
 
-const frequencyConfig = z
-    .record(z.string(), z.unknown())
-    .nullish()
-    .transform((value) => value ?? {});
+const frequencyConfig = map(z.nullish(z.record(z.string(), z.unknown())), (value) => value ?? {});
 
 export const userSchema = z.object({ id: z.string(), username: text, fullname: text, email: text, role: text });
 export type User = z.output<typeof userSchema>;
@@ -82,8 +50,7 @@ export const sessionSchema = z.object({ user: userSchema });
 
 export const profileSchema = z.object({ profile: userSchema });
 
-export const taskItemSchema = z
-    .object({
+export const taskItemSchema = map(z.object({
         id: z.string(),
         title: text,
         description: text,
@@ -97,8 +64,7 @@ export const taskItemSchema = z
         target_count: optionalCount,
         current_count: count,
         completed_at: optionalText,
-    })
-    .transform((task) => ({
+    }), (task) => ({
         id: task.id,
         title: task.title,
         description: task.description,
@@ -115,13 +81,10 @@ export const taskItemSchema = z
     }));
 export type TaskItem = z.output<typeof taskItemSchema>;
 
-export const dayTasksSchema = z
-    .object({ tasks: z.array(taskItemSchema).nullish(), date: text, owner_user_id: text })
-    .transform((data) => ({ tasks: data.tasks ?? [], date: data.date, ownerUserId: data.owner_user_id }));
+export const dayTasksSchema = map(z.object({ tasks: z.nullish(z.array(taskItemSchema)), date: text, owner_user_id: text }), (data) => ({ tasks: data.tasks ?? [], date: data.date, ownerUserId: data.owner_user_id }));
 export type DayTasks = z.output<typeof dayTasksSchema>;
 
-export const taskDetailSchema = z
-    .object({
+export const taskDetailSchema = map(z.object({
         id: z.string(),
         userId: text,
         scheduleTaskId: text,
@@ -147,8 +110,7 @@ export const taskDetailSchema = z
         category: text,
         canEdit: flag,
         canApplyToSchedule: flag,
-    })
-    .transform((task) => ({
+    }), (task) => ({
         id: task.id,
         userId: task.userId,
         scheduleId: task.scheduleTaskId,
@@ -178,8 +140,7 @@ export type TaskDetail = z.output<typeof taskDetailSchema>;
 
 export const taskDetailResponseSchema = z.object({ task: taskDetailSchema });
 
-const dayStatsSchema = z
-    .object({
+const dayStatsSchema = map(z.object({
         date: text,
         total: count,
         completed: count,
@@ -188,19 +149,16 @@ const dayStatsSchema = z
         failed: count,
         in_progress: count,
         percentage: count,
-    })
-    .transform(({ in_progress, ...day }) => ({ ...day, inProgress: in_progress }));
+    }),
+    ({ in_progress, ...day }) => ({ ...day, inProgress: in_progress }));
 export type DayStats = z.output<typeof dayStatsSchema>;
 
 export const progressResponseSchema = z.object({ progress: dayStatsSchema });
 
-export const historyResponseSchema = z
-    .object({ history: z.object({ from: text, to: text, days: z.array(dayStatsSchema).nullish() }) })
-    .transform(({ history }) => ({ from: history.from, to: history.to, days: history.days ?? [] }));
+export const historyResponseSchema = map(z.object({ history: z.object({ from: text, to: text, days: z.nullish(z.array(dayStatsSchema)) }) }), ({ history }) => ({ from: history.from, to: history.to, days: history.days ?? [] }));
 export type History = z.output<typeof historyResponseSchema>;
 
-export const metricsResponseSchema = z
-    .object({
+export const metricsResponseSchema = map(z.object({
         metrics: z.object({
             from: text,
             to: text,
@@ -214,11 +172,10 @@ export const metricsResponseSchema = z
             days_count: count,
             completions_count: count,
             active_days: count,
-            best_day: z.object({ date: text, percentage: count }).nullish(),
+            best_day: z.nullish(z.object({ date: text, percentage: count })),
             current_streak: count,
         }),
-    })
-    .transform(({ metrics }) => ({
+    }), ({ metrics }) => ({
         from: metrics.from,
         to: metrics.to,
         total: metrics.total,
@@ -236,8 +193,7 @@ export const metricsResponseSchema = z
     }));
 export type Metrics = z.output<typeof metricsResponseSchema>;
 
-export const scheduleSchema = z
-    .object({
+export const scheduleSchema = map(z.object({
         id: z.string(),
         userId: text,
         createdBy: text,
@@ -253,34 +209,24 @@ export const scheduleSchema = z
         required: flag,
         repeating: flag,
         repeatFrequency: repeatFrequency,
-        repeatWeekdays: z
-            .array(z.number())
-            .nullish()
-            .transform((value) => value ?? []),
+        repeatWeekdays: map(z.nullish(z.array(z.number())), (value) => value ?? []),
         repeatInterval: count,
         frequency: text,
         frequencyConfig: frequencyConfig,
         category: text,
         status: scheduleStatus,
         priority: priority,
-    })
-    .transform(({ required, ...schedule }) => ({ ...schedule, isRequired: schedule.isRequired || required }));
+    }), ({ required, ...schedule }) => ({ ...schedule, isRequired: schedule.isRequired || required }));
 export type Schedule = z.output<typeof scheduleSchema>;
 
-export const schedulesResponseSchema = z
-    .object({ schedules: z.array(scheduleSchema).nullish() })
-    .transform((data) => data.schedules ?? []);
-export const scheduleResponseSchema = z.object({ schedule: scheduleSchema }).transform((data) => data.schedule);
+export const schedulesResponseSchema = map(z.object({ schedules: z.nullish(z.array(scheduleSchema)) }), (data) => data.schedules ?? []);
+export const scheduleResponseSchema = map(z.object({ schedule: scheduleSchema }), (data) => data.schedule);
 
 export const sharingAccessLevels = ["view", "manage", "ping_only"] as const;
 export type SharingAccessLevel = (typeof sharingAccessLevels)[number];
-const accessLevel = z
-    .string()
-    .nullish()
-    .transform((value): SharingAccessLevel => (sharingAccessLevels as readonly string[]).includes(value ?? "") ? (value as SharingAccessLevel) : "view");
+const accessLevel = map(z.nullish(z.string()), (value): SharingAccessLevel => (sharingAccessLevels as readonly string[]).includes(value ?? "") ? (value as SharingAccessLevel) : "view");
 
-export const grantSchema = z
-    .object({
+export const grantSchema = map(z.object({
         id: z.string(),
         owner_user_id: text,
         grantee_user_id: text,
@@ -294,8 +240,7 @@ export const grantSchema = z
         grantee_username: text,
         grantee_fullname: text,
         created_at: text,
-    })
-    .transform((grant) => ({
+    }), (grant) => ({
         id: grant.id,
         ownerUserId: grant.owner_user_id,
         granteeUserId: grant.grantee_user_id,
@@ -310,17 +255,14 @@ export const grantSchema = z
     }));
 export type Grant = z.output<typeof grantSchema>;
 
-export const grantsResponseSchema = z.object({ grants: z.array(grantSchema).nullish() }).transform((data) => data.grants ?? []);
-export const grantResponseSchema = z.object({ grant: grantSchema }).transform((data) => data.grant);
+export const grantsResponseSchema = map(z.object({ grants: z.nullish(z.array(grantSchema)) }), (data) => data.grants ?? []);
+export const grantResponseSchema = map(z.object({ grant: grantSchema }), (data) => data.grant);
 
 export const sharingUserSchema = z.object({ id: z.string(), username: text, fullname: text, email: text });
 export type SharingUser = z.output<typeof sharingUserSchema>;
-export const sharingUsersResponseSchema = z
-    .object({ users: z.array(sharingUserSchema).nullish() })
-    .transform((data) => data.users ?? []);
+export const sharingUsersResponseSchema = map(z.object({ users: z.nullish(z.array(sharingUserSchema)) }), (data) => data.users ?? []);
 
-export const invitationSchema = z
-    .object({
+export const invitationSchema = map(z.object({
         id: z.string(),
         grant_id: text,
         owner_user_id: text,
@@ -329,8 +271,7 @@ export const invitationSchema = z
         access_level: accessLevel,
         read_at: optionalText,
         created_at: text,
-    })
-    .transform((item) => ({
+    }), (item) => ({
         id: item.id,
         grantId: item.grant_id,
         ownerUserId: item.owner_user_id,
@@ -340,12 +281,9 @@ export const invitationSchema = z
         createdAt: item.created_at,
     }));
 export type Invitation = z.output<typeof invitationSchema>;
-export const invitationsResponseSchema = z
-    .object({ invitations: z.array(invitationSchema).nullish() })
-    .transform((data) => data.invitations ?? []);
+export const invitationsResponseSchema = map(z.object({ invitations: z.nullish(z.array(invitationSchema)) }), (data) => data.invitations ?? []);
 
-export const inboxItemSchema = z
-    .object({
+export const inboxItemSchema = map(z.object({
         id: z.string(),
         task_id: text,
         task_title: text,
@@ -355,8 +293,7 @@ export const inboxItemSchema = z
         message: text,
         created_at: text,
         read_at: optionalText,
-    })
-    .transform((item) => ({
+    }), (item) => ({
         id: item.id,
         taskId: item.task_id,
         taskTitle: item.task_title,
@@ -367,28 +304,20 @@ export const inboxItemSchema = z
         readAt: item.read_at,
     }));
 export type InboxItem = z.output<typeof inboxItemSchema>;
-export const inboxResponseSchema = z.object({ items: z.array(inboxItemSchema).nullish() }).transform((data) => data.items ?? []);
+export const inboxResponseSchema = map(z.object({ items: z.nullish(z.array(inboxItemSchema)) }), (data) => data.items ?? []);
 
-export const noteSchema = z
-    .object({ id: z.string(), user_id: text, content: text, created_at: text, updated_at: text })
-    .transform((note) => ({
+export const noteSchema = map(z.object({ id: z.string(), user_id: text, content: text, created_at: text, updated_at: text }), (note) => ({
         id: note.id,
         content: note.content,
         createdAt: note.created_at,
         updatedAt: note.updated_at,
     }));
 export type Note = z.output<typeof noteSchema>;
-export const notesResponseSchema = z
-    .object({ notes: z.array(noteSchema).nullish(), date: text })
-    .transform((data) => ({ notes: data.notes ?? [], date: data.date }));
-export const noteResponseSchema = z.object({ note: noteSchema }).transform((data) => data.note);
-export const notesHistoryResponseSchema = z
-    .object({
-        history: z.object({ from: text, to: text, days: z.array(z.object({ date: text, total: count })).nullish() }),
-    })
-    .transform(({ history }) => ({ from: history.from, to: history.to, days: history.days ?? [] }));
+export const notesResponseSchema = map(z.object({ notes: z.nullish(z.array(noteSchema)), date: text }), (data) => ({ notes: data.notes ?? [], date: data.date }));
+export const noteResponseSchema = map(z.object({ note: noteSchema }), (data) => data.note);
+export const notesHistoryResponseSchema = map(z.object({
+        history: z.object({ from: text, to: text, days: z.nullish(z.array(z.object({ date: text, total: count }))) }),
+    }), ({ history }) => ({ from: history.from, to: history.to, days: history.days ?? [] }));
 export type NotesHistory = z.output<typeof notesHistoryResponseSchema>;
 
-export const vapidKeySchema = z
-    .object({ publicKey: z.string().optional(), public_key: z.string().optional(), key: z.string().optional() })
-    .transform((data) => data.publicKey ?? data.public_key ?? data.key ?? "");
+export const vapidKeySchema = map(z.object({ publicKey: z.optional(z.string()), public_key: z.optional(z.string()), key: z.optional(z.string()) }), (data) => data.publicKey ?? data.public_key ?? data.key ?? "");

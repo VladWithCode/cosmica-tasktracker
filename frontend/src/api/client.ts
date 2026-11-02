@@ -1,5 +1,3 @@
-import type { z } from "zod";
-
 const AUTH_PATHS = ["/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/logout", "/api/v1/auth/refresh"];
 
 export class ApiError extends Error {
@@ -28,11 +26,15 @@ type Envelope = { data?: unknown; error?: unknown; message?: unknown };
 
 type Query = Record<string, string | number | undefined | null>;
 
+export type Schema<T> = {
+    safeParse: (data: unknown) => { success: true; data: T } | { success: false; error: unknown };
+};
+
 export type RequestOptions<T> = {
     method?: "GET" | "POST" | "PUT" | "DELETE";
     body?: unknown;
     query?: Query;
-    schema?: z.ZodType<T>;
+    schema?: Schema<T>;
     signal?: AbortSignal;
 };
 

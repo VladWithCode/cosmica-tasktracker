@@ -65,7 +65,9 @@ export function CompletionColumns({ days, label }: { days: DayStats[]; label: st
             <div aria-hidden className="ml-10 flex gap-0.5 pt-1.5">
                 {days.map((day, index) => {
                     const date = fromISODate(day.date);
-                    const show = !dense || index === 0 || index === days.length - 1 || date.getDate() % 5 === 0;
+                    const remainder = date.getDate() % 5;
+                    const edgeFits = (index === 0 && 5 - remainder >= 2) || (index === days.length - 1 && remainder >= 2);
+                    const show = !dense || remainder === 0 || edgeFits;
                     return (
                         <span key={day.date} className="min-w-0 flex-1 text-center text-caption text-label-tertiary">
                             {show ? (dense ? date.getDate() : formatDay(day.date, "EEEEE")) : ""}

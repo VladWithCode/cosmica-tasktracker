@@ -1,6 +1,6 @@
 import type { RepeatFrequency, Schedule } from "@/api/schemas";
 import type { CreateValues } from "@/features/create/createForm";
-import { weekdayOptions } from "@/features/create/createForm";
+import { weekdayOptions } from "./repeat";
 import { formatClock, todayISO } from "./date";
 import { formatDuration } from "./tasks";
 
