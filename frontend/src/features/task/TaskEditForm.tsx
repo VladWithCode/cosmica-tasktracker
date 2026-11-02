@@ -155,7 +155,7 @@ export function TaskEditForm({ task, saving, onCancel, onSave }: TaskEditFormPro
                 </>
             ) : null}
 
-            <div className="flex gap-3 px-4 pt-3">
+            <div className="flex gap-3 px-4 pt-8">
                 <Button type="button" variant="tinted" size="lg" className="flex-1" onClick={onCancel}>
                     Cancelar
                 </Button>

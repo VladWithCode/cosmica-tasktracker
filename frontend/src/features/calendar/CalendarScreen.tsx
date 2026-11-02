@@ -59,7 +59,7 @@ export function CalendarScreen({ date, taskId, onSelectDate, onOpenTask, onClose
         >
             <DayPicker date={date} monthOpen={monthOpen} onSelect={onSelectDate} marks={marks} />
 
-            <h2 className="px-8 pt-4 pb-1 text-headline">{formatDay(date)}</h2>
+            <h2 className="px-8 pt-6 pb-3 text-headline">{formatDay(date)}</h2>
             <PullToRefresh onRefresh={() => day.refetch()}>
                 {day.isPending ? (
                     <div className="flex flex-col gap-3 px-4 pt-2">

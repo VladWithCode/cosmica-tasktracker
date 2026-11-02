@@ -224,7 +224,7 @@ export function TaskForm({ defaultValues, mode, owners = [], pending, error, sub
             ) : null}
 
             {readOnly ? null : (
-                <div className="px-4 pt-3">
+                <div className="px-4 pt-8">
                     <Button type="submit" size="lg" loading={pending}>
                         {submitLabel ?? (kind === "once" ? "Crear tarea" : "Crear rutina")}
                     </Button>

@@ -192,7 +192,7 @@ function DetailView({ task, onEdit, onDeleted }: { task: TaskDetail; onEdit: () 
             </GroupedSection>
 
             {canEdit ? (
-                <div className="flex flex-col gap-3 px-4 pt-3">
+                <div className="flex flex-col gap-3 px-4 pt-8">
                     <Button variant="tinted" size="lg" onClick={onEdit}>
                         Editar
                     </Button>

@@ -139,7 +139,7 @@ export function TodayList({ tasks, water, canEdit, canPing = false, ownerName = 
         <LayoutGroup>
             <SummaryCard tasks={tasks} />
             {sections.map((section) => (
-                <motion.section key={section.id} layout="position" transition={rowTransition} className="px-4 pt-5" aria-labelledby={`section-${section.id}`}>
+                <motion.section key={section.id} layout="position" transition={rowTransition} className="px-4 pt-7" aria-labelledby={`section-${section.id}`}>
                     <h2 id={`section-${section.id}`} className="px-4 pb-1.5 text-footnote font-medium text-label-secondary">
                         {section.title}
                     </h2>
@@ -152,7 +152,7 @@ export function TodayList({ tasks, water, canEdit, canPing = false, ownerName = 
                 <p className="px-8 pt-6 text-center text-callout text-label-secondary">No quedan tareas pendientes.</p>
             ) : null}
             {done.length > 0 ? (
-                <motion.section layout="position" transition={rowTransition} className="px-4 pt-5">
+                <motion.section layout="position" transition={rowTransition} className="px-4 pt-7">
                     <button
                         type="button"
                         aria-expanded={showDone}

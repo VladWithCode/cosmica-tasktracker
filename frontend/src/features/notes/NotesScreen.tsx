@@ -53,7 +53,7 @@ export function NotesScreen({ date, onSelectDate }: { date: string; onSelectDate
             }
         >
             <DayPicker date={date} monthOpen={monthOpen} onSelect={onSelectDate} dotDays={dotDays} />
-            <h2 className="px-8 pt-4 pb-1 text-headline">{formatDay(date)}</h2>
+            <h2 className="px-8 pt-6 pb-3 text-headline">{formatDay(date)}</h2>
             <PullToRefresh onRefresh={() => notes.refetch()}>
                 {notes.isPending ? (
                     <div className="flex flex-col gap-3 px-4 pt-2">

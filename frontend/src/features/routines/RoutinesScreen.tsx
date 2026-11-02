@@ -59,7 +59,7 @@ function RoutineGroup({ title, schedules, readOnly }: { title: string; schedules
     const reduceMotion = useReducedMotion();
     if (schedules.length === 0) return null;
     return (
-        <motion.section layout="position" transition={reduceMotion ? fade : spring.default} className="px-4 pt-5">
+        <motion.section layout="position" transition={reduceMotion ? fade : spring.default} className="px-4 pt-7 first:pt-2">
             <h2 className="px-4 pb-1.5 text-footnote font-medium text-label-secondary">{title}</h2>
             <ul className="overflow-hidden rounded-card bg-bg-elevated">
                 <AnimatePresence initial={false}>

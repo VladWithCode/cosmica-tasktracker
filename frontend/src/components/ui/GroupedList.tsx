@@ -5,10 +5,10 @@ import { Pressable } from "./Pressable";
 
 export function GroupedSection({ title, footer, children, className }: { title?: string; footer?: ReactNode; children: ReactNode; className?: string }) {
     return (
-        <section className={cn("px-4 py-3", className)}>
-            {title ? <h2 className="px-4 pb-1.5 text-footnote font-medium text-label-secondary">{title}</h2> : null}
+        <section className={cn("px-4 pt-7 first:pt-2", className)}>
+            {title ? <h2 className="px-4 pb-2 text-footnote font-medium text-label-secondary">{title}</h2> : null}
             <div className="overflow-hidden rounded-card bg-bg-elevated [&>*+*]:border-t [&>*+*]:border-separator">{children}</div>
-            {footer ? <div className="px-4 pt-1.5 text-footnote text-label-secondary">{footer}</div> : null}
+            {footer ? <div className="px-4 pt-2 text-footnote text-label-secondary">{footer}</div> : null}
         </section>
     );
 }

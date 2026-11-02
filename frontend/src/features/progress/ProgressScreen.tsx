@@ -24,7 +24,7 @@ export function ProgressScreen({ range, onRangeChange }: { range: RangeId; onRan
 
     return (
         <Screen title="Progreso">
-            <div className="px-4 pt-1 pb-3">
+            <div className="px-4 pb-6">
                 <SegmentedControl label="Periodo" value={range} options={rangeOptions} onChange={onRangeChange} />
                 {access.isSelf ? null : (
                     <p className="px-1 pt-2 text-footnote text-label-secondary">Progreso muestra solo tus datos; el de otras personas aún no está disponible.</p>
@@ -79,7 +79,7 @@ function ProgressContent({ metrics, days, range, from }: { metrics: Metrics; day
     ];
 
     return (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-9">
             <div className="grid grid-cols-2 gap-3 px-4">
                 <StatTile label="Completado" value={`${Math.round(metrics.percentage)}%`} detail={`${metrics.completed} de ${metrics.total} tareas`} />
                 <StatTile label="Racha actual" value={`${metrics.currentStreak}`} detail={metrics.currentStreak === 1 ? "día" : "días"} />
@@ -99,7 +99,7 @@ function ProgressContent({ metrics, days, range, from }: { metrics: Metrics; day
                     ) : (
                         <CompletionColumns days={days} label={`Porcentaje completado por día, ${rangeLabel}`} />
                     )}
-                    <div className="px-4 pt-3">
+                    <div className="px-4 pt-4">
                         <button type="button" aria-expanded={showTable} onClick={() => setShowTable((value) => !value)} className="min-h-11 text-footnote font-semibold text-accent">
                             {showTable ? "Ocultar tabla" : "Ver como tabla"}
                         </button>

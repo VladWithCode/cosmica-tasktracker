@@ -103,7 +103,7 @@ function InviteForm({ onDone }: { onDone: () => void }) {
                                 : errorMessage(create.error)}
                         </p>
                     ) : null}
-                    <div className="px-4 pt-3">
+                    <div className="px-4 pt-8">
                         <Button
                             size="lg"
                             loading={create.isPending}

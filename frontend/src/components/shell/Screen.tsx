@@ -15,18 +15,18 @@ type ScreenProps = {
     className?: string;
 };
 
-const BAR_HEIGHT = 44;
-
 export function Screen({ title, titleAccessory, leading, actions, showAvatar = true, largeTitle = true, children, className }: ScreenProps) {
     const titleRef = useRef<HTMLHeadingElement>(null);
+    const headerRef = useRef<HTMLElement>(null);
     const [collapsed, setCollapsed] = useState(!largeTitle);
 
     useEffect(() => {
         const element = titleRef.current;
         if (!element || !largeTitle) return;
+        const barHeight = headerRef.current?.offsetHeight ?? 56;
         const observer = new IntersectionObserver(
             ([entry]) => setCollapsed(!(entry?.isIntersecting ?? true)),
-            { rootMargin: `-${BAR_HEIGHT}px 0px 0px 0px`, threshold: 0 },
+            { rootMargin: `-${barHeight}px 0px 0px 0px`, threshold: 0 },
         );
         observer.observe(element);
         return () => observer.disconnect();
@@ -38,7 +38,7 @@ export function Screen({ title, titleAccessory, leading, actions, showAvatar = t
 
     return (
         <div className={cn("mx-auto w-full max-w-3xl", className)}>
-            <header className={cn("sticky top-0 z-30 pt-safe transition-[background-color]", collapsed && "material-bar")}>
+            <header ref={headerRef} className={cn("sticky top-0 z-30 pt-bar transition-[background-color]", collapsed && "material-bar")}>
                 <div className="relative flex h-11 items-center justify-between px-2">
                     <div className="flex min-w-11 items-center">{leading}</div>
                     <motion.span
@@ -64,7 +64,7 @@ export function Screen({ title, titleAccessory, leading, actions, showAvatar = t
                 />
             </header>
             {largeTitle ? (
-                <div className="px-4 pb-2">
+                <div className="flex flex-col gap-1 px-4 pt-2 pb-5">
                     <h1 ref={titleRef} className="text-large-title">
                         {title}
                     </h1>

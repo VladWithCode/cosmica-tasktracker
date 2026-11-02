@@ -18,7 +18,7 @@ function PingForm({ task, ownerName, onDone }: { task: Pick<TaskItem, "id" | "ti
     return (
         <form
             noValidate
-            className="flex flex-col gap-3 px-4"
+            className="flex flex-col gap-4 px-4"
             onSubmit={(event) => {
                 event.preventDefault();
                 ping.mutate({ id: task.id, message: message.trim() }, { onSuccess: onDone });

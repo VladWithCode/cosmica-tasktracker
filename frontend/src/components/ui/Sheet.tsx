@@ -34,14 +34,14 @@ export function Sheet({ open, onOpenChange, title, description, headerAction, ch
                             : "inset-x-0 bottom-0 max-h-[94dvh] rounded-t-sheet pb-safe",
                     )}
                 >
-                    {desktop ? null : <Drawer.Handle className="mt-2 !h-1.5 !w-9 !bg-label-tertiary/50" />}
-                    <header className="flex items-center gap-2 px-4 pt-3 pb-2">
+                    {desktop ? null : <Drawer.Handle className="mt-2.5 !h-1.5 !w-9 !bg-label-tertiary/50" />}
+                    <header className={cn("flex items-center gap-2 px-4 pb-3", desktop ? "pt-5" : "pt-4")}>
                         <Drawer.Title className="min-w-0 flex-1 truncate text-headline">{title}</Drawer.Title>
                         {headerAction}
                         <Drawer.Close className="-mr-2 min-h-11 px-2 text-callout font-semibold text-accent">Cerrar</Drawer.Close>
                     </header>
                     {description ? <Drawer.Description className="sr-only">{description}</Drawer.Description> : null}
-                    <div className="flex-1 overflow-y-auto overscroll-contain pb-6">{children}</div>
+                    <div className="flex-1 overflow-y-auto overscroll-contain pt-2 pb-10">{children}</div>
                 </Drawer.Content>
             </Drawer.Portal>
         </Drawer.Root>

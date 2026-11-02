@@ -74,6 +74,7 @@
 
 @layer base {
     :root {
+        --bar-top: max(env(safe-area-inset-top), 0.75rem);
         color-scheme: light dark;
         font-family: var(--font-sans);
         font-size: 100%;
@@ -142,8 +143,22 @@
         padding-top: env(safe-area-inset-top);
     }
 
+    .pt-bar {
+        padding-top: var(--bar-top);
+    }
+
+    .top-below-bar {
+        top: calc(var(--bar-top) + 2.75rem);
+    }
+
     .pb-safe {
         padding-bottom: env(safe-area-inset-bottom);
+    }
+}
+
+@media (min-width: 1024px) {
+    :root {
+        --bar-top: 1.5rem;
     }
 }
 

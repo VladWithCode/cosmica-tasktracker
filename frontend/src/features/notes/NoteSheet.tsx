@@ -51,7 +51,7 @@ function NoteEditor({ target, onDone }: { target: Exclude<NoteTarget, null>; onD
                 event.preventDefault();
                 save();
             }}
-            className="flex flex-col gap-3 px-4"
+            className="flex flex-col gap-4 px-4"
         >
             <label htmlFor="note-content" className="sr-only">
                 Nota

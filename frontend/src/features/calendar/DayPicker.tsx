@@ -36,7 +36,7 @@ type DayPickerProps = {
 export function DayPicker({ date, monthOpen, onSelect, marks, dotDays }: DayPickerProps) {
     const reduceMotion = useReducedMotion();
     return (
-        <div className="material-bar sticky top-[calc(env(safe-area-inset-top)+2.75rem)] z-20 pb-1">
+        <div className="material-bar top-below-bar sticky z-20 py-1">
             <AnimatePresence initial={false} mode="popLayout">
                 {monthOpen ? (
                     <motion.div
