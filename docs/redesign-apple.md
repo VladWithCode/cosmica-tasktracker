@@ -2,7 +2,7 @@
 
 Branch: `feat/redesign-apple` (from `main` at `feed7f8`)
 Started: 2026-11-02
-Status: Phases 0–3 done (scaffold, foundations, API and auth, Hoy and task sheet). Next: phase 4 (create).
+Status: Phases 0–4 done (scaffold, foundations, API and auth, Hoy and task sheet, create). Next: phase 5 (Calendario and Rutinas).
 
 This document is the source of truth for the new client. It records scope,
 design decisions, the API contract the client consumes, and the order of work.
@@ -605,7 +605,7 @@ and a manual check on a phone-width viewport and a desktop viewport.
 - [x] Task sheet: read, status, edit with "Solo hoy / Toda la rutina", notes, delete (one-off tasks only).
 
 ### Phase 4: Create
-- [ ] New sheet with Una vez / Rutina, progressive fields, Agua preset, owner selection.
+- [x] New sheet with Una vez / Rutina, progressive fields, Agua preset, owner selection.
 
 ### Phase 5: Calendario and Rutinas
 - [ ] Week strip with projection, month grid, day list, history dots.
@@ -690,3 +690,5 @@ separate direction and this branch is independent of it.
 | 2026-11-02 | Vaul keeps its own CSS easing for sheet open/close | Vaul already hands off drag velocity and snaps with momentum; replacing its animation engine is not worth the cost. |
 | 2026-11-02 | Dev proxy strips the `Origin` header | Browser talks same-origin to Vite; backend CORS rejected `127.0.0.1:3000`. Production is unaffected (Caddy serves both). |
 | 2026-11-02 | Counter updates run serially per task (mutation scope) | Fast taps on + must reach the server in order. |
+| 2026-11-02 | Agua goal and "Para" owner choice only for Rutina | Water display and reminders read the schedule's `frequency_config`, which `POST /tasks` does not take; `POST /tasks` has no `owner_user_id`. |
+| 2026-11-02 | New sheet is a bottom sheet (phone) / right pane (desktop), not scaled from the "+" button | Vaul sheets always enter from an edge; enter and exit stay on the same path, which keeps spatial consistency. |
