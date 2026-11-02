@@ -111,8 +111,8 @@ func (s *TaskScheduler) checkAndNotifyTasks() {
 			URL:                "/tasks",
 			TaskID:             t.id,
 			Actions: []NotificationAction{
-				{Action: "view", Title: "View Task"},
-				{Action: "complete", Title: "Mark Complete"},
+				{Action: "view", Title: "Ver tarea"},
+				{Action: "complete", Title: "Completar"},
 			},
 		}
 
