@@ -2,7 +2,7 @@
 
 Branch: `feat/redesign-apple` (from `main` at `feed7f8`)
 Started: 2026-11-02
-Status: Phases 0–5 done (scaffold, foundations, API and auth, Hoy and task sheet, create, Calendario and Rutinas). Next: phase 6 (Progreso and Notas). Backend limits are tracked in `docs/backend-gaps.md`.
+Status: Phases 0–6 done (scaffold, foundations, API and auth, Hoy and task sheet, create, Calendario and Rutinas, Progreso and Notas). Next: phase 7 (sharing, Actividad, Perfil). Backend limits are tracked in `docs/backend-gaps.md`.
 
 This document is the source of truth for the new client. It records scope,
 design decisions, the API contract the client consumes, and the order of work.
@@ -612,8 +612,8 @@ and a manual check on a phone-width viewport and a desktop viewport.
 - [x] Routines list, pause/resume swipe, routine detail edit and cancel.
 
 ### Phase 6: Progreso and Notas
-- [ ] Metrics, bars, heatmap (SVG), range control.
-- [ ] Notes per day, quick note, edit, delete with undo.
+- [x] Metrics, bars, heatmap (SVG), range control.
+- [x] Notes per day, quick note, edit, delete with undo.
 
 ### Phase 7: Sharing, Actividad, Perfil
 - [ ] Owner switcher and owner pill across Hoy, Calendario, Rutinas; permission-gated actions; ping sheet.
@@ -694,5 +694,8 @@ separate direction and this branch is independent of it.
 | 2026-11-02 | Rutinas hides cancelled and one-off schedules | `GET /schedules` returns every schedule, including cancelled ones and the schedule behind each one-off task. |
 | 2026-11-02 | Shared owners' routines are read-only | Backend allows edit, pause and cancel only for the owner (gap 3 in `docs/backend-gaps.md`). |
 | 2026-11-02 | Calendar dots only for the signed-in user | `/tasks/history` has no `owner_user_id` (gap 4). |
+| 2026-11-02 | Progreso status breakdown as labeled count tiles, not a segmented bar | The dataviz validator fails the status colors as a categorical set (danger vs warning ΔE 2.9 under protanopia). Counts with icons and labels need no color separation. |
+| 2026-11-02 | Charts are HTML/CSS, not SVG: single-series columns (7 and 30 days) and a one-hue heatmap (3 months, `color-mix` steps of the accent) | One series needs no legend; the heatmap ramp is monotonic in lightness by construction in both themes. Every mark has a hover/focus tooltip and a table view. |
+| 2026-11-02 | Notes add button only on today | `POST /notes` has no date (gap 7). |
 | 2026-11-02 | Agua goal and "Para" owner choice only for Rutina | Water display and reminders read the schedule's `frequency_config`, which `POST /tasks` does not take; `POST /tasks` has no `owner_user_id`. |
 | 2026-11-02 | New sheet is a bottom sheet (phone) / right pane (desktop), not scaled from the "+" button | Vaul sheets always enter from an edge; enter and exit stay on the same path, which keeps spatial consistency. |
