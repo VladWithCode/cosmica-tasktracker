@@ -12,15 +12,15 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { SwipeRow } from "@/components/ui/SwipeRow";
 import { fade, spring } from "@/lib/motion";
 import { compareSchedules, goalSummary, isOneOffSchedule, repeatSummary } from "@/lib/schedules";
+import { useOpenCreate } from "@/hooks/useCreateContext";
+import { useOwnerAccess } from "@/queries/owner";
 import { useSchedules, useSetSchedulePaused } from "@/queries/schedules";
-import { useCreateStore } from "@/stores/create";
-import { useOwnerStore } from "@/stores/owner";
 
 export function RoutinesScreen() {
-    const ownerId = useOwnerStore((state) => state.ownerId);
-    const schedules = useSchedules(ownerId);
-    const openCreate = useCreateStore((state) => state.openCreate);
-    const readOnly = ownerId !== null;
+    const access = useOwnerAccess();
+    const schedules = useSchedules(access.ownerId);
+    const openCreate = useOpenCreate();
+    const readOnly = !access.canEdit;
     const routines = (schedules.data ?? []).filter((schedule) => schedule.status !== "cancelled" && !isOneOffSchedule(schedule))
         .sort(compareSchedules);
     const active = routines.filter((schedule) => schedule.status === "active");
@@ -41,11 +41,11 @@ export function RoutinesScreen() {
                         icon={Repeat}
                         title="Sin rutinas"
                         message="Las rutinas se repiten y crean tus tareas de cada día."
-                        action={readOnly ? undefined : <Button onClick={() => openCreate()}>Nueva rutina</Button>}
+                        action={access.canCreate ? <Button onClick={openCreate}>Nueva rutina</Button> : undefined}
                     />
                 ) : null}
                 {readOnly && routines.length > 0 ? (
-                    <p className="px-8 pb-1 text-footnote text-label-secondary">Solo lectura: las rutinas compartidas no se pueden editar desde aquí.</p>
+                    <p className="px-8 pb-1 text-footnote text-label-secondary">Solo lectura: para editar estas rutinas necesitas permiso de gestión.</p>
                 ) : null}
                 <RoutineGroup title="Activas" schedules={active} readOnly={readOnly} />
                 <RoutineGroup title="En pausa" schedules={paused} readOnly={readOnly} />

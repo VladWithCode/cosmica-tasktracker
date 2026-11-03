@@ -52,9 +52,9 @@ export function TaskForm({ defaultValues, mode, owners = [], pending, error, sub
         defaultValues,
     });
     const { errors } = form.formState;
-    const [kind, timeMode, repeat, goal, hasEndDate, ownerId] = useWatch({
+    const [kind, timeMode, repeat, goal, hasEndDate] = useWatch({
         control: form.control,
-        name: ["kind", "timeMode", "repeat", "goal", "hasEndDate", "ownerId"],
+        name: ["kind", "timeMode", "repeat", "goal", "hasEndDate"],
     });
 
     useEffect(() => {
@@ -62,10 +62,8 @@ export function TaskForm({ defaultValues, mode, owners = [], pending, error, sub
     }, [goal, form]);
 
     useEffect(() => {
-        if (kind !== "once") return;
-        if (ownerId) form.setValue("ownerId", "");
-        if (goal === "water") form.setValue("goal", "count");
-    }, [kind, ownerId, goal, form]);
+        if (kind === "once" && goal === "water") form.setValue("goal", "count");
+    }, [kind, goal, form]);
 
     const submit = form.handleSubmit(onSubmit);
     const interval = intervalUnits[repeat];
@@ -196,8 +194,8 @@ export function TaskForm({ defaultValues, mode, owners = [], pending, error, sub
 
             <MoreOptions control={form.control} register={form.register} />
 
-            {mode === "create" && kind === "routine" && owners.length > 0 ? (
-                <GroupedSection title="Para" footer="Puedes crear rutinas para quien te dio permiso de gestionar sus tareas.">
+            {mode === "create" && owners.length > 0 ? (
+                <GroupedSection title="Para" footer="Puedes crear tareas y rutinas para quien te dio permiso de gestionar sus tareas.">
                     <Controller
                         control={form.control}
                         name="ownerId"

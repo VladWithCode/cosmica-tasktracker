@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Ban, Check, CircleDashed, CircleX, ChartNoAxesColumn } from "lucide-react";
+import { Ban, Check, CircleDashed, CircleX, ChartNoAxesColumn, EyeOff } from "lucide-react";
 import type { DayStats, Metrics } from "@/api/schemas";
 import { Screen } from "@/components/shell/Screen";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -9,16 +9,16 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { cn } from "@/lib/cn";
 import { formatDay } from "@/lib/date";
 import { useHistory, useMetrics } from "@/queries/history";
-import { useOwnerAccess } from "@/queries/owner";
+import { useOwnerAccess, type OwnerAccess } from "@/queries/owner";
 import { CompletionColumns } from "./CompletionColumns";
 import { CompletionHeatmap } from "./CompletionHeatmap";
-import { rangeFor, rangeOptions, type RangeId } from "./ranges";
+import { highDismissal, rangeFor, rangeOptions, type RangeId } from "./ranges";
 
 export function ProgressScreen({ range, onRangeChange }: { range: RangeId; onRangeChange: (range: RangeId) => void }) {
     const access = useOwnerAccess();
     const { from, to } = rangeFor(range);
-    const metrics = useMetrics(from, to);
-    const history = useHistory(from, to);
+    const metrics = useMetrics(access.ownerId, from, to);
+    const history = useHistory(access.ownerId, from, to);
     const refetching = metrics.isPlaceholderData || history.isPlaceholderData;
     const error = metrics.error ?? history.error;
 
@@ -26,9 +26,7 @@ export function ProgressScreen({ range, onRangeChange }: { range: RangeId; onRan
         <Screen title="Progreso">
             <div className="px-4 pb-6">
                 <SegmentedControl label="Periodo" value={range} options={rangeOptions} onChange={onRangeChange} />
-                {access.isSelf ? null : (
-                    <p className="px-1 pt-2 text-footnote text-label-secondary">Progreso muestra solo tus datos; el de otras personas aún no está disponible.</p>
-                )}
+                {access.isSelf ? null : <p className="px-1 pt-2 text-footnote text-label-secondary">Progreso de {access.name ?? "otra persona"}.</p>}
             </div>
             {error ? <ErrorState error={error} onRetry={() => void Promise.all([metrics.refetch(), history.refetch()])} /> : null}
             {!error && (!metrics.data || !history.data) ? <ProgressSkeleton /> : null}
@@ -37,7 +35,7 @@ export function ProgressScreen({ range, onRangeChange }: { range: RangeId; onRan
                     {metrics.data.total === 0 ? (
                         <EmptyState icon={ChartNoAxesColumn} title="Aún sin datos" message="Completa tareas y aquí verás tu avance." />
                     ) : (
-                        <ProgressContent metrics={metrics.data} days={history.data.days} range={range} from={from} />
+                        <ProgressContent metrics={metrics.data} days={history.data.days} range={range} from={from} access={access} />
                     )}
                 </div>
             ) : null}
@@ -67,7 +65,9 @@ function StatTile({ label, value, detail }: { label: string; value: string; deta
     );
 }
 
-function ProgressContent({ metrics, days, range, from }: { metrics: Metrics; days: DayStats[]; range: RangeId; from: string }) {
+type ProgressContentProps = { metrics: Metrics; days: DayStats[]; range: RangeId; from: string; access: OwnerAccess };
+
+function ProgressContent({ metrics, days, range, from, access }: ProgressContentProps) {
     const [showTable, setShowTable] = useState(false);
     const rangeLabel = rangeOptions.find((option) => option.value === range)?.label ?? "";
     const pending = metrics.pending + metrics.inProgress;
@@ -75,6 +75,7 @@ function ProgressContent({ metrics, days, range, from }: { metrics: Metrics; day
         { label: "Completadas", value: metrics.completed, icon: Check, iconClass: "text-success" },
         { label: "Omitidas", value: metrics.skipped, icon: Ban, iconClass: "text-label-secondary" },
         { label: "Fallidas", value: metrics.failed, icon: CircleX, iconClass: "text-danger" },
+        { label: "Descartadas", value: metrics.dismissed, icon: EyeOff, iconClass: "text-dismissed" },
         { label: "Pendientes", value: pending, icon: CircleDashed, iconClass: "text-warning" },
     ];
 
@@ -90,6 +91,8 @@ function ProgressContent({ metrics, days, range, from }: { metrics: Metrics; day
                     detail={metrics.bestDay ? formatDay(metrics.bestDay.date, "EEE d MMM") : undefined}
                 />
             </div>
+
+            {highDismissal(metrics) ? <DismissalAdvice rate={metrics.dismissalRate} access={access} /> : null}
 
             <section className="flex flex-col gap-3">
                 <h2 className="px-8 text-headline">Completado por día</h2>
@@ -126,6 +129,25 @@ function ProgressContent({ metrics, days, range, from }: { metrics: Metrics; day
     );
 }
 
+function DismissalAdvice({ rate, access }: { rate: number; access: OwnerAccess }) {
+    const who = access.isSelf ? "Descartaste" : `${access.name ?? "Esta persona"} descartó`;
+    return (
+        <aside role="note" className="mx-4 flex gap-3 rounded-card bg-dismissed-soft p-4">
+            <EyeOff aria-hidden className="mt-0.5 size-5 shrink-0 text-dismissed" />
+            <div className="flex flex-col gap-1">
+                <p className="text-headline">
+                    {who} el {Math.round(rate)}% de las tareas
+                </p>
+                <p className="text-footnote text-label-secondary">
+                    {access.isSelf
+                        ? "Si una rutina no encaja en tu día, cambia su horario o ponla en pausa. Menos tareas que sí cumples valen más que muchas descartadas."
+                        : "Puede ser buen momento para revisar juntos si sus rutinas encajan en su día."}
+                </p>
+            </div>
+        </aside>
+    );
+}
+
 function DaysTable({ days }: { days: DayStats[] }) {
     return (
         <table className="mt-2 w-full text-left text-footnote">
@@ -133,6 +155,7 @@ function DaysTable({ days }: { days: DayStats[] }) {
                 <tr>
                     <th scope="col" className="py-1.5 font-medium">Día</th>
                     <th scope="col" className="py-1.5 text-right font-medium">Completadas</th>
+                    <th scope="col" className="py-1.5 text-right font-medium">Descartadas</th>
                     <th scope="col" className="py-1.5 text-right font-medium">%</th>
                 </tr>
             </thead>
@@ -141,6 +164,7 @@ function DaysTable({ days }: { days: DayStats[] }) {
                     <tr key={day.date} className="border-t border-separator">
                         <td className="py-1.5">{formatDay(day.date, "EEE d MMM")}</td>
                         <td className="py-1.5 text-right">{day.total ? `${day.completed} de ${day.total}` : "—"}</td>
+                        <td className="py-1.5 text-right">{day.total ? day.dismissed : "—"}</td>
                         <td className="py-1.5 text-right">{day.total ? `${Math.round(day.percentage)}%` : "—"}</td>
                     </tr>
                 ))}

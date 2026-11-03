@@ -28,6 +28,8 @@
     --color-danger: light-dark(#d0261b, #ff6b61);
     --color-danger-soft: light-dark(rgb(208 38 27 / 0.1), rgb(255 107 97 / 0.16));
     --color-on-status: light-dark(#ffffff, #0b0820);
+    --color-dismissed: light-dark(#eb6834, #d95926);
+    --color-dismissed-soft: light-dark(rgb(235 104 52 / 0.14), rgb(217 89 38 / 0.2));
 
     --color-material-bar: light-dark(rgb(249 249 251 / 0.78), rgb(22 22 24 / 0.72));
     --color-material-sidebar: light-dark(rgb(232 232 238 / 0.82), rgb(18 18 20 / 0.82));

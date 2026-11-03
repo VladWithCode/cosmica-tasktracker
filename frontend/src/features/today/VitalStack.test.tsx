@@ -21,6 +21,8 @@ function task(id: string, title: string): TaskItem {
         targetCount: null,
         currentCount: 0,
         completedAt: null,
+        category: "",
+        frequencyConfig: {},
     };
 }
 

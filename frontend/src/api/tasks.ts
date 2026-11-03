@@ -23,16 +23,16 @@ export async function getTask(id: string): Promise<TaskDetail> {
     return (await api(`/api/v1/tasks/${encodeURIComponent(id)}`, { schema: taskDetailResponseSchema })).task;
 }
 
-export async function getProgress(date?: string) {
-    return (await api("/api/v1/tasks/progress", { query: { date }, schema: progressResponseSchema })).progress;
+export async function getProgress(date?: string, ownerUserId?: string) {
+    return (await api("/api/v1/tasks/progress", { query: { date, owner_user_id: ownerUserId }, schema: progressResponseSchema })).progress;
 }
 
-export function getHistory(from: string, to: string) {
-    return api("/api/v1/tasks/history", { query: { from, to }, schema: historyResponseSchema });
+export function getHistory(from: string, to: string, ownerUserId?: string) {
+    return api("/api/v1/tasks/history", { query: { from, to, owner_user_id: ownerUserId }, schema: historyResponseSchema });
 }
 
-export function getMetrics(from: string, to: string) {
-    return api("/api/v1/tasks/metrics", { query: { from, to }, schema: metricsResponseSchema });
+export function getMetrics(from: string, to: string, ownerUserId?: string) {
+    return api("/api/v1/tasks/metrics", { query: { from, to, owner_user_id: ownerUserId }, schema: metricsResponseSchema });
 }
 
 export type TaskUpdate = {
@@ -102,6 +102,7 @@ export type OneOffTaskInput = {
     priority: Priority;
     isRequired: boolean;
     category?: string;
+    ownerUserId?: string;
 };
 
 function literalUtc(date: string, clock = "00:00"): string {
@@ -124,6 +125,7 @@ export function toOneOffBody(input: OneOffTaskInput): Record<string, unknown> {
         repeating: false,
         frequency: "custom",
         frequencyConfig: { singleInstance: true },
+        owner_user_id: input.ownerUserId,
     };
     return Object.fromEntries(Object.entries(body).filter(([, value]) => value !== undefined));
 }

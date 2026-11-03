@@ -43,7 +43,7 @@ export function CompletionHeatmap({ days, from, label }: { days: DayStats[]; fro
                 <div className="grid flex-1 grid-flow-col grid-rows-7 gap-[3px]" style={{ gridTemplateColumns: `repeat(${weeks.length}, minmax(0, 1fr))` }}>
                     {weeks.flat().map((date) => {
                         if (date > today) return <span key={date} aria-hidden className="aspect-square" />;
-                        const day = byDate.get(date) ?? { date, total: 0, completed: 0, pending: 0, skipped: 0, failed: 0, inProgress: 0, percentage: 0 };
+                        const day = byDate.get(date) ?? { date, total: 0, completed: 0, pending: 0, skipped: 0, failed: 0, dismissed: 0, inProgress: 0, percentage: 0 };
                         return (
                             <button
                                 key={date}

@@ -1,4 +1,4 @@
-import { Check, Minus, X } from "lucide-react";
+import { Check, EyeOff, Minus, X } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import type { TaskStatus } from "@/api/schemas";
 import { cn } from "@/lib/cn";
@@ -17,6 +17,7 @@ const ringClass: Record<TaskStatus, string> = {
     completed: "bg-success text-on-status",
     skipped: "bg-fill text-label-secondary",
     failed: "bg-danger-soft text-danger",
+    dismissed: "bg-dismissed-soft text-dismissed",
 };
 
 export function StatusCheck({ status, title, onToggle, disabled }: StatusCheckProps) {
@@ -46,6 +47,7 @@ export function StatusCheck({ status, title, onToggle, disabled }: StatusCheckPr
                 {status === "completed" ? <Check aria-hidden className="size-4" strokeWidth={3} /> : null}
                 {status === "skipped" ? <Minus aria-hidden className="size-4" strokeWidth={3} /> : null}
                 {status === "failed" ? <X aria-hidden className="size-4" strokeWidth={3} /> : null}
+                {status === "dismissed" ? <EyeOff aria-hidden className="size-3.5" strokeWidth={2.5} /> : null}
                 {status === "in_progress" ? <span aria-hidden className="size-2.5 rounded-full bg-warning" /> : null}
             </motion.span>
         </motion.button>

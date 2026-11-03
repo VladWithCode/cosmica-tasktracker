@@ -1,5 +1,5 @@
 import * as ContextMenu from "@radix-ui/react-context-menu";
-import { Ban, BellRing, Check, CircleDot, CircleX, NotebookPen, RotateCcw, SquarePen } from "lucide-react";
+import { Ban, BellRing, Check, CircleDot, CircleX, EyeOff, NotebookPen, RotateCcw, SquarePen } from "lucide-react";
 import type { TaskItem } from "@/api/schemas";
 import { SwipeRow, type SwipeAction } from "@/components/ui/SwipeRow";
 import { cn } from "@/lib/cn";
@@ -24,22 +24,30 @@ const menuItem =
     "flex min-h-11 cursor-default items-center gap-3 rounded-[0.5rem] px-3 text-body text-label outline-none select-none data-[highlighted]:bg-fill-secondary data-[disabled]:opacity-40";
 
 export function TaskRow({ task, canEdit, canPing = false, water, onOpen, onPing }: TaskRowProps) {
-    const { done, setStatus, setCount, toggle } = useTaskActions(task);
+    const { done, setStatus, setCount, toggle, dismiss } = useTaskActions(task);
 
     const leading: SwipeAction = done
         ? { id: "undo", label: "Pendiente", icon: RotateCcw, tone: "neutral", onTrigger: () => setStatus("pending") }
         : { id: "complete", label: "Completar", icon: Check, tone: "success", onTrigger: toggle };
     const skip: SwipeAction = { id: "skip", label: "Omitir", icon: Ban, tone: "neutral", onTrigger: () => setStatus("skipped") };
     const fail: SwipeAction = { id: "fail", label: "Fallida", icon: CircleX, tone: "danger", onTrigger: () => setStatus("failed") };
+    const discard: SwipeAction = { id: "dismiss", label: "Descartar", icon: EyeOff, tone: "dismissed", onTrigger: dismiss };
     const pingable = canPing && Boolean(onPing) && !done;
     const ping: SwipeAction = { id: "ping", label: "Recordar", icon: BellRing, tone: "accent", onTrigger: () => onPing?.(task) };
-    const editActions = canEdit ? [skip, fail].filter((action) => !(action === skip && task.status === "skipped") && !(action === fail && task.status === "failed")) : [];
+    const editActions = canEdit
+        ? [skip, discard, fail].filter(
+              (action) =>
+                  !(action === discard && task.status === "dismissed") &&
+                  !(action === skip && task.status === "skipped") &&
+                  !(action === fail && task.status === "failed"),
+          )
+        : [];
     const trailing = pingable ? [ping, ...editActions] : editActions;
     const hasMenu = canEdit || pingable;
 
     const meta = [scheduleLabel(task)];
     if (task.status === "in_progress") meta.unshift("En curso");
-    if (task.status === "skipped" || task.status === "failed") meta.unshift(statusLabels[task.status]);
+    if (task.status === "skipped" || task.status === "failed" || task.status === "dismissed") meta.unshift(statusLabels[task.status]);
 
     return (
         <ContextMenu.Root>
@@ -73,6 +81,7 @@ export function TaskRow({ task, canEdit, canPing = false, water, onOpen, onPing 
                                     "truncate text-footnote text-label-secondary",
                                     task.status === "in_progress" && "text-warning",
                                     task.status === "failed" && "text-danger",
+                                    task.status === "dismissed" && "text-dismissed",
                                 )}
                             >
                                 {meta.join(" · ")}
@@ -116,6 +125,9 @@ export function TaskRow({ task, canEdit, canPing = false, water, onOpen, onPing 
                     </ContextMenu.Item>
                     <ContextMenu.Item className={menuItem} disabled={task.status === "failed"} onSelect={() => setStatus("failed")}>
                         <CircleX aria-hidden className="size-5 text-danger" /> Marcar fallida
+                    </ContextMenu.Item>
+                    <ContextMenu.Item className={menuItem} disabled={task.status === "dismissed"} onSelect={dismiss}>
+                        <EyeOff aria-hidden className="size-5 text-dismissed" /> Descartar por hoy
                     </ContextMenu.Item>
                     <ContextMenu.Separator className="my-1 h-px bg-separator" />
                     <ContextMenu.Item className={menuItem} onSelect={() => onOpen(task.id)}>

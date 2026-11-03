@@ -6,7 +6,7 @@ import { lockDirection, project, rubberband, VelocityTracker } from "@/lib/gestu
 import { haptic } from "@/lib/haptics";
 import { spring, withVelocity } from "@/lib/motion";
 
-type Tone = "success" | "danger" | "neutral" | "warning" | "accent";
+type Tone = "success" | "danger" | "neutral" | "warning" | "accent" | "dismissed";
 
 export type SwipeAction = {
     id: string;
@@ -38,6 +38,7 @@ const toneClass: Record<Tone, string> = {
     neutral: "bg-label-tertiary text-white",
     warning: "bg-warning text-on-status",
     accent: "bg-accent text-on-accent",
+    dismissed: "bg-dismissed text-white",
 };
 
 type DragStart = { x: number; y: number; offset: number; pointerId: number };

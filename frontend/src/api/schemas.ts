@@ -26,7 +26,7 @@ export function dateFromWire(value: string | null | undefined): string | null {
 const clock = map(z.nullish(z.string()), (value) => clockFromWire(value));
 const isoDate = map(z.nullish(z.string()), (value) => dateFromWire(value));
 
-export const taskStatuses = ["pending", "in_progress", "completed", "skipped", "failed"] as const;
+export const taskStatuses = ["pending", "in_progress", "completed", "skipped", "failed", "dismissed"] as const;
 export type TaskStatus = (typeof taskStatuses)[number];
 const taskStatus = map(z.nullish(z.string()), (value): TaskStatus => (taskStatuses as readonly string[]).includes(value ?? "") ? (value as TaskStatus) : "pending");
 
@@ -64,6 +64,8 @@ export const taskItemSchema = map(z.object({
         target_count: optionalCount,
         current_count: count,
         completed_at: optionalText,
+        category: text,
+        frequency_config: frequencyConfig,
     }), (task) => ({
         id: task.id,
         title: task.title,
@@ -78,6 +80,8 @@ export const taskItemSchema = map(z.object({
         targetCount: task.target_count,
         currentCount: task.current_count,
         completedAt: task.completed_at,
+        category: task.category,
+        frequencyConfig: task.frequency_config,
     }));
 export type TaskItem = z.output<typeof taskItemSchema>;
 
@@ -147,6 +151,7 @@ const dayStatsSchema = map(z.object({
         pending: count,
         skipped: count,
         failed: count,
+        dismissed: count,
         in_progress: count,
         percentage: count,
     }),
@@ -167,8 +172,10 @@ export const metricsResponseSchema = map(z.object({
             pending: count,
             skipped: count,
             failed: count,
+            dismissed: count,
             in_progress: count,
             percentage: count,
+            dismissal_rate: count,
             days_count: count,
             completions_count: count,
             active_days: count,
@@ -183,8 +190,10 @@ export const metricsResponseSchema = map(z.object({
         pending: metrics.pending,
         skipped: metrics.skipped,
         failed: metrics.failed,
+        dismissed: metrics.dismissed,
         inProgress: metrics.in_progress,
         percentage: metrics.percentage,
+        dismissalRate: metrics.dismissal_rate,
         daysCount: metrics.days_count,
         completionsCount: metrics.completions_count,
         activeDays: metrics.active_days,
@@ -218,6 +227,31 @@ export const scheduleSchema = map(z.object({
         priority: priority,
     }), ({ required, ...schedule }) => ({ ...schedule, isRequired: schedule.isRequired || required }));
 export type Schedule = z.output<typeof scheduleSchema>;
+
+export const scheduleHistoryResponseSchema = map(z.object({
+        history: z.object({
+            from: text,
+            to: text,
+            entries: z.nullish(z.array(z.object({ task_id: text, date: text, status_level: taskStatus }))),
+            total: count,
+            completed: count,
+            dismissed: count,
+            percentage: count,
+            current_streak: count,
+            best_streak: count,
+        }),
+    }), ({ history }) => ({
+        from: history.from,
+        to: history.to,
+        entries: (history.entries ?? []).map((entry) => ({ taskId: entry.task_id, date: entry.date, status: entry.status_level })),
+        total: history.total,
+        completed: history.completed,
+        dismissed: history.dismissed,
+        percentage: history.percentage,
+        currentStreak: history.current_streak,
+        bestStreak: history.best_streak,
+    }));
+export type ScheduleHistory = z.output<typeof scheduleHistoryResponseSchema>;
 
 export const schedulesResponseSchema = map(z.object({ schedules: z.nullish(z.array(scheduleSchema)) }), (data) => data.schedules ?? []);
 export const scheduleResponseSchema = map(z.object({ schedule: scheduleSchema }), (data) => data.schedule);

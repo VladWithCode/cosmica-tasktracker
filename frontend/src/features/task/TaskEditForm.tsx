@@ -45,17 +45,15 @@ function diff(task: TaskDetail, values: Parsed): TaskUpdate {
     if (values.description !== task.description) update.description = values.description;
     const target = values.targetCount === "" ? null : values.targetCount;
     if (target !== null && target !== task.targetCount) update.targetCount = target;
-    if (values.scope === "routine") {
-        update.applyToSchedule = true;
-        if (values.startTime && values.startTime !== task.startTime) update.startTime = values.startTime;
-        if (values.endTime && values.endTime !== task.endTime) update.endTime = values.endTime;
-        const duration = values.durationMinutes === "" ? null : values.durationMinutes;
-        if (duration !== null && duration !== task.durationMinutes) update.durationMinutes = duration;
-        const priority: Priority = values.urgent ? "urgent" : "medium";
-        if (priority !== task.priority) update.priority = priority;
-        if (values.isRequired !== task.isRequired) update.isRequired = values.isRequired;
-        if (values.category.trim() !== task.category) update.category = values.category.trim();
-    }
+    if (values.scope === "routine") update.applyToSchedule = true;
+    if (values.startTime && values.startTime !== task.startTime) update.startTime = values.startTime;
+    if (values.endTime && values.endTime !== task.endTime) update.endTime = values.endTime;
+    const duration = values.durationMinutes === "" ? null : values.durationMinutes;
+    if (duration !== null && duration !== task.durationMinutes) update.durationMinutes = duration;
+    const priority: Priority = values.urgent ? "urgent" : "medium";
+    if (priority !== task.priority) update.priority = priority;
+    if (values.isRequired !== task.isRequired) update.isRequired = values.isRequired;
+    if (values.category.trim() !== task.category) update.category = values.category.trim();
     return update;
 }
 
@@ -108,7 +106,7 @@ export function TaskEditForm({ task, saving, onCancel, onSave }: TaskEditFormPro
                     <p className="px-1 pt-2 text-footnote text-label-secondary">
                         {scope === "routine"
                             ? "Los cambios se aplican a esta tarea y a las próximas de la rutina."
-                            : "Solo cambia esta tarea. Horario, prioridad y categoría se editan en toda la rutina."}
+                            : "Solo cambia la tarea de este día. La rutina sigue igual."}
                     </p>
                 </div>
             ) : null}
@@ -124,36 +122,32 @@ export function TaskEditForm({ task, saving, onCancel, onSave }: TaskEditFormPro
                 </FieldRow>
             </GroupedSection>
 
-            {scope === "routine" ? (
-                <>
-                    <GroupedSection title="Horario" footer={errors.endTime?.message ?? errors.durationMinutes?.message}>
-                        <FieldRow label="Empieza" htmlFor="edit-start">
-                            <TrailingInput id="edit-start" type="time" {...form.register("startTime")} />
-                        </FieldRow>
-                        <FieldRow label="Termina" htmlFor="edit-end">
-                            <TrailingInput id="edit-end" type="time" {...form.register("endTime")} />
-                        </FieldRow>
-                        <FieldRow label="Duración (min)" htmlFor="edit-duration">
-                            <TrailingInput id="edit-duration" inputMode="numeric" className="w-20" {...form.register("durationMinutes")} />
-                        </FieldRow>
-                    </GroupedSection>
-                    <GroupedSection>
-                        <FieldRow label="Urgente">
-                            <Controller control={form.control} name="urgent" render={({ field }) => <Switch label="Urgente" checked={field.value} onChange={field.onChange} />} />
-                        </FieldRow>
-                        <FieldRow label="Imprescindible">
-                            <Controller
-                                control={form.control}
-                                name="isRequired"
-                                render={({ field }) => <Switch label="Imprescindible" checked={field.value} onChange={field.onChange} />}
-                            />
-                        </FieldRow>
-                        <FieldRow label="Categoría" htmlFor="edit-category">
-                            <TrailingInput id="edit-category" className="w-40 text-left" placeholder="Ninguna" {...form.register("category")} />
-                        </FieldRow>
-                    </GroupedSection>
-                </>
-            ) : null}
+            <GroupedSection title="Horario" footer={errors.endTime?.message ?? errors.durationMinutes?.message}>
+                <FieldRow label="Empieza" htmlFor="edit-start">
+                    <TrailingInput id="edit-start" type="time" {...form.register("startTime")} />
+                </FieldRow>
+                <FieldRow label="Termina" htmlFor="edit-end">
+                    <TrailingInput id="edit-end" type="time" {...form.register("endTime")} />
+                </FieldRow>
+                <FieldRow label="Duración (min)" htmlFor="edit-duration">
+                    <TrailingInput id="edit-duration" inputMode="numeric" className="w-20" {...form.register("durationMinutes")} />
+                </FieldRow>
+            </GroupedSection>
+            <GroupedSection>
+                <FieldRow label="Urgente">
+                    <Controller control={form.control} name="urgent" render={({ field }) => <Switch label="Urgente" checked={field.value} onChange={field.onChange} />} />
+                </FieldRow>
+                <FieldRow label="Imprescindible">
+                    <Controller
+                        control={form.control}
+                        name="isRequired"
+                        render={({ field }) => <Switch label="Imprescindible" checked={field.value} onChange={field.onChange} />}
+                    />
+                </FieldRow>
+                <FieldRow label="Categoría" htmlFor="edit-category">
+                    <TrailingInput id="edit-category" className="w-40 text-left" placeholder="Ninguna" {...form.register("category")} />
+                </FieldRow>
+            </GroupedSection>
 
             <div className="flex gap-3 px-4 pt-8">
                 <Button type="button" variant="tinted" size="lg" className="flex-1" onClick={onCancel}>

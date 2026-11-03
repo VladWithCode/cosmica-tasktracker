@@ -28,6 +28,14 @@ export function createGrant(granteeUserId: string, accessLevel: SharingAccessLev
     });
 }
 
+export function updateGrant(id: string, accessLevel: SharingAccessLevel) {
+    return api(`/api/v1/sharing/grants/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        body: { access_level: accessLevel },
+        schema: grantResponseSchema,
+    });
+}
+
 export async function revokeGrant(id: string): Promise<void> {
     await api(`/api/v1/sharing/grants/${encodeURIComponent(id)}`, { method: "DELETE" });
 }

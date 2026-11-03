@@ -1,6 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { errorMessage } from "@/api/client";
-import { cancelSchedule, getSchedule, getSchedules, setSchedulePaused, updateSchedule, type ScheduleInput } from "@/api/schedules";
+import { cancelSchedule, getSchedule, getScheduleHistory, getSchedules, setSchedulePaused, updateSchedule, type ScheduleInput } from "@/api/schedules";
 import type { Schedule } from "@/api/schemas";
 import { toast } from "@/stores/toast";
 import { queryKeys } from "./keys";
@@ -19,6 +19,15 @@ export function useSchedule(id: string) {
                 .getQueriesData<Schedule[]>({ queryKey: ["schedules"] })
                 .flatMap(([, list]) => list ?? [])
                 .find((schedule) => schedule.id === id),
+    });
+}
+
+export function useScheduleHistory(id: string, from: string, to: string) {
+    return useQuery({
+        queryKey: queryKeys.scheduleHistory(id, from, to),
+        queryFn: () => getScheduleHistory(id, from, to),
+        staleTime: 60_000,
+        placeholderData: keepPreviousData,
     });
 }
 

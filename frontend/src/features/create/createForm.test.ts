@@ -35,7 +35,13 @@ describe("create form", () => {
             priority: "urgent",
             isRequired: false,
             category: undefined,
+            ownerUserId: undefined,
         });
+    });
+
+    it("maps a one-off task for another owner", () => {
+        const result = parse({ ownerId: "owner-1" });
+        expect(result.success && toOneOffInput(result.data)).toMatchObject({ date: "2026-11-02", ownerUserId: "owner-1" });
     });
 
     it("maps a weekly water routine for another owner", () => {

@@ -47,6 +47,14 @@ describe("wire normalization", () => {
         });
     });
 
+    it("reads dismissed status, category and frequency config from the feed", () => {
+        const parsed = dayTasksSchema.parse({
+            date: "2026-11-02",
+            tasks: [{ id: "t2", status_level: "dismissed", category: "Salud", frequency_config: { waterUnit: "L" } }],
+        });
+        expect(parsed.tasks[0]).toMatchObject({ status: "dismissed", category: "Salud", frequencyConfig: { waterUnit: "L" } });
+    });
+
     it("tolerates a null task list", () => {
         expect(dayTasksSchema.parse({ tasks: null, date: "2026-11-02" }).tasks).toEqual([]);
     });
@@ -84,6 +92,10 @@ describe("request bodies", () => {
             current_count: 0,
             apply_to_schedule: true,
         });
+    });
+
+    it("sends an emptied note so the server clears it", () => {
+        expect(toTaskUpdateBody({ notes: "" })).toEqual({ notes: "" });
     });
 
     it("sends one-off tasks as literal UTC wall-clock values", () => {

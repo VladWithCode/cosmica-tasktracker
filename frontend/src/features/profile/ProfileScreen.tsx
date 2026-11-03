@@ -15,6 +15,7 @@ import { useGrants, useRevokeGrantWithUndo, useSharedWithMe } from "@/queries/sh
 import { useOwnerStore } from "@/stores/owner";
 import { useThemeStore, type ThemePreference } from "@/stores/theme";
 import { ProfileSheet, PasswordSheet } from "./AccountSheets";
+import { GrantSheet } from "./GrantSheet";
 import { InviteSheet } from "./InviteSheet";
 import { accessLevelInfo } from "./accessLevels";
 import { NotificationSection } from "./NotificationSection";
@@ -99,20 +100,29 @@ export function ProfileScreen() {
 function SharingSection({ onInvite }: { onInvite: () => void }) {
     const grants = useGrants();
     const revoke = useRevokeGrantWithUndo();
+    const [editing, setEditing] = useState<Grant | null>(null);
     const list = grants.data ?? [];
     return (
-        <GroupedSection title="Compartir mis tareas" footer={list.length ? "Desliza a la izquierda para retirar el acceso." : "Elige quién puede ver tus tareas o enviarte recordatorios."}>
-            {list.map((grant) => (
-                <SwipeRow key={grant.id} trailing={[{ id: "revoke", label: "Retirar", icon: UserX, tone: "danger", onTrigger: () => revoke(grant) }]}>
-                    <GroupedRow
-                        icon={<PersonBadge name={grant.grantee.fullname || grant.grantee.username} />}
-                        label={grant.grantee.fullname || grant.grantee.username}
-                        detail={accessLevelInfo[grant.accessLevel].label}
-                    />
-                </SwipeRow>
-            ))}
-            <GroupedRow icon={<UserPlus aria-hidden className="size-5 text-accent" />} label="Invitar a alguien" tone="accent" onPress={onInvite} />
-        </GroupedSection>
+        <>
+            <GroupedSection
+                title="Compartir mis tareas"
+                footer={list.length ? "Toca a alguien para cambiar su acceso o desliza a la izquierda para retirarlo." : "Elige quién puede ver tus tareas o enviarte recordatorios."}
+            >
+                {list.map((grant) => (
+                    <SwipeRow key={grant.id} trailing={[{ id: "revoke", label: "Retirar", icon: UserX, tone: "danger", onTrigger: () => revoke(grant) }]}>
+                        <GroupedRow
+                            icon={<PersonBadge name={grant.grantee.fullname || grant.grantee.username} />}
+                            label={grant.grantee.fullname || grant.grantee.username}
+                            detail={accessLevelInfo[grant.accessLevel].label}
+                            chevron
+                            onPress={() => setEditing(grant)}
+                        />
+                    </SwipeRow>
+                ))}
+                <GroupedRow icon={<UserPlus aria-hidden className="size-5 text-accent" />} label="Invitar a alguien" tone="accent" onPress={onInvite} />
+            </GroupedSection>
+            <GrantSheet grant={editing} onClose={() => setEditing(null)} />
+        </>
     );
 }
 

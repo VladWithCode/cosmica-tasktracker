@@ -42,13 +42,19 @@ function ProfileForm({ user, onDone }: { user: User; onDone: () => void }) {
                             toast.show("Cuenta actualizada");
                             onDone();
                         },
+                        onError: (error) => {
+                            if (!(error instanceof ApiError)) return;
+                            if (error.code === "email_taken") form.setError("email", { message: error.message });
+                            if (error.fields.fullname) form.setError("fullname", { message: error.fields.fullname });
+                            if (error.fields.email) form.setError("email", { message: error.fields.email });
+                        },
                     },
                 ),
             )}
         >
             <TextField label="Nombre" autoComplete="name" error={errors.fullname?.message} {...form.register("fullname")} />
             <TextField label="Correo (opcional)" type="email" autoComplete="email" error={errors.email?.message} {...form.register("email")} />
-            {update.isError ? (
+            {update.isError && !(update.error instanceof ApiError && (update.error.status === 409 || update.error.status === 422)) ? (
                 <p role="alert" className="px-1 text-footnote text-danger">
                     {errorMessage(update.error)}
                 </p>

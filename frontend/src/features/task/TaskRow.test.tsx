@@ -25,6 +25,8 @@ function task(partial: Partial<TaskItem> = {}): TaskItem {
         targetCount: null,
         currentCount: 0,
         completedAt: null,
+        category: "",
+        frequencyConfig: {},
         ...partial,
     };
 }

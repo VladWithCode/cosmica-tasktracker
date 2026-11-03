@@ -1,5 +1,13 @@
 import { api } from "./client";
-import { scheduleResponseSchema, schedulesResponseSchema, type Priority, type RepeatFrequency, type Schedule } from "./schemas";
+import {
+    scheduleHistoryResponseSchema,
+    scheduleResponseSchema,
+    schedulesResponseSchema,
+    type Priority,
+    type RepeatFrequency,
+    type Schedule,
+    type ScheduleHistory,
+} from "./schemas";
 
 export type ScheduleInput = {
     title: string;
@@ -59,6 +67,10 @@ export function getSchedules(ownerUserId?: string): Promise<Schedule[]> {
 
 export function getSchedule(id: string): Promise<Schedule> {
     return api(`/api/v1/schedules/${encodeURIComponent(id)}`, { schema: scheduleResponseSchema });
+}
+
+export function getScheduleHistory(id: string, from: string, to: string): Promise<ScheduleHistory> {
+    return api(`/api/v1/schedules/${encodeURIComponent(id)}/history`, { query: { from, to }, schema: scheduleHistoryResponseSchema });
 }
 
 export function createSchedule(input: ScheduleInput): Promise<Schedule> {

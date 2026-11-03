@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { errorMessage } from "@/api/client";
 import type { Grant, SharingAccessLevel } from "@/api/schemas";
-import { createGrant, getGrants, getSharedWithMe, revokeGrant, searchUsers } from "@/api/sharing";
+import { createGrant, getGrants, getSharedWithMe, revokeGrant, searchUsers, updateGrant } from "@/api/sharing";
 import { toast } from "@/stores/toast";
 import { queryKeys } from "./keys";
 
@@ -29,6 +29,16 @@ export function useCreateGrant() {
     return useMutation({
         mutationFn: ({ userId, level }: { userId: string; level: SharingAccessLevel }) => createGrant(userId, level),
         onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.grants }),
+    });
+}
+
+export function useUpdateGrant() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, level }: { id: string; level: SharingAccessLevel }) => updateGrant(id, level),
+        onSuccess: (grant) => queryClient.setQueryData<Grant[]>(queryKeys.grants, (list) => list?.map((item) => (item.id === grant.id ? grant : item))),
+        onError: (error) => toast.error(errorMessage(error)),
+        onSettled: () => void queryClient.invalidateQueries({ queryKey: queryKeys.grants }),
     });
 }
 

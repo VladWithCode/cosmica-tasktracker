@@ -16,7 +16,7 @@ const sectionTitles: Record<SectionId, string> = {
 const sectionOrder: SectionId[] = ["required", "morning", "afternoon", "evening", "anytime"];
 
 export function isDone(status: TaskStatus): boolean {
-    return status === "completed" || status === "skipped" || status === "failed";
+    return status === "completed" || status === "skipped" || status === "failed" || status === "dismissed";
 }
 
 function sectionFor(task: TaskItem): SectionId {
@@ -92,6 +92,7 @@ export const statusLabels: Record<TaskStatus, string> = {
     completed: "Completada",
     skipped: "Omitida",
     failed: "Fallida",
+    dismissed: "Descartada",
 };
 
 export function statusForCount(count: number, target: number | null, current: TaskStatus): TaskStatus {

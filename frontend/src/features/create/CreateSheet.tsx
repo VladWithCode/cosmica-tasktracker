@@ -28,7 +28,7 @@ function CreateContent({ initialDate, ownerId, onDone }: { initialDate: string; 
             mode="create"
             defaultValues={{
                 ...defaultCreateValues(initialDate, fromISODate(initialDate).getDay()),
-                ...(ownerId ? { kind: "routine" as const, ownerId } : {}),
+                ...(ownerId ? { ownerId } : {}),
             }}
             owners={owners}
             pending={createOneOff.isPending || createRoutine.isPending}
@@ -38,7 +38,7 @@ function CreateContent({ initialDate, ownerId, onDone }: { initialDate: string; 
                     createOneOff.mutate(toOneOffInput(values), {
                         onSuccess: (task) => {
                             onDone();
-                            toast.show("Tarea creada", {
+                            toast.show(values.ownerId ? "Tarea creada para otra persona" : "Tarea creada", {
                                 action: { label: "Ver", onAction: () => void navigate({ to: "/", search: { task: task.id } }) },
                             });
                         },

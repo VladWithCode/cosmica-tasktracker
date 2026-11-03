@@ -9,7 +9,7 @@ import { Sheet } from "@/components/ui/Sheet";
 import { Spinner } from "@/components/ui/Spinner";
 import { useCreateGrant, useSearchUsers } from "@/queries/sharing";
 import { toast } from "@/stores/toast";
-import { accessLevelInfo, accessLevelOrder } from "./accessLevels";
+import { AccessLevelPicker } from "./AccessLevelPicker";
 
 export function InviteSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
     return (
@@ -78,28 +78,11 @@ function InviteForm({ onDone }: { onDone: () => void }) {
 
             {selected ? (
                 <>
-                    <GroupedSection title="Qué puede hacer">
-                        <div role="radiogroup" aria-label="Nivel de acceso">
-                            {accessLevelOrder.map((value) => (
-                                <div key={value} className="[&+&]:border-t [&+&]:border-separator">
-                                    <GroupedRow
-                                        onPress={() => setLevel(value)}
-                                        label={
-                                            <span className="flex flex-col">
-                                                <span>{accessLevelInfo[value].label}</span>
-                                                <span className="text-footnote whitespace-normal text-label-secondary">{accessLevelInfo[value].description}</span>
-                                            </span>
-                                        }
-                                        trailing={level === value ? <Check aria-label="Seleccionado" className="size-5 text-accent" strokeWidth={2.5} /> : null}
-                                    />
-                                </div>
-                            ))}
-                        </div>
-                    </GroupedSection>
+                    <AccessLevelPicker value={level} onChange={setLevel} />
                     {create.isError ? (
                         <p role="alert" className="px-8 text-footnote text-danger">
                             {create.error instanceof ApiError && create.error.code === "active_grant_exists"
-                                ? "Ya compartes tus tareas con esta persona. Retira su acceso para cambiar el nivel."
+                                ? "Ya compartes tus tareas con esta persona. Cambia su nivel desde la lista en Perfil."
                                 : errorMessage(create.error)}
                         </p>
                     ) : null}

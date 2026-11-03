@@ -43,6 +43,7 @@ function itemFromDetail(item: TaskItem, detail: TaskDetail): TaskItem {
         targetCount: detail.targetCount,
         currentCount: detail.currentCount,
         completedAt: detail.completedAt,
+        category: detail.category,
     };
 }
 

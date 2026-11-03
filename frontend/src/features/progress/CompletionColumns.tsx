@@ -7,6 +7,10 @@ import { ChartTooltip, dayDetailText, dayValueText, type HoverState } from "./Ch
 const HEIGHT = 160;
 const ticks = [100, 50, 0];
 
+function dismissedShare(day: DayStats): number {
+    return day.total ? (day.dismissed * 100) / day.total : 0;
+}
+
 export function CompletionColumns({ days, label }: { days: DayStats[]; label: string }) {
     const ref = useRef<HTMLDivElement>(null);
     const [hover, setHover] = useState<HoverState>(null);
@@ -16,12 +20,26 @@ export function CompletionColumns({ days, label }: { days: DayStats[]; label: st
         const container = ref.current?.getBoundingClientRect();
         const rect = element.getBoundingClientRect();
         if (!container) return;
-        const barTop = HEIGHT - (HEIGHT * Math.max(day.percentage, 0)) / 100;
+        const barTop = HEIGHT - (HEIGHT * Math.max(day.percentage + dismissedShare(day), 0)) / 100;
         setHover({ day, left: rect.left - container.left + rect.width / 2, top: Math.max(barTop - 8, 0) });
     };
 
+    const showLegend = days.some((day) => day.dismissed > 0);
+
     return (
         <figure aria-label={label} className="relative px-4">
+            {showLegend ? (
+                <div className="flex items-center gap-4 pb-3 pl-10 text-caption text-label-secondary">
+                    <span className="flex items-center gap-1.5">
+                        <span aria-hidden className="size-2.5 rounded-[3px] bg-accent" />
+                        Completadas
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                        <span aria-hidden className="size-2.5 rounded-[3px] bg-dismissed" />
+                        Descartadas
+                    </span>
+                </div>
+            ) : null}
             <div ref={ref} className="relative flex gap-2">
                 <div aria-hidden className="tabular relative w-8 shrink-0 text-right text-caption text-label-tertiary" style={{ height: HEIGHT }}>
                     {ticks.map((tick) => (
@@ -51,10 +69,14 @@ export function CompletionColumns({ days, label }: { days: DayStats[]; label: st
                                 className="group flex h-full min-w-0 flex-1 items-end justify-center outline-offset-0"
                             >
                                 {day.total > 0 ? (
-                                    <span
-                                        className="block w-full max-w-6 rounded-t-[4px] bg-accent transition-opacity group-hover:opacity-80 group-focus-visible:opacity-80"
-                                        style={{ height: Math.max((HEIGHT * day.percentage) / 100, day.percentage > 0 ? 3 : 0) }}
-                                    />
+                                    <span className="flex w-full max-w-6 flex-col justify-end gap-[2px] overflow-hidden rounded-t-[4px] transition-opacity group-hover:opacity-80 group-focus-visible:opacity-80">
+                                        {day.dismissed > 0 ? (
+                                            <span className="block w-full bg-dismissed" style={{ height: Math.max((HEIGHT * dismissedShare(day)) / 100, 3) }} />
+                                        ) : null}
+                                        {day.completed > 0 ? (
+                                            <span className="block w-full bg-accent" style={{ height: Math.max((HEIGHT * day.percentage) / 100, 3) }} />
+                                        ) : null}
+                                    </span>
                                 ) : null}
                             </button>
                         ))}

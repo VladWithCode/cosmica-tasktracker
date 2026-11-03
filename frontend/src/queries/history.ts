@@ -5,20 +5,30 @@ import { queryKeys } from "./keys";
 
 export type DayMark = "full" | "partial" | "empty";
 
-export function useHistory(from: string, to: string, enabled = true) {
-    return useQuery({ queryKey: queryKeys.history(from, to), queryFn: () => getHistory(from, to), enabled, staleTime: 60_000, placeholderData: keepPreviousData });
+export function useHistory(ownerId: string | null, from: string, to: string) {
+    return useQuery({
+        queryKey: queryKeys.history(ownerId, from, to),
+        queryFn: () => getHistory(from, to, ownerId ?? undefined),
+        staleTime: 60_000,
+        placeholderData: keepPreviousData,
+    });
 }
 
-export function useMetrics(from: string, to: string) {
-    return useQuery({ queryKey: queryKeys.metrics(from, to), queryFn: () => getMetrics(from, to), staleTime: 60_000, placeholderData: keepPreviousData });
+export function useMetrics(ownerId: string | null, from: string, to: string) {
+    return useQuery({
+        queryKey: queryKeys.metrics(ownerId, from, to),
+        queryFn: () => getMetrics(from, to, ownerId ?? undefined),
+        staleTime: 60_000,
+        placeholderData: keepPreviousData,
+    });
 }
 
 export function useNotesHistory(from: string, to: string) {
     return useQuery({ queryKey: queryKeys.notesHistory(from, to), queryFn: () => getNotesHistory(from, to), staleTime: 60_000, placeholderData: keepPreviousData });
 }
 
-export function useTaskMarks(from: string, to: string, enabled = true): Map<string, DayMark> {
-    const history = useHistory(from, to, enabled);
+export function useTaskMarks(ownerId: string | null, from: string, to: string): Map<string, DayMark> {
+    const history = useHistory(ownerId, from, to);
     const marks = new Map<string, DayMark>();
     for (const day of history.data?.days ?? []) {
         if (day.total === 0) continue;

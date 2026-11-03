@@ -1,7 +1,7 @@
-import { lazy, useMemo, useState } from "react";
+import { lazy, useState } from "react";
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
 import { ChevronRight, Sun } from "lucide-react";
-import type { Schedule, TaskItem } from "@/api/schemas";
+import type { TaskItem } from "@/api/schemas";
 import { OwnerSwitcher } from "@/components/shell/OwnerSwitcher";
 import { Screen } from "@/components/shell/Screen";
 import { Button } from "@/components/ui/Button";
@@ -16,7 +16,6 @@ import { fade, spring } from "@/lib/motion";
 import { isWaterSchedule } from "@/lib/schedules";
 import { groupTasks, pendingVital, summarize } from "@/lib/tasks";
 import { useOwnerAccess } from "@/queries/owner";
-import { useSchedules } from "@/queries/schedules";
 import { useTodayTasks } from "@/queries/tasks";
 import { useCreateStore } from "@/stores/create";
 import { VitalStack } from "./VitalStack";
@@ -28,14 +27,10 @@ const PingSheet = lazy(() => import("@/features/task/PingSheet").then((module) =
 
 type TodayScreenProps = { taskId?: string; onOpenTask: (id: string) => void; onCloseTask: () => void };
 
-export function waterConfigs(schedules: Schedule[] | undefined): Map<string, WaterConfig> {
-    const map = new Map<string, WaterConfig>();
-    for (const schedule of schedules ?? []) {
-        if (!isWaterSchedule(schedule)) continue;
-        const unit = schedule.frequencyConfig.waterUnit;
-        map.set(schedule.id, { unit: typeof unit === "string" && unit ? unit : "L" });
-    }
-    return map;
+export function waterConfig(task: TaskItem): WaterConfig | undefined {
+    if (!isWaterSchedule(task)) return undefined;
+    const unit = task.frequencyConfig.waterUnit;
+    return { unit: typeof unit === "string" && unit ? unit : "L" };
 }
 
 export function TodayScreen({ taskId, onOpenTask, onCloseTask }: TodayScreenProps) {
@@ -43,8 +38,6 @@ export function TodayScreen({ taskId, onOpenTask, onCloseTask }: TodayScreenProp
     const ownerId = access.ownerId;
     const openCreate = useCreateStore((state) => state.openCreate);
     const today = useTodayTasks(ownerId);
-    const schedules = useSchedules(ownerId);
-    const water = useMemo(() => waterConfigs(schedules.data), [schedules.data]);
     const tasks = today.data?.tasks;
 
     return (
@@ -54,7 +47,7 @@ export function TodayScreen({ taskId, onOpenTask, onCloseTask }: TodayScreenProp
                     <OwnerSwitcher />
                 </div>
             }>
-            <PullToRefresh onRefresh={() => Promise.all([today.refetch(), schedules.refetch()])}>
+            <PullToRefresh onRefresh={() => today.refetch()}>
                 {today.isPending ? <TodaySkeleton /> : null}
                 {today.isError ? <ErrorState error={today.error} onRetry={() => void today.refetch()} /> : null}
                 {tasks && tasks.length === 0 ? (
@@ -71,7 +64,6 @@ export function TodayScreen({ taskId, onOpenTask, onCloseTask }: TodayScreenProp
                         <TodayList
                             tasks={tasks}
                             vitalSeparately
-                            water={water}
                             canEdit={access.canEdit}
                             canPing={access.canPing}
                             ownerName={access.name}
@@ -120,14 +112,13 @@ function SummaryCard({ tasks }: { tasks: TaskItem[] }) {
 type TodayListProps = {
     tasks: TaskItem[];
     vitalSeparately?: boolean;
-    water: Map<string, WaterConfig>;
     canEdit: boolean;
     canPing?: boolean;
     ownerName?: string | null;
     onOpenTask: (id: string) => void;
 };
 
-export function TodayList({ tasks, vitalSeparately = false, water, canEdit, canPing = false, ownerName = null, onOpenTask }: TodayListProps) {
+export function TodayList({ tasks, vitalSeparately = false, canEdit, canPing = false, ownerName = null, onOpenTask }: TodayListProps) {
     const reduceMotion = useReducedMotion();
     const [showDone, setShowDone] = useState(false);
     const [pingTask, setPingTask] = useState<TaskItem | null>(null);
@@ -145,7 +136,7 @@ export function TodayList({ tasks, vitalSeparately = false, water, canEdit, canP
             transition={rowTransition}
             className="[&+&]:border-t [&+&]:border-separator"
         >
-            <TaskRow task={task} canEdit={canEdit} canPing={canPing} water={water.get(task.scheduleId)} onOpen={onOpenTask} onPing={setPingTask} />
+            <TaskRow task={task} canEdit={canEdit} canPing={canPing} water={waterConfig(task)} onOpen={onOpenTask} onPing={setPingTask} />
         </motion.li>
     );
 

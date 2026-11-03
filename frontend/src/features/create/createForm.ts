@@ -103,7 +103,7 @@ function common(values: CreateParsed) {
 }
 
 export function toOneOffInput(values: CreateParsed): OneOffTaskInput {
-    return { ...common(values), date: values.date };
+    return { ...common(values), date: values.date, ownerUserId: values.ownerId || undefined };
 }
 
 export function toScheduleInput(values: CreateParsed): ScheduleInput {

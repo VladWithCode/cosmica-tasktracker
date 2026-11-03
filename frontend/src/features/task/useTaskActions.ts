@@ -2,6 +2,7 @@ import type { TaskItem, TaskStatus } from "@/api/schemas";
 import { haptic } from "@/lib/haptics";
 import { statusForCount } from "@/lib/tasks";
 import { useUpdateTask } from "@/queries/tasks";
+import { toast } from "@/stores/toast";
 
 export function useTaskActions(task: TaskItem) {
     const update = useUpdateTask(task.id);
@@ -26,5 +27,18 @@ export function useTaskActions(task: TaskItem) {
         setStatus(done ? "pending" : "completed");
     };
 
-    return { done, setStatus, setCount, toggle };
+    const dismiss = () => {
+        const previous = task.status;
+        update.mutate(
+            { status: "dismissed" },
+            {
+                onSuccess: () =>
+                    toast.show("Tarea descartada por hoy", {
+                        action: { label: "Deshacer", onAction: () => update.mutate({ status: previous }) },
+                    }),
+            },
+        );
+    };
+
+    return { done, setStatus, setCount, toggle, dismiss };
 }

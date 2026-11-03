@@ -10,7 +10,8 @@ export function dayValueText(day: DayStats): string {
 
 export function dayDetailText(day: DayStats): string {
     if (day.total === 0) return formatDay(day.date, "EEE d MMM");
-    return `${formatDay(day.date, "EEE d MMM")} · ${day.completed} de ${day.total}`;
+    const dismissed = day.dismissed ? ` · ${day.dismissed} descartada${day.dismissed === 1 ? "" : "s"}` : "";
+    return `${formatDay(day.date, "EEE d MMM")} · ${day.completed} de ${day.total}${dismissed}`;
 }
 
 export function ChartTooltip({ hover, width }: { hover: HoverState; width: number }) {

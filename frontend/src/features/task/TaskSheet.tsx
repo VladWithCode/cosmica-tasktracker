@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Ban, Check, CircleDot, CircleX, Clock, RotateCcw, Trash } from "lucide-react";
+import { Ban, Check, CircleDot, CircleX, Clock, EyeOff, RotateCcw, Trash } from "lucide-react";
 import type { TaskDetail, TaskStatus } from "@/api/schemas";
 import { Button } from "@/components/ui/Button";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -24,6 +24,7 @@ const statusIcons: Record<TaskStatus, typeof Check> = {
     completed: Check,
     skipped: Ban,
     failed: CircleX,
+    dismissed: EyeOff,
 };
 
 const statusIconClass: Record<TaskStatus, string> = {
@@ -32,9 +33,10 @@ const statusIconClass: Record<TaskStatus, string> = {
     completed: "text-success",
     skipped: "text-label-secondary",
     failed: "text-danger",
+    dismissed: "text-dismissed",
 };
 
-const statusOrder: TaskStatus[] = ["pending", "in_progress", "completed", "skipped", "failed"];
+const statusOrder: TaskStatus[] = ["pending", "in_progress", "completed", "skipped", "failed", "dismissed"];
 
 type TaskSheetProps = { taskId: string | undefined; onClose: () => void };
 
@@ -123,7 +125,7 @@ function DetailView({ task, onEdit, onDeleted }: { task: TaskDetail; onEdit: () 
 
     const saveNotes = () => {
         const trimmed = notes.trim();
-        if (trimmed && trimmed !== task.notes) update.mutate({ notes: trimmed });
+        if (trimmed !== task.notes) update.mutate({ notes: trimmed });
     };
 
     const details: { label: string; value: string }[] = [];
@@ -152,7 +154,7 @@ function DetailView({ task, onEdit, onDeleted }: { task: TaskDetail; onEdit: () 
                 </div>
             ) : null}
 
-            <GroupedSection title="Estado">
+            <GroupedSection title="Estado" footer={isOneOff ? undefined : "«Descartada» la quita de hoy sin borrar la rutina; cuenta en tu progreso aparte de las omitidas."}>
                 <div role="radiogroup" aria-label="Estado">
                     {statusOrder.map((status) => {
                         const Icon = statusIcons[status];

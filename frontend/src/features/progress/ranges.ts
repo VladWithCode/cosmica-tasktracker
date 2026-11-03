@@ -15,6 +15,13 @@ export function rangeFor(id: RangeId, today = todayISO()): { from: string; to: s
     return { from: shiftISODate(monday, -12 * 7), to: today };
 }
 
+export const DISMISSAL_WARNING_RATE = 20;
+export const DISMISSAL_WARNING_MIN = 3;
+
+export function highDismissal(metrics: { dismissed: number; dismissalRate: number }): boolean {
+    return metrics.dismissed >= DISMISSAL_WARNING_MIN && metrics.dismissalRate >= DISMISSAL_WARNING_RATE;
+}
+
 export function heatStep(percentage: number, total: number): number {
     if (total === 0) return 0;
     if (percentage <= 0) return 1;

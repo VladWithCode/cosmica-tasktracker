@@ -13,8 +13,9 @@ import { TaskForm } from "@/features/create/TaskForm";
 import { toScheduleInput } from "@/features/create/createForm";
 import { spring } from "@/lib/motion";
 import { scheduleToValues } from "@/lib/schedules";
+import { useAccessForUser } from "@/queries/owner";
 import { useCancelSchedule, useSchedule, useSetSchedulePaused, useUpdateSchedule } from "@/queries/schedules";
-import { useSession } from "@/queries/session";
+import { RoutineHistory } from "./RoutineHistory";
 import { toast } from "@/stores/toast";
 
 function BackLink() {
@@ -27,10 +28,10 @@ function BackLink() {
 }
 
 export function RoutineDetailScreen({ id }: { id: string }) {
-    const user = useSession();
     const query = useSchedule(id);
     const schedule = query.data;
-    const readOnly = schedule ? schedule.userId !== user.id : true;
+    const access = useAccessForUser(schedule?.userId);
+    const readOnly = !schedule || !access.canEdit;
 
     return (
         <Screen title={schedule?.title ?? "Rutina"} leading={<BackLink />} largeTitle={false}>
@@ -41,12 +42,12 @@ export function RoutineDetailScreen({ id }: { id: string }) {
                 </div>
             ) : null}
             {query.isError ? <ErrorState error={query.error} onRetry={() => void query.refetch()} /> : null}
-            {schedule ? <RoutineEditor key={schedule.id} id={id} readOnly={readOnly} /> : null}
+            {schedule ? <RoutineEditor key={schedule.id} id={id} readOnly={readOnly} ownerName={access.isSelf ? null : access.name} /> : null}
         </Screen>
     );
 }
 
-function RoutineEditor({ id, readOnly }: { id: string; readOnly: boolean }) {
+function RoutineEditor({ id, readOnly, ownerName }: { id: string; readOnly: boolean; ownerName: string | null }) {
     const navigate = useNavigate();
     const schedule = useSchedule(id).data;
     const update = useUpdateSchedule(id);
@@ -69,6 +70,8 @@ function RoutineEditor({ id, readOnly }: { id: string; readOnly: boolean }) {
                 </FieldRow>
             </GroupedSection>
 
+            <RoutineHistory id={id} />
+
             <TaskForm
                 mode="edit"
                 readOnly={readOnly}
@@ -84,52 +87,55 @@ function RoutineEditor({ id, readOnly }: { id: string; readOnly: boolean }) {
             />
 
             {readOnly ? (
-                <p className="px-8 pt-2 text-footnote text-label-secondary">Esta rutina es de otra persona. Solo quien la tiene puede editarla.</p>
+                <p className="px-8 pt-2 text-footnote text-label-secondary">Esta rutina es de otra persona. Para editarla necesitas permiso de gestión.</p>
             ) : (
-                <div className="px-4 pt-6">
-                    <AnimatePresence initial={false} mode="popLayout">
-                        {confirmCancel ? (
-                            <motion.div
-                                key="confirm"
-                                initial={{ opacity: 0, scale: 0.96 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.96 }}
-                                transition={spring.default}
-                                className="flex flex-col gap-2 rounded-card bg-bg-elevated p-4"
-                            >
-                                <p className="text-callout">
-                                    La rutina deja de crear tareas. Tu historial se conserva, pero no podrás reactivarla.
-                                </p>
-                                <div className="flex gap-2">
-                                    <Button variant="tinted" className="flex-1" onClick={() => setConfirmCancel(false)}>
-                                        Volver
-                                    </Button>
-                                    <Button
-                                        variant="destructive"
-                                        className="flex-1"
-                                        loading={cancel.isPending}
-                                        onClick={() =>
-                                            cancel.mutate(id, {
-                                                onSuccess: () => {
-                                                    toast.show("Rutina cancelada");
-                                                    void navigate({ to: "/routines" });
-                                                },
-                                            })
-                                        }
-                                    >
+                <>
+                    {ownerName ? <p className="px-8 pt-2 text-footnote text-label-secondary">Estás editando una rutina de {ownerName}.</p> : null}
+                    <div className="px-4 pt-6">
+                        <AnimatePresence initial={false} mode="popLayout">
+                            {confirmCancel ? (
+                                <motion.div
+                                    key="confirm"
+                                    initial={{ opacity: 0, scale: 0.96 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.96 }}
+                                    transition={spring.default}
+                                    className="flex flex-col gap-2 rounded-card bg-bg-elevated p-4"
+                                >
+                                    <p className="text-callout">
+                                        La rutina deja de crear tareas. Tu historial se conserva, pero no podrás reactivarla.
+                                    </p>
+                                    <div className="flex gap-2">
+                                        <Button variant="tinted" className="flex-1" onClick={() => setConfirmCancel(false)}>
+                                            Volver
+                                        </Button>
+                                        <Button
+                                            variant="destructive"
+                                            className="flex-1"
+                                            loading={cancel.isPending}
+                                            onClick={() =>
+                                                cancel.mutate(id, {
+                                                    onSuccess: () => {
+                                                        toast.show("Rutina cancelada");
+                                                        void navigate({ to: "/routines" });
+                                                    },
+                                                })
+                                            }
+                                        >
+                                            Cancelar rutina
+                                        </Button>
+                                    </div>
+                                </motion.div>
+                            ) : (
+                                <motion.div key="trigger" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                                    <Button variant="destructive" size="lg" onClick={() => setConfirmCancel(true)}>
                                         Cancelar rutina
                                     </Button>
-                                </div>
-                            </motion.div>
-                        ) : (
-                            <motion.div key="trigger" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                                <Button variant="destructive" size="lg" onClick={() => setConfirmCancel(true)}>
-                                    Cancelar rutina
-                                </Button>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                </>
             )}
         </div>
     );

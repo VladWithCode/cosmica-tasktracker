@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { heatStep, rangeFor } from "./ranges";
+import { heatStep, highDismissal, rangeFor } from "./ranges";
 
 describe("progress ranges", () => {
     it("ends every range today", () => {
@@ -13,5 +13,11 @@ describe("progress ranges", () => {
 
     it("bins completion into monotonic heat steps", () => {
         expect([heatStep(0, 0), heatStep(0, 3), heatStep(20, 5), heatStep(50, 4), heatStep(80, 5), heatStep(100, 2)]).toEqual([0, 1, 2, 3, 4, 5]);
+    });
+
+    it("warns about dismissals only past both the rate and the minimum count", () => {
+        expect(highDismissal({ dismissed: 2, dismissalRate: 100 })).toBe(false);
+        expect(highDismissal({ dismissed: 3, dismissalRate: 19.9 })).toBe(false);
+        expect(highDismissal({ dismissed: 3, dismissalRate: 20 })).toBe(true);
     });
 });
