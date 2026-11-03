@@ -85,17 +85,18 @@ with Zod schemas, so screens never see wire casing.
 | `PUT /api/v1/auth/password` | Change password | Perfil › Seguridad |
 | `GET /api/v1/tasks/today?owner_user_id` | Generate and list today | Hoy |
 | `GET /api/v1/tasks/day?date&owner_user_id` | List any day | Calendario |
-| `GET /api/v1/tasks/progress?date` | Day counts and percentage | Hoy header, Calendario day header |
-| `GET /api/v1/tasks/history?from&to` | Per-day counts | Progreso (heatmap, week bars), Calendario dots |
-| `GET /api/v1/tasks/metrics?from&to` | Range totals, streak, best day | Progreso |
+| `GET /api/v1/tasks/progress?date&owner_user_id` | Day counts and percentage | Hoy header, Calendario day header |
+| `GET /api/v1/tasks/history?from&to&owner_user_id` | Per-day counts, including `dismissed` | Progreso (heatmap, week bars), Calendario dots |
+| `GET /api/v1/tasks/metrics?from&to&owner_user_id` | Range totals, streak, best day, `dismissal_rate` | Progreso |
 | `GET /api/v1/tasks/:id` | Task detail with `canEdit`, `canApplyToSchedule` | Task sheet |
 | `PUT /api/v1/tasks/:id` | Status, count, times, notes, edits; `apply_to_schedule` | Row swipe, counter, task sheet |
-| `DELETE /api/v1/tasks/:id` | Delete instance | Task sheet |
-| `POST /api/v1/tasks` | One-off task (schedule + instance, `frequencyConfig.singleInstance`) | New sheet › "Una vez" |
+| `DELETE /api/v1/tasks/:id` | Delete a one-off instance; a routine instance is dismissed instead | Task sheet |
+| `POST /api/v1/tasks` | One-off task (schedule + instance, `frequencyConfig.singleInstance`), also for another owner via `owner_user_id` | New sheet › "Una vez" |
 | `POST /api/v1/tasks/:id/ping` | Nudge owner about a task | Shared task row and sheet |
 | `GET /api/v1/schedules?owner_user_id` | List routines | Rutinas |
 | `POST /api/v1/schedules` | Create routine (also for another owner via `owner_user_id`) | New sheet › "Rutina" |
 | `GET /api/v1/schedules/:id` | Routine detail | Routine detail |
+| `GET /api/v1/schedules/:id/history?from&to` | Occurrences, current and best streak | Routine detail › Últimos 30 días |
 | `PUT /api/v1/schedules/:id` | Edit routine | Routine detail |
 | `POST /api/v1/schedules/:id/pause` / `resume` | Pause / resume | Rutinas swipe, routine detail toggle |
 | `DELETE /api/v1/schedules/:id` | Cancel routine | Routine detail (confirm) |
@@ -104,6 +105,7 @@ with Zod schemas, so screens never see wire casing.
 | `GET/POST/PUT/DELETE /api/v1/notes[/:id]` | CRUD | Notas, quick-note sheet |
 | `GET /api/v1/sharing/grants` | Grants I gave | Perfil › Compartir |
 | `POST /api/v1/sharing/grants` | Give access (`view`, `manage`, `ping_only`) | Perfil › Compartir › Invitar |
+| `PUT /api/v1/sharing/grants/:id` | Change access level | Perfil › Compartir › person |
 | `DELETE /api/v1/sharing/grants/:id` | Revoke | Perfil › Compartir |
 | `GET /api/v1/sharing/shared-with-me` | Owners I can see | Owner switcher, Perfil › Compartido conmigo |
 | `GET /api/v1/sharing/users/search?q` | Find users | Invite sheet |
@@ -249,8 +251,9 @@ Bottom sheet (Vaul), snap points: medium (~55%) and large. Desktop: right pane.
 
 - Read section: title, description, time window, duration, routine name,
   category, priority, required, current status, actual start/end, notes.
-- Status segmented control: Pendiente / En curso / Completada / Omitida /
-  Fallida.
+- Status list: Pendiente / En curso / Completada / Omitida / Fallida /
+  Descartada. Descartada removes a routine task from the day without
+  touching the routine; it counts in progress apart from Omitida.
 - Edit (when `canEdit`): title, description, times, duration, target count,
   priority, required, category. Before save, a segmented control "Solo hoy /
   Toda la rutina" maps to `apply_to_schedule`; hidden when
@@ -739,3 +742,7 @@ direction and this branch is independent of it.
 | 2026-11-02 | "Sí o sí" stack for pending required tasks on Hoy | User request: vital tasks must stand out. Accent fill and glow are reserved for them; secondary text at 85% opacity keeps 4.86:1 (light) and 5.4:1 (dark). Calendario keeps the plain Imprescindibles section. |
 | 2026-11-02 | Agua goal and "Para" owner choice only for Rutina | Water display and reminders read the schedule's `frequency_config`, which `POST /tasks` does not take; `POST /tasks` has no `owner_user_id`. |
 | 2026-11-02 | New sheet is a bottom sheet (phone) / right pane (desktop), not scaled from the "+" button | Vaul sheets always enter from an edge; enter and exit stay on the same path, which keeps spatial consistency. |
+| 2026-11-02 | Backend gaps 1–6 and 8–11 closed; the rows above that cite them are superseded | "Solo hoy" now edits every field (per-instance overrides); managers edit, pause and cancel shared routines; Progreso and Calendario dots follow the selected owner; "Para" applies to "Una vez" too; Hoy and Calendario read water config from the day feed. |
+| 2026-11-02 | Dismissed ("Descartada") is a separate status, counted in the total like a missed task and shown in its own color (orange `#eb6834` / `#d95926`) | User decision: keep dismissals in the stats, distinct from misses, so a high rate can be flagged. Accent + orange pass the dataviz validator in both themes (CVD ΔE ≥ 27.9); the dark accent is outside the lightness band, as before. |
+| 2026-11-02 | Progreso shows advice when at least 3 tasks and 20% of the range were dismissed | Below that, a dismissal is noise; the thresholds live in `features/progress/ranges.ts`. |
+| 2026-11-02 | Routine streaks count occurrences ("veces"), skip open occurrences today or later | A weekly routine has no daily streak; today's pending run must not reset the streak before the day ends. |
