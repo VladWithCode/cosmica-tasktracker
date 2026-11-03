@@ -143,6 +143,12 @@ func UserExistsByUsername(ctx context.Context, username string) (bool, error) {
 }
 
 func UserExistsByEmail(ctx context.Context, email string) (bool, error) {
+	return EmailTakenByOtherUser(ctx, email, "")
+}
+
+// EmailTakenByOtherUser reports whether a user other than exceptUserID holds
+// the email, compared case-insensitively. An empty exceptUserID checks all users.
+func EmailTakenByOtherUser(ctx context.Context, email string, exceptUserID string) (bool, error) {
 	if strings.TrimSpace(email) == "" {
 		return false, nil
 	}
@@ -159,8 +165,9 @@ func UserExistsByEmail(ctx context.Context, email string) (bool, error) {
 	var exists bool
 	err = conn.QueryRow(
 		ctx,
-		"SELECT EXISTS (SELECT 1 FROM users WHERE email IS NOT NULL AND email <> '' AND LOWER(email) = LOWER($1))",
+		"SELECT EXISTS (SELECT 1 FROM users WHERE email IS NOT NULL AND email <> '' AND LOWER(email) = LOWER($1) AND id::text <> $2)",
 		email,
+		exceptUserID,
 	).Scan(&exists)
 
 	return exists, err

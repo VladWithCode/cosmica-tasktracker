@@ -240,6 +240,45 @@ func CreateTaskAccessGrant(ctx context.Context, grant *TaskAccessGrant) error {
 	return err
 }
 
+// UpdateTaskAccessGrantLevel changes the access level of an active grant the
+// owner holds and returns the updated grant, or pgx.ErrNoRows when none matches.
+func UpdateTaskAccessGrantLevel(ctx context.Context, ownerUserID string, grantID string, accessLevel SharingAccessLevel) (*TaskAccessGrant, error) {
+	conn, err := GetConn(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	grant := &TaskAccessGrant{AccessLevel: accessLevel}
+	ApplySharingAccessLevel(grant)
+	tag, err := conn.Exec(
+		ctx,
+		`UPDATE task_access_grants
+		 SET access_level = @accessLevel, can_view = @canView, can_create = @canCreate, can_ping = @canPing
+		 WHERE id = @id AND owner_user_id = @ownerUserID AND revoked_at IS NULL`,
+		pgx.NamedArgs{
+			"id":          grantID,
+			"ownerUserID": ownerUserID,
+			"accessLevel": grant.AccessLevel,
+			"canView":     grant.CanView,
+			"canCreate":   grant.CanCreate,
+			"canPing":     grant.CanPing,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	if tag.RowsAffected() == 0 {
+		return nil, pgx.ErrNoRows
+	}
+
+	row := conn.QueryRow(ctx, taskAccessGrantSelectSQL()+` WHERE g.id = $1`, grantID)
+	return scanTaskAccessGrant(row)
+}
+
 func ListTaskAccessGrantsByOwner(ctx context.Context, ownerUserID string) ([]*TaskAccessGrant, error) {
 	return listTaskAccessGrants(ctx, `g.owner_user_id = $1 AND g.revoked_at IS NULL`, ownerUserID)
 }

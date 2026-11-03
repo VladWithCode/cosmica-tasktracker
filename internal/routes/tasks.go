@@ -30,7 +30,7 @@ type updateTaskRequest struct {
 	EndTime          *string `json:"schedule_end_time"`
 	Frequency        *string `json:"frequency"`
 	IsRequired       *bool   `json:"is_required"`
-	Notes            string  `json:"notes"`
+	Notes            *string `json:"notes"`
 	Priority         *string `json:"priority_level"`
 	StartTime        *string `json:"schedule_start_time"`
 	Status           string  `json:"status"`
@@ -38,6 +38,11 @@ type updateTaskRequest struct {
 	TargetCount      *int    `json:"targetCount"`
 	TargetCountSnake *int    `json:"target_count"`
 	Title            *string `json:"title"`
+}
+
+type createTaskRequest struct {
+	db.ScheduleTask
+	OwnerUserID string `json:"owner_user_id"`
 }
 
 type pingTaskRequest struct {
@@ -67,15 +72,20 @@ func CreateTask(c *gin.Context) {
 		return
 	}
 
-	var scheduleTask *db.ScheduleTask
-	if err := c.ShouldBindJSON(&scheduleTask); err != nil {
+	var request createTaskRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
 		httpx.BadRequest(c, "Información inválida")
 		log.Printf("failed to bind json: %v\n", err)
 		return
 	}
 
+	ownerUserID, ok := authorizeOwner(c, sessionAuth, request.OwnerUserID, db.SharingPermissionCreate)
+	if !ok {
+		return
+	}
+
 	service := tasksvc.NewService(tasksvc.NewRepository())
-	task, err := service.Create(c.Request.Context(), sessionAuth.ID, scheduleTask)
+	task, err := service.Create(c.Request.Context(), ownerUserID, sessionAuth.ID, &request.ScheduleTask)
 	if err != nil {
 		httpx.ServerError(c, "Error al crear tarea")
 		log.Printf("failed to create task: %v\n", err)
@@ -159,13 +169,16 @@ func (r updateTaskRequest) toServiceInput() (tasksvc.UpdateTaskInput, error) {
 		Description:     trimStringPtr(r.Description),
 		DurationMinutes: r.DurationMinutes,
 		IsRequired:      r.IsRequired,
-		Notes:           strings.TrimSpace(r.Notes),
+		Notes:           trimStringPtr(r.Notes),
 		TargetCount:     firstIntPtr(r.TargetCountSnake, r.TargetCount),
 		Title:           trimStringPtr(r.Title),
 	}
 
 	if status := firstNonEmpty(r.StatusLevel, r.Status); status != "" {
 		input.Status = db.TaskStatus(status)
+		if err := db.ValidateTaskStatus(input.Status); err != nil {
+			return input, err
+		}
 	}
 	if r.Date != "" {
 		date, err := parseFlexibleTime(r.Date)
@@ -323,8 +336,13 @@ func GetTaskProgress(c *gin.Context) {
 		day = time.Date(parsed.Year(), parsed.Month(), parsed.Day(), 12, 0, 0, 0, time.Local)
 	}
 
+	ownerUserID, ok := authorizeOwner(c, sessionAuth, c.Query("owner_user_id"), db.SharingPermissionView)
+	if !ok {
+		return
+	}
+
 	service := tasksvc.NewService(tasksvc.NewRepository())
-	progress, err := service.GetDayProgress(c.Request.Context(), sessionAuth.ID, day)
+	progress, err := service.GetDayProgress(c.Request.Context(), ownerUserID, day)
 	if err != nil {
 		httpx.ServerError(c, "Error al recuperar progreso")
 		log.Printf("failed to get day progress: %v\n", err)
@@ -348,8 +366,13 @@ func GetTaskHistory(c *gin.Context) {
 		return
 	}
 
+	ownerUserID, ok := authorizeOwner(c, sessionAuth, c.Query("owner_user_id"), db.SharingPermissionView)
+	if !ok {
+		return
+	}
+
 	service := tasksvc.NewService(tasksvc.NewRepository())
-	history, err := service.GetHistory(c.Request.Context(), sessionAuth.ID, from, to)
+	history, err := service.GetHistory(c.Request.Context(), ownerUserID, from, to)
 	if err != nil {
 		httpx.ServerError(c, "Error al recuperar historial")
 		log.Printf("failed to get task history: %v\n", err)
@@ -373,8 +396,13 @@ func GetTaskMetrics(c *gin.Context) {
 		return
 	}
 
+	ownerUserID, ok := authorizeOwner(c, sessionAuth, c.Query("owner_user_id"), db.SharingPermissionView)
+	if !ok {
+		return
+	}
+
 	service := tasksvc.NewService(tasksvc.NewRepository())
-	metrics, err := service.GetMetrics(c.Request.Context(), sessionAuth.ID, from, to)
+	metrics, err := service.GetMetrics(c.Request.Context(), ownerUserID, from, to)
 	if err != nil {
 		httpx.ServerError(c, "Error al recuperar métricas")
 		log.Printf("failed to get task metrics: %v\n", err)
@@ -439,21 +467,12 @@ func GetDayTasks(c *gin.Context) {
 		return
 	}
 
-	ownerUserID := strings.TrimSpace(c.Query("owner_user_id"))
-	if ownerUserID == "" {
-		ownerUserID = sessionAuth.ID
+	ownerUserID, ok := authorizeOwner(c, sessionAuth, c.Query("owner_user_id"), db.SharingPermissionView)
+	if !ok {
+		return
 	}
 
 	service := tasksvc.NewService(tasksvc.NewRepository())
-	if err := service.CanViewOwner(c.Request.Context(), sessionAuth, ownerUserID); err != nil {
-		if errors.Is(err, tasksvc.ErrForbidden) {
-			sharingPermissionDenied(c)
-			return
-		}
-		httpx.ServerError(c, "Error al validar permisos compartidos")
-		log.Printf("failed to validate shared day tasks access: %v\n", err)
-		return
-	}
 
 	tasks, err := service.ListByDate(c.Request.Context(), ownerUserID, date)
 	if err != nil {
@@ -482,21 +501,12 @@ func GenerateTodaysTasks(c *gin.Context) {
 		return
 	}
 
-	ownerUserID := strings.TrimSpace(c.Query("owner_user_id"))
-	if ownerUserID == "" {
-		ownerUserID = sessionAuth.ID
+	ownerUserID, ok := authorizeOwner(c, sessionAuth, c.Query("owner_user_id"), db.SharingPermissionView)
+	if !ok {
+		return
 	}
 
 	service := tasksvc.NewService(tasksvc.NewRepository())
-	if err := service.CanViewOwner(c.Request.Context(), sessionAuth, ownerUserID); err != nil {
-		if errors.Is(err, tasksvc.ErrForbidden) {
-			sharingPermissionDenied(c)
-			return
-		}
-		httpx.ServerError(c, "Error al validar permisos compartidos")
-		log.Printf("failed to validate shared task feed access: %v\n", err)
-		return
-	}
 
 	tasks, err := service.ListToday(c.Request.Context(), ownerUserID)
 	if err != nil {

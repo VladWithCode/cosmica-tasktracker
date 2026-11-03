@@ -4,9 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/vladwithcode/tasktracker/internal/auth"
 	"github.com/vladwithcode/tasktracker/internal/db"
 )
@@ -52,10 +54,28 @@ func (s *Service) UpdateProfile(ctx context.Context, userID string, input Update
 		return nil, normalizeNotFound(err)
 	}
 
-	user.Fullname = input.Fullname
-	user.Email = input.Email
+	fullname := strings.TrimSpace(input.Fullname)
+	email := auth.NormalizeEmail(input.Email)
+	if fields := auth.ValidateProfileFields(fullname, email); len(fields) > 0 {
+		return nil, &auth.ValidationError{Fields: fields, Message: "Revisa los campos del formulario"}
+	}
+
+	taken, err := s.repo.IsEmailTakenByOther(ctx, email, user.ID)
+	if err != nil {
+		return nil, err
+	}
+	if taken {
+		return nil, auth.ErrEmailTaken
+	}
+
+	user.Fullname = fullname
+	user.Email = email
 
 	if err := s.repo.Update(ctx, user); err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return nil, auth.ErrEmailTaken
+		}
 		return nil, err
 	}
 

@@ -32,7 +32,7 @@ type UpdateTaskInput struct {
 	EndTime         *time.Time
 	Frequency       *db.ScheduleTaskFrequency
 	IsRequired      *bool
-	Notes           string
+	Notes           *string
 	Priority        *db.ScheduleTaskPriority
 	StartTime       *time.Time
 	Status          db.TaskStatus
@@ -48,8 +48,9 @@ func NewService(repo Repository) *Service {
 	return &Service{repo: repo}
 }
 
-func (s *Service) Create(ctx context.Context, userID string, scheduleTask *db.ScheduleTask) (*db.DetailedTask, error) {
-	scheduleTask.UserID = userID
+func (s *Service) Create(ctx context.Context, ownerUserID string, creatorUserID string, scheduleTask *db.ScheduleTask) (*db.DetailedTask, error) {
+	scheduleTask.UserID = ownerUserID
+	scheduleTask.CreatedBy = creatorUserID
 	scheduleTask.ID = uuid.Must(uuid.NewV7()).String()
 	scheduleTask.Status = db.ScheduleTaskStatusActive
 
@@ -93,25 +94,9 @@ func (s *Service) GetDetails(ctx context.Context, authData *auth.Auth, id string
 		return nil, err
 	}
 	task.CanEdit = canEdit
-	task.CanApplyToSchedule = false
+	task.CanApplyToSchedule = canEdit
 
 	return task, nil
-}
-
-func (s *Service) CanViewOwner(ctx context.Context, authData *auth.Auth, ownerUserID string) error {
-	if canAccessTask(authData, ownerUserID) {
-		return nil
-	}
-
-	allowed, err := s.repo.UserHasTaskPermission(ctx, ownerUserID, authData.ID, db.SharingPermissionView)
-	if err != nil {
-		return err
-	}
-	if !allowed {
-		return ErrForbidden
-	}
-
-	return nil
 }
 
 func (s *Service) ListByUser(ctx context.Context, userID string) ([]*db.DetailedTask, error) {
@@ -160,11 +145,10 @@ func (s *Service) Update(ctx context.Context, authData *auth.Auth, id string, in
 		if err != nil {
 			return nil, err
 		}
-		if !allowed || input.ApplyToSchedule {
+		if !allowed {
 			return nil, ErrForbidden
 		}
 	}
-	canApplyToSchedule := canAccessTask(authData, task.UserID)
 
 	previousStatus := task.Status
 	if input.Status != "" {
@@ -185,14 +169,19 @@ func (s *Service) Update(ctx context.Context, authData *auth.Auth, id string, in
 	if input.TargetCount != nil {
 		task.TargetCount = input.TargetCount
 	}
-	if input.Notes != "" {
-		task.Notes = input.Notes
+	if input.Notes != nil {
+		task.Notes = *input.Notes
 	}
 	if input.Title != nil {
 		task.Title = *input.Title
 	}
 	if input.Description != nil {
 		task.Description = *input.Description
+	}
+	if input.ApplyToSchedule {
+		task.ClearScheduleOverrides()
+	} else {
+		applyInstanceOverrides(task, input)
 	}
 
 	now := time.Now()
@@ -294,7 +283,7 @@ func (s *Service) Update(ctx context.Context, authData *auth.Auth, id string, in
 		return nil, err
 	}
 	detailedTask.CanEdit = true
-	detailedTask.CanApplyToSchedule = canApplyToSchedule
+	detailedTask.CanApplyToSchedule = true
 
 	return detailedTask, nil
 }
@@ -321,7 +310,41 @@ func (s *Service) Delete(ctx context.Context, authData *auth.Auth, id string) er
 		return ErrForbidden
 	}
 
+	schedule, err := s.repo.GetScheduleByID(ctx, task.ScheduleTaskID)
+	if err != nil {
+		return normalizeNotFound(err)
+	}
+	// Deleting a routine's instance would only last until the generator
+	// recreates it, so it is dismissed instead.
+	if db.ScheduleGeneratesOn(schedule, task.Date) {
+		task.Status = db.TaskStatusDismissed
+		task.CompletedAt = time.Time{}
+		task.ActualEnd = time.Time{}
+		return s.repo.UpdateTask(ctx, task)
+	}
+
 	return s.repo.DeleteTask(ctx, task)
+}
+
+func applyInstanceOverrides(task *db.Task, input UpdateTaskInput) {
+	if input.StartTime != nil {
+		task.StartTime = input.StartTime
+	}
+	if input.EndTime != nil {
+		task.EndTime = input.EndTime
+	}
+	if input.DurationMinutes != nil {
+		task.DurationMinutes = input.DurationMinutes
+	}
+	if input.Priority != nil {
+		task.Priority = input.Priority
+	}
+	if input.IsRequired != nil {
+		task.IsRequired = input.IsRequired
+	}
+	if input.Category != nil {
+		task.Category = input.Category
+	}
 }
 
 func canAccessTask(authData *auth.Auth, userID string) bool {

@@ -16,6 +16,10 @@ import (
 	"github.com/vladwithcode/tasktracker/internal/notifications"
 )
 
+type updateSharingGrantRequest struct {
+	AccessLevel string `json:"access_level"`
+}
+
 type createSharingGrantRequest struct {
 	AccessLevel   string `json:"access_level"`
 	Grantee       string `json:"grantee"`
@@ -25,6 +29,7 @@ type createSharingGrantRequest struct {
 func registerSharingRoutes(router *gin.RouterGroup) {
 	router.GET("/sharing/grants", ListSharingGrants)
 	router.POST("/sharing/grants", CreateSharingGrant)
+	router.PUT("/sharing/grants/:id", UpdateSharingGrant)
 	router.DELETE("/sharing/grants/:id", RevokeSharingGrant)
 	router.GET("/sharing/shared-with-me", ListSharedWithMe)
 	router.GET("/sharing/users/search", SearchSharingUsers)
@@ -224,6 +229,39 @@ func MarkSharingInvitationRead(c *gin.Context) {
 	httpx.OK(c, gin.H{}, "Invitación marcada como leída")
 }
 
+func UpdateSharingGrant(c *gin.Context) {
+	authData, err := auth.GetAuth(c)
+	if err != nil {
+		httpx.Unauthorized(c, "No autorizado")
+		return
+	}
+
+	var request updateSharingGrantRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		httpx.BadRequest(c, "Información inválida")
+		return
+	}
+
+	accessLevel, err := db.NormalizeSharingAccessLevel(request.AccessLevel)
+	if err != nil {
+		httpx.BadRequest(c, "Nivel de acceso inválido")
+		return
+	}
+
+	grant, err := db.UpdateTaskAccessGrantLevel(c.Request.Context(), authData.ID, c.Param("id"), accessLevel)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			httpx.NotFound(c, "Permiso no encontrado")
+			return
+		}
+		httpx.ServerError(c, "No se pudo actualizar el permiso")
+		log.Printf("failed to update sharing grant: %v", err)
+		return
+	}
+
+	httpx.OK(c, gin.H{"grant": grant}, "Permiso actualizado")
+}
+
 func RevokeSharingGrant(c *gin.Context) {
 	authData, err := auth.GetAuth(c)
 	if err != nil {
@@ -256,6 +294,32 @@ func resolveSharingGrantee(c *gin.Context, request createSharingGrantRequest) (*
 	}
 
 	return db.GetUserByUsernameOrEmail(c.Request.Context(), identifier)
+}
+
+// authorizeOwner resolves the owner a request acts on (the session user when
+// ownerUserID is empty) and checks that the session user holds permission on
+// that owner's tasks. On failure it writes the response and returns false.
+func authorizeOwner(c *gin.Context, sessionAuth *auth.Auth, ownerUserID string, permission string) (string, bool) {
+	ownerUserID = strings.TrimSpace(ownerUserID)
+	if ownerUserID == "" {
+		ownerUserID = sessionAuth.ID
+	}
+	if ownerUserID == sessionAuth.ID || sessionAuth.HasAccess(auth.AccessLevelAdmin) {
+		return ownerUserID, true
+	}
+
+	allowed, err := db.UserHasTaskPermission(c.Request.Context(), ownerUserID, sessionAuth.ID, permission)
+	if err != nil {
+		httpx.ServerError(c, "Error al validar permisos compartidos")
+		log.Printf("failed to validate shared %s access: %v\n", permission, err)
+		return "", false
+	}
+	if !allowed {
+		sharingPermissionDenied(c)
+		return "", false
+	}
+
+	return ownerUserID, true
 }
 
 func sharingPermissionDenied(c *gin.Context) {

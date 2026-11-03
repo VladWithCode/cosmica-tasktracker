@@ -60,10 +60,21 @@ func TestSharedManageCanEditTaskButViewCannot(t *testing.T) {
 
 	status, body, _, _ = performJSONPayload(router, http.MethodPut, "/api/v1/tasks/"+task.ID, map[string]interface{}{
 		"apply_to_schedule": true,
-		"title":             "Forbidden shared schedule edit",
+		"title":             "Managed schedule edit",
 	}, []*http.Cookie{managerCookie})
+	if status != http.StatusOK {
+		t.Fatalf("expected manager apply_to_schedule OK, got %d body=%s", status, body)
+	}
+	if getPhase6ScheduleState(t, schedule.Data.Schedule.ID).Title != "Managed schedule edit" {
+		t.Fatalf("manager apply_to_schedule should update the schedule")
+	}
+
+	status, body, _, _ = performJSONPayload(router, http.MethodPut, "/api/v1/tasks/"+task.ID, map[string]interface{}{
+		"apply_to_schedule": true,
+		"title":             "Viewer schedule edit",
+	}, []*http.Cookie{viewerCookie})
 	if status != http.StatusForbidden {
-		t.Fatalf("expected manager apply_to_schedule 403, got %d body=%s", status, body)
+		t.Fatalf("expected viewer apply_to_schedule 403, got %d body=%s", status, body)
 	}
 
 	status, body, _, _ = performJSONPayload(router, http.MethodPut, "/api/v1/tasks/"+task.ID, map[string]string{

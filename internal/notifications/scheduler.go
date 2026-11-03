@@ -68,9 +68,7 @@ func (s *TaskScheduler) checkAndNotifyTasks() {
 		SELECT t.id, t.title, COALESCE(t.description, ''), t.user_id
 		FROM detailed_tasks t
 		LEFT JOIN task_notifications tn ON tn.task_id = t.id
-		WHERE t.status != 'completed'
-		  AND t.status != 'skipped'
-		  AND t.status != 'failed'
+		WHERE t.status NOT IN ('completed', 'skipped', 'failed', 'dismissed')
 		  AND t.date IS NOT NULL
 		  AND t.start_time IS NOT NULL
 		  AND tn.task_id IS NULL

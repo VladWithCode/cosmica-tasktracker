@@ -73,6 +73,19 @@ func UpdateProfile(c *gin.Context) {
 	service := usersvc.NewService(usersvc.NewRepository())
 	profile, err := service.UpdateProfile(c.Request.Context(), authData.ID, updateReq)
 	if err != nil {
+		var validationError *auth.ValidationError
+		if errors.As(err, &validationError) {
+			httpx.Unprocessable(c, gin.H{"fields": validationError.Fields}, "validation_error", validationError.Message)
+			return
+		}
+		if errors.Is(err, auth.ErrEmailTaken) {
+			httpx.Conflict(c, "email_taken", "El correo ya está registrado")
+			return
+		}
+		if errors.Is(err, usersvc.ErrNotFound) {
+			httpx.NotFound(c, "Usuario no encontrado")
+			return
+		}
 		httpx.ServerError(c, "Error inesperado")
 		log.Printf("failed to update user: %v\n", err)
 		return

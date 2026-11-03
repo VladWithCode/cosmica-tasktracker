@@ -46,6 +46,7 @@ func registerScheduleRoutes(router *gin.RouterGroup) {
 	router.GET("/schedules", GetSchedules)
 	router.POST("/schedules", CreateSchedule)
 	router.GET("/schedules/:id", GetSchedule)
+	router.GET("/schedules/:id/history", GetScheduleHistory)
 	router.POST("/schedules/:id/pause", PauseSchedule)
 	router.POST("/schedules/:id/resume", ResumeSchedule)
 	router.PUT("/schedules/:id", UpdateSchedule)
@@ -60,21 +61,9 @@ func GetSchedules(c *gin.Context) {
 		return
 	}
 
-	ownerUserID := strings.TrimSpace(c.Query("owner_user_id"))
-	if ownerUserID == "" {
-		ownerUserID = sessionAuth.ID
-	}
-	if ownerUserID != sessionAuth.ID && !sessionAuth.HasAccess(auth.AccessLevelAdmin) {
-		allowed, err := db.UserHasTaskPermission(c.Request.Context(), ownerUserID, sessionAuth.ID, db.SharingPermissionView)
-		if err != nil {
-			httpx.ServerError(c, "Error al validar permisos compartidos")
-			log.Printf("failed to validate shared schedules access: %v\n", err)
-			return
-		}
-		if !allowed {
-			sharingPermissionDenied(c)
-			return
-		}
+	ownerUserID, ok := authorizeOwner(c, sessionAuth, c.Query("owner_user_id"), db.SharingPermissionView)
+	if !ok {
+		return
 	}
 
 	service := schedulesvc.NewService(schedulesvc.NewRepository())
@@ -109,21 +98,9 @@ func CreateSchedule(c *gin.Context) {
 		return
 	}
 
-	ownerUserID := strings.TrimSpace(req.OwnerUserID)
-	if ownerUserID == "" {
-		ownerUserID = sessionAuth.ID
-	}
-	if ownerUserID != sessionAuth.ID && !sessionAuth.HasAccess(auth.AccessLevelAdmin) {
-		allowed, err := db.UserHasTaskPermission(c.Request.Context(), ownerUserID, sessionAuth.ID, db.SharingPermissionCreate)
-		if err != nil {
-			httpx.ServerError(c, "Error al validar permisos compartidos")
-			log.Printf("failed to validate shared schedule creation: %v\n", err)
-			return
-		}
-		if !allowed {
-			sharingPermissionDenied(c)
-			return
-		}
+	ownerUserID, ok := authorizeOwner(c, sessionAuth, req.OwnerUserID, db.SharingPermissionCreate)
+	if !ok {
+		return
 	}
 
 	service := schedulesvc.NewService(schedulesvc.NewRepository())
@@ -162,6 +139,38 @@ func GetSchedule(c *gin.Context) {
 	}
 
 	httpx.OK(c, gin.H{"schedule": schedule}, "Rutina recuperada")
+}
+
+func GetScheduleHistory(c *gin.Context) {
+	sessionAuth, err := auth.GetAuth(c)
+	if err != nil {
+		httpx.Unauthorized(c, "No autorizado")
+		return
+	}
+
+	from, to, err := parseDateRange(c)
+	if err != nil {
+		httpx.BadRequest(c, err.Error())
+		return
+	}
+
+	service := schedulesvc.NewService(schedulesvc.NewRepository())
+	history, err := service.History(c.Request.Context(), sessionAuth, c.Param("id"), from, to)
+	if err != nil {
+		if errors.Is(err, schedulesvc.ErrNotFound) {
+			httpx.NotFound(c, "Rutina no encontrada")
+			return
+		}
+		if errors.Is(err, schedulesvc.ErrForbidden) {
+			httpx.Forbidden(c, "No tienes permisos para ver esta rutina")
+			return
+		}
+		httpx.ServerError(c, "Error al recuperar historial de la rutina")
+		log.Printf("failed to get schedule history: %v\n", err)
+		return
+	}
+
+	httpx.OK(c, gin.H{"history": history}, "Historial de la rutina recuperado")
 }
 
 func UpdateSchedule(c *gin.Context) {

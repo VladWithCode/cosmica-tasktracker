@@ -10,6 +10,7 @@ type Repository interface {
 	Create(ctx context.Context, user *db.User) error
 	Delete(ctx context.Context, userID string) error
 	GetByID(ctx context.Context, id string) (*db.User, error)
+	IsEmailTakenByOther(ctx context.Context, email string, userID string) (bool, error)
 	Update(ctx context.Context, user *db.User) error
 }
 
@@ -29,6 +30,10 @@ func (r *DBRepository) Delete(ctx context.Context, userID string) error {
 
 func (r *DBRepository) GetByID(ctx context.Context, id string) (*db.User, error) {
 	return db.GetUserByID(ctx, id)
+}
+
+func (r *DBRepository) IsEmailTakenByOther(ctx context.Context, email string, userID string) (bool, error) {
+	return db.EmailTakenByOtherUser(ctx, email, userID)
 }
 
 func (r *DBRepository) Update(ctx context.Context, user *db.User) error {

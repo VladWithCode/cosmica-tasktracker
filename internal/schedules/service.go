@@ -60,30 +60,22 @@ func (s *Service) List(ctx context.Context, userID string) ([]*db.ScheduleTask, 
 }
 
 func (s *Service) Get(ctx context.Context, authData *auth.Auth, id string) (*db.ScheduleTask, error) {
-	schedule, err := s.repo.GetByID(ctx, id)
+	return s.getAuthorized(ctx, authData, id, db.SharingPermissionView)
+}
+
+func (s *Service) History(ctx context.Context, authData *auth.Auth, id string, from time.Time, to time.Time) (*db.ScheduleHistory, error) {
+	schedule, err := s.getAuthorized(ctx, authData, id, db.SharingPermissionView)
 	if err != nil {
-		return nil, normalizeNotFound(err)
-	}
-	if !canAccessSchedule(authData, schedule.UserID) {
-		allowed, err := s.repo.UserHasTaskPermission(ctx, schedule.UserID, authData.ID, db.SharingPermissionView)
-		if err != nil {
-			return nil, err
-		}
-		if !allowed {
-			return nil, ErrForbidden
-		}
+		return nil, err
 	}
 
-	return schedule, nil
+	return s.repo.History(ctx, schedule.ID, from, to)
 }
 
 func (s *Service) Update(ctx context.Context, authData *auth.Auth, id string, input *db.ScheduleTask) (*db.ScheduleTask, error) {
-	existing, err := s.repo.GetByID(ctx, id)
+	existing, err := s.getAuthorized(ctx, authData, id, db.SharingPermissionEdit)
 	if err != nil {
-		return nil, normalizeNotFound(err)
-	}
-	if !canAccessSchedule(authData, existing.UserID) {
-		return nil, ErrForbidden
+		return nil, err
 	}
 
 	input.ID = existing.ID
@@ -104,12 +96,9 @@ func (s *Service) Update(ctx context.Context, authData *auth.Auth, id string, in
 }
 
 func (s *Service) Delete(ctx context.Context, authData *auth.Auth, id string) error {
-	schedule, err := s.repo.GetByID(ctx, id)
+	schedule, err := s.getAuthorized(ctx, authData, id, db.SharingPermissionEdit)
 	if err != nil {
-		return normalizeNotFound(err)
-	}
-	if !canAccessSchedule(authData, schedule.UserID) {
-		return ErrForbidden
+		return err
 	}
 
 	return s.repo.Delete(ctx, schedule)
@@ -124,12 +113,9 @@ func (s *Service) Resume(ctx context.Context, authData *auth.Auth, id string) (*
 }
 
 func (s *Service) setStatus(ctx context.Context, authData *auth.Auth, id string, status db.ScheduleTaskStatus) (*db.ScheduleTask, error) {
-	schedule, err := s.repo.GetByID(ctx, id)
+	schedule, err := s.getAuthorized(ctx, authData, id, db.SharingPermissionEdit)
 	if err != nil {
-		return nil, normalizeNotFound(err)
-	}
-	if !canAccessSchedule(authData, schedule.UserID) {
-		return nil, ErrForbidden
+		return nil, err
 	}
 
 	if err := s.repo.SetStatus(ctx, schedule.ID, schedule.UserID, status); err != nil {
@@ -137,6 +123,28 @@ func (s *Service) setStatus(ctx context.Context, authData *auth.Auth, id string,
 	}
 
 	return s.repo.GetByID(ctx, id)
+}
+
+// getAuthorized loads a schedule and checks that the session user owns it, is
+// an admin, or holds the given sharing permission on the owner's tasks.
+func (s *Service) getAuthorized(ctx context.Context, authData *auth.Auth, id string, permission string) (*db.ScheduleTask, error) {
+	schedule, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, normalizeNotFound(err)
+	}
+	if canAccessSchedule(authData, schedule.UserID) {
+		return schedule, nil
+	}
+
+	allowed, err := s.repo.UserHasTaskPermission(ctx, schedule.UserID, authData.ID, permission)
+	if err != nil {
+		return nil, err
+	}
+	if !allowed {
+		return nil, ErrForbidden
+	}
+
+	return schedule, nil
 }
 
 func canAccessSchedule(authData *auth.Auth, userID string) bool {

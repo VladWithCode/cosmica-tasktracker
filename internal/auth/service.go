@@ -303,7 +303,7 @@ func validatePassword(password string) FieldErrors {
 
 func normalizeRegisterInput(input RegisterInput) RegisterInput {
 	return RegisterInput{
-		Email:    strings.ToLower(strings.TrimSpace(input.Email)),
+		Email:    NormalizeEmail(input.Email),
 		Fullname: strings.TrimSpace(input.Fullname),
 		Password: input.Password,
 		Username: strings.ToLower(strings.TrimSpace(input.Username)),
@@ -330,16 +330,33 @@ func validateRegisterInput(input RegisterInput) FieldErrors {
 		fields["password"] = "La contraseña debe incluir al menos una letra y un número"
 	}
 
-	fullnameLength := len([]rune(input.Fullname))
-	if input.Fullname == "" {
+	for field, message := range ValidateProfileFields(input.Fullname, input.Email) {
+		fields[field] = message
+	}
+
+	return fields
+}
+
+// NormalizeEmail trims and lowercases an email the way accounts store it.
+func NormalizeEmail(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
+}
+
+// ValidateProfileFields checks the fields shared by registration and profile
+// edits. It expects a trimmed fullname and a NormalizeEmail-ed email.
+func ValidateProfileFields(fullname string, email string) FieldErrors {
+	fields := FieldErrors{}
+
+	fullnameLength := len([]rune(fullname))
+	if fullname == "" {
 		fields["fullname"] = "El nombre completo es requerido"
 	} else if fullnameLength < 2 || fullnameLength > 80 {
 		fields["fullname"] = "El nombre debe tener entre 2 y 80 caracteres"
 	}
 
-	if input.Email != "" {
-		address, err := mail.ParseAddress(input.Email)
-		if err != nil || strings.ToLower(address.Address) != input.Email {
+	if email != "" {
+		address, err := mail.ParseAddress(email)
+		if err != nil || strings.ToLower(address.Address) != email {
 			fields["email"] = "Ingresa un correo válido"
 		}
 	}

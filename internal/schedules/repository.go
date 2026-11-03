@@ -2,6 +2,7 @@ package schedules
 
 import (
 	"context"
+	"time"
 
 	"github.com/vladwithcode/tasktracker/internal/db"
 )
@@ -10,6 +11,7 @@ type Repository interface {
 	Create(ctx context.Context, schedule *db.ScheduleTask) error
 	Delete(ctx context.Context, schedule *db.ScheduleTask) error
 	GetByID(ctx context.Context, id string) (*db.ScheduleTask, error)
+	History(ctx context.Context, id string, from time.Time, to time.Time) (*db.ScheduleHistory, error)
 	ListByUser(ctx context.Context, userID string) ([]*db.ScheduleTask, error)
 	SetStatus(ctx context.Context, id string, userID string, status db.ScheduleTaskStatus) error
 	UserHasTaskPermission(ctx context.Context, ownerUserID string, granteeUserID string, permission string) (bool, error)
@@ -32,6 +34,10 @@ func (r *DBRepository) Delete(ctx context.Context, schedule *db.ScheduleTask) er
 
 func (r *DBRepository) GetByID(ctx context.Context, id string) (*db.ScheduleTask, error) {
 	return db.GetScheduleTaskByID(ctx, id)
+}
+
+func (r *DBRepository) History(ctx context.Context, id string, from time.Time, to time.Time) (*db.ScheduleHistory, error) {
+	return db.GetScheduleTaskHistory(ctx, id, from, to)
 }
 
 func (r *DBRepository) ListByUser(ctx context.Context, userID string) ([]*db.ScheduleTask, error) {

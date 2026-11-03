@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -28,7 +29,30 @@ const (
 	TaskStatusCompleted  TaskStatus = "completed"
 	TaskStatusSkipped    TaskStatus = "skipped"
 	TaskStatusFailed     TaskStatus = "failed"
+	TaskStatusDismissed  TaskStatus = "dismissed"
 )
+
+var ErrInvalidTaskStatus = errors.New("invalid task status")
+
+func ValidateTaskStatus(status TaskStatus) error {
+	switch status {
+	case TaskStatusPending, TaskStatusInProgress, TaskStatusCompleted, TaskStatusSkipped, TaskStatusFailed, TaskStatusDismissed:
+		return nil
+	default:
+		return ErrInvalidTaskStatus
+	}
+}
+
+// IsSettled reports whether a status was set by the user or already resolved,
+// so serve-time inference must not overwrite it.
+func (status TaskStatus) IsSettled() bool {
+	switch status {
+	case TaskStatusCompleted, TaskStatusSkipped, TaskStatusFailed, TaskStatusDismissed:
+		return true
+	default:
+		return false
+	}
+}
 
 type Task struct {
 	ID             string     `db:"id" json:"id,omitempty"`
@@ -46,6 +70,49 @@ type Task struct {
 	Notes          string     `db:"notes" json:"notes,omitempty"`
 	CreatedAt      time.Time  `db:"created_at" json:"createdAt,omitzero"`
 	UpdatedAt      time.Time  `db:"updated_at" json:"updatedAt,omitzero"`
+
+	// Per-instance overrides of schedule fields. Nil means "use the schedule".
+	StartTime       *time.Time            `db:"start_time" json:"-"`
+	EndTime         *time.Time            `db:"end_time" json:"-"`
+	DurationMinutes *int                  `db:"duration_minutes" json:"-"`
+	Priority        *ScheduleTaskPriority `db:"priority_level" json:"-"`
+	IsRequired      *bool                 `db:"is_required" json:"-"`
+	Category        *string               `db:"category" json:"-"`
+}
+
+func (task *Task) ClearScheduleOverrides() {
+	task.StartTime = nil
+	task.EndTime = nil
+	task.DurationMinutes = nil
+	task.Priority = nil
+	task.IsRequired = nil
+	task.Category = nil
+}
+
+// EffectiveSchedule returns a copy of the schedule with this instance's
+// overrides applied, so status inference and responses see today's values.
+func (task *Task) EffectiveSchedule(scheduleTask *ScheduleTask) *ScheduleTask {
+	effective := *scheduleTask
+	if task.StartTime != nil {
+		effective.StartTime = *task.StartTime
+	}
+	if task.EndTime != nil {
+		effective.EndTime = *task.EndTime
+	}
+	if task.DurationMinutes != nil {
+		effective.DurationMinutes = *task.DurationMinutes
+	}
+	if task.Priority != nil {
+		effective.Priority = *task.Priority
+	}
+	if task.IsRequired != nil {
+		effective.IsRequired = *task.IsRequired
+		effective.Required = *task.IsRequired
+	}
+	if task.Category != nil {
+		effective.Category = *task.Category
+	}
+	return &effective
 }
 
 type DetailedTask struct {
@@ -71,6 +138,7 @@ type DetailedTask struct {
 	TargetCount        *int                  `db:"target_count" json:"targetCount,omitempty"`
 	Notes              string                `db:"notes" json:"notes,omitempty"`
 	Frequency          ScheduleTaskFrequency `db:"frequency" json:"frequency,omitempty"`
+	FrequencyConfig    json.RawMessage       `db:"frequency_config" json:"frequencyConfig,omitempty"`
 	Category           string                `db:"category" json:"category,omitempty"`
 	CreatedAt          time.Time             `db:"created_at" json:"createdAt"`
 	UpdatedAt          time.Time             `db:"updated_at" json:"updatedAt"`
@@ -90,23 +158,26 @@ type TaskCompletion struct {
 }
 
 type TaskFeedItem struct {
-	ID                string     `json:"id"`
-	Title             string     `json:"title"`
-	Description       string     `json:"description,omitempty"`
-	ScheduleID        string     `json:"schedule_id"`
-	PriorityLevel     string     `json:"priority_level"`
-	StatusLevel       string     `json:"status_level"`
-	IsRequired        bool       `json:"is_required"`
-	ScheduleStartTime *string    `json:"schedule_start_time,omitempty"`
-	ScheduleEndTime   *string    `json:"schedule_end_time,omitempty"`
-	DurationMinutes   *int       `json:"duration_minutes,omitempty"`
-	TargetCount       *int       `json:"target_count,omitempty"`
-	CurrentCount      int        `json:"current_count"`
-	CreatedAt         time.Time  `json:"created_at"`
-	CompletedAt       *time.Time `json:"completed_at,omitempty"`
+	ID                string          `json:"id"`
+	Title             string          `json:"title"`
+	Description       string          `json:"description,omitempty"`
+	ScheduleID        string          `json:"schedule_id"`
+	PriorityLevel     string          `json:"priority_level"`
+	StatusLevel       string          `json:"status_level"`
+	IsRequired        bool            `json:"is_required"`
+	ScheduleStartTime *string         `json:"schedule_start_time,omitempty"`
+	ScheduleEndTime   *string         `json:"schedule_end_time,omitempty"`
+	DurationMinutes   *int            `json:"duration_minutes,omitempty"`
+	TargetCount       *int            `json:"target_count,omitempty"`
+	CurrentCount      int             `json:"current_count"`
+	Category          string          `json:"category,omitempty"`
+	FrequencyConfig   json.RawMessage `json:"frequency_config,omitempty"`
+	CreatedAt         time.Time       `json:"created_at"`
+	CompletedAt       *time.Time      `json:"completed_at,omitempty"`
 }
 
 func NewDetailedTask(task *Task, scheduleTask *ScheduleTask) *DetailedTask {
+	scheduleTask = task.EffectiveSchedule(scheduleTask)
 	title := scheduleTask.Title
 	description := scheduleTask.Description
 	if task.Title != "" {
@@ -117,31 +188,32 @@ func NewDetailedTask(task *Task, scheduleTask *ScheduleTask) *DetailedTask {
 	}
 
 	return &DetailedTask{
-		ID:             task.ID,
-		UserID:         task.UserID,
-		ScheduleTaskID: scheduleTask.ID,
-		Title:          title,
-		Description:    description,
-		Date:           task.Date,
-		Status:         task.Status,
-		Priority:       scheduleTask.Priority,
-		Required:       scheduleTask.IsRequired,
-		IsRequired:     scheduleTask.IsRequired,
-		CompletedAt:    task.CompletedAt,
-		ActualStart:    task.ActualStart,
-		ActualEnd:      task.ActualEnd,
-		StartTime:      scheduleTask.StartTime,
-		EndTime:        scheduleTask.EndTime,
-		StartDate:      scheduleTask.StartDate,
-		EndDate:        scheduleTask.EndDate,
-		Duration:       scheduleTask.DurationMinutes,
-		CurrentCount:   task.CurrentCount,
-		TargetCount:    task.TargetCount,
-		Notes:          task.Notes,
-		Frequency:      scheduleTask.Frequency,
-		Category:       scheduleTask.Category,
-		CreatedAt:      task.CreatedAt,
-		UpdatedAt:      task.UpdatedAt,
+		ID:              task.ID,
+		UserID:          task.UserID,
+		ScheduleTaskID:  scheduleTask.ID,
+		Title:           title,
+		Description:     description,
+		Date:            task.Date,
+		Status:          task.Status,
+		Priority:        scheduleTask.Priority,
+		Required:        scheduleTask.IsRequired,
+		IsRequired:      scheduleTask.IsRequired,
+		CompletedAt:     task.CompletedAt,
+		ActualStart:     task.ActualStart,
+		ActualEnd:       task.ActualEnd,
+		StartTime:       scheduleTask.StartTime,
+		EndTime:         scheduleTask.EndTime,
+		StartDate:       scheduleTask.StartDate,
+		EndDate:         scheduleTask.EndDate,
+		Duration:        scheduleTask.DurationMinutes,
+		CurrentCount:    task.CurrentCount,
+		TargetCount:     task.TargetCount,
+		Notes:           task.Notes,
+		Frequency:       scheduleTask.Frequency,
+		FrequencyConfig: scheduleTask.FrequencyConfig,
+		Category:        scheduleTask.Category,
+		CreatedAt:       task.CreatedAt,
+		UpdatedAt:       task.UpdatedAt,
 	}
 }
 
@@ -176,11 +248,9 @@ func CreateUsersTodayTasks(ctx context.Context, userID string) ([]*DetailedTask,
 			// Only apply status transitions that make sense at serve-time.
 			// A pending task whose time window has passed becomes "skipped" (missed),
 			// not "failed" — failed should require explicit user action.
-			// In-progress tasks that have blown past their end window become failed.
-			// Completed/skipped tasks are never overwritten.
-			if task.Status != TaskStatusCompleted && task.Status != TaskStatusSkipped && task.Status != TaskStatusFailed {
-				nextStatus := determineTaskStatus(scheduleTask, today)
-				task.Status = nextStatus
+			// Settled tasks (completed, skipped, failed, dismissed) are never overwritten.
+			if !task.Status.IsSettled() {
+				task.Status = determineTaskStatus(task.EffectiveSchedule(scheduleTask), today)
 			}
 			if existingTask != nil {
 				err = UpdateTask(ctx, task)
@@ -225,9 +295,8 @@ func CreateUserTasksForDate(ctx context.Context, userID string, date time.Time) 
 				task = existingTask
 			}
 
-			if task.Status != TaskStatusCompleted && task.Status != TaskStatusSkipped && task.Status != TaskStatusFailed {
-				nextStatus := determineTaskStatus(scheduleTask, date)
-				task.Status = nextStatus
+			if !task.Status.IsSettled() {
+				task.Status = determineTaskStatus(task.EffectiveSchedule(scheduleTask), date)
 			}
 			if existingTask != nil {
 				err = UpdateTask(ctx, task)
@@ -330,6 +399,12 @@ func GenerateTodayTasksForActiveUsers(ctx context.Context) (int, error) {
 		processedUsers++
 	}
 	return processedUsers, nil
+}
+
+// ScheduleGeneratesOn reports whether the generators create an instance of
+// the schedule on the given date.
+func ScheduleGeneratesOn(scheduleTask *ScheduleTask, date time.Time) bool {
+	return shouldCreateTaskForToday(scheduleTask, date)
 }
 
 func shouldCreateTaskForToday(scheduleTask *ScheduleTask, today time.Time) bool {
@@ -556,23 +631,7 @@ func UpdateTask(ctx context.Context, task *Task) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	_, err = conn.Exec(
-		ctx,
-		`UPDATE tasks SET
-			date = @date,
-			status = @legacyStatus,
-			status_level = @status,
-			completed_at = @completedAt,
-			actual_start = @actualStart,
-			actual_end = @actualEnd,
-			current_count = @currentCount,
-			target_count = @targetCount,
-			notes = @notes,
-			title = @title,
-			description = @description
-		WHERE id = @id`,
-		taskArgs(task),
-	)
+	_, err = conn.Exec(ctx, taskUpdateSQL, taskArgs(task))
 	return err
 }
 
@@ -592,60 +651,12 @@ func UpdateTaskAndSchedule(ctx context.Context, task *Task, schedule *ScheduleTa
 	}
 	defer tx.Rollback(ctx)
 
-	_, err = tx.Exec(
-		ctx,
-		`UPDATE tasks SET
-			date = @date,
-			status = @legacyStatus,
-			status_level = @status,
-			completed_at = @completedAt,
-			actual_start = @actualStart,
-			actual_end = @actualEnd,
-			current_count = @currentCount,
-			target_count = @targetCount,
-			notes = @notes,
-			title = @title,
-			description = @description
-		WHERE id = @id`,
-		taskArgs(task),
-	)
-	if err != nil {
+	if _, err := tx.Exec(ctx, taskUpdateSQL, taskArgs(task)); err != nil {
 		return err
 	}
 
 	schedule.NormalizeDefaults()
-	_, err = tx.Exec(
-		ctx,
-		`UPDATE schedule_tasks SET
-			title = @title,
-			description = @description,
-			start_time = date_trunc('minute', @startTime::timestamptz),
-			end_time = date_trunc('minute', @endTime::timestamptz),
-			schedule_start_time = @startClock::time,
-			schedule_end_time = @endClock::time,
-			start_date = @startDate,
-			end_date = @endDate,
-			duration = @duration,
-			duration_minutes = @durationMinutes,
-			target_count = @targetCount,
-			required = @isRequired,
-			is_required = @isRequired,
-			repeating = @repeating,
-			repeat_frequency = @repeatFrequency,
-			repeat_interval = @repeatInterval,
-			repeat_weekdays = @repeatWeekdays,
-			repeat_end_date = @repeatEndDate,
-			frequency = @frequency,
-			frequency_config = @frequencyConfig,
-			category = @category,
-			status = @legacyStatus,
-			status_level = @status,
-			priority = @legacyPriority,
-			priority_level = @priority
-		WHERE id = @id AND user_id = @userID`,
-		scheduleArgs(schedule),
-	)
-	if err != nil {
+	if _, err := tx.Exec(ctx, scheduleUpdateSQL, scheduleArgs(schedule)); err != nil {
 		return err
 	}
 
@@ -903,9 +914,10 @@ type taskScanner interface {
 
 func scanTask(scanner taskScanner) (*Task, error) {
 	var task Task
-	var completedAt, actualStart, actualEnd sql.NullTime
-	var description, notes, title sql.NullString
-	var targetCount sql.NullInt64
+	var completedAt, actualStart, actualEnd, startTime, endTime sql.NullTime
+	var description, notes, title, priority, category sql.NullString
+	var targetCount, durationMinutes sql.NullInt64
+	var isRequired sql.NullBool
 
 	err := scanner.Scan(
 		&task.ID,
@@ -923,11 +935,37 @@ func scanTask(scanner taskScanner) (*Task, error) {
 		&notes,
 		&task.CreatedAt,
 		&task.UpdatedAt,
+		&startTime,
+		&endTime,
+		&durationMinutes,
+		&priority,
+		&isRequired,
+		&category,
 	)
 	if err != nil {
 		return nil, err
 	}
 
+	if startTime.Valid {
+		task.StartTime = &startTime.Time
+	}
+	if endTime.Valid {
+		task.EndTime = &endTime.Time
+	}
+	if durationMinutes.Valid {
+		value := int(durationMinutes.Int64)
+		task.DurationMinutes = &value
+	}
+	if priority.Valid {
+		value := ScheduleTaskPriority(priority.String)
+		task.Priority = &value
+	}
+	if isRequired.Valid {
+		task.IsRequired = &isRequired.Bool
+	}
+	if category.Valid {
+		task.Category = &category.String
+	}
 	if completedAt.Valid {
 		task.CompletedAt = completedAt.Time
 	}
@@ -959,6 +997,7 @@ func scanDetailedTask(scanner taskScanner) (*DetailedTask, error) {
 	var completedAt, actualStart, actualEnd, startTime, endTime, startDate, endDate sql.NullTime
 	var description, notes, category sql.NullString
 	var duration, currentCount, targetCount sql.NullInt64
+	var frequencyConfig []byte
 
 	err := scanner.Scan(
 		&task.ID,
@@ -983,6 +1022,7 @@ func scanDetailedTask(scanner taskScanner) (*DetailedTask, error) {
 		&targetCount,
 		&notes,
 		&task.Frequency,
+		&frequencyConfig,
 		&category,
 		&task.CreatedAt,
 		&task.UpdatedAt,
@@ -1031,6 +1071,9 @@ func scanDetailedTask(scanner taskScanner) (*DetailedTask, error) {
 	if category.Valid {
 		task.Category = category.String
 	}
+	if len(frequencyConfig) > 0 {
+		task.FrequencyConfig = json.RawMessage(frequencyConfig)
+	}
 
 	return &task, nil
 }
@@ -1066,7 +1109,13 @@ func taskSelectSQL() string {
 		target_count,
 		notes,
 		created_at,
-		updated_at
+		updated_at,
+		CASE WHEN start_time IS NULL THEN NULL ELSE (CURRENT_DATE + start_time)::timestamptz END,
+		CASE WHEN end_time IS NULL THEN NULL ELSE (CURRENT_DATE + end_time)::timestamptz END,
+		duration_minutes,
+		priority_level,
+		is_required,
+		category
 	FROM tasks`
 }
 
@@ -1097,6 +1146,7 @@ func detailedTaskSelectSQL() string {
 		target_count,
 		notes,
 		frequency,
+		frequency_config,
 		category,
 		created_at,
 		updated_at
@@ -1105,21 +1155,34 @@ func detailedTaskSelectSQL() string {
 
 func taskArgs(task *Task) pgx.NamedArgs {
 	return pgx.NamedArgs{
-		"id":             task.ID,
-		"userID":         task.UserID,
-		"scheduleTaskID": task.ScheduleTaskID,
-		"date":           task.Date,
-		"status":         task.Status,
-		"legacyStatus":   string(task.Status),
-		"completedAt":    nullableTime(task.CompletedAt),
-		"actualStart":    nullableTime(task.ActualStart),
-		"actualEnd":      nullableTime(task.ActualEnd),
-		"currentCount":   task.CurrentCount,
-		"targetCount":    nullableIntPtr(task.TargetCount),
-		"notes":          nullableString(task.Notes),
-		"title":          nullableString(task.Title),
-		"description":    nullableString(task.Description),
+		"id":              task.ID,
+		"userID":          task.UserID,
+		"scheduleTaskID":  task.ScheduleTaskID,
+		"date":            task.Date,
+		"status":          task.Status,
+		"legacyStatus":    string(task.Status),
+		"completedAt":     nullableTime(task.CompletedAt),
+		"actualStart":     nullableTime(task.ActualStart),
+		"actualEnd":       nullableTime(task.ActualEnd),
+		"currentCount":    task.CurrentCount,
+		"targetCount":     nullableIntPtr(task.TargetCount),
+		"notes":           nullableString(task.Notes),
+		"title":           nullableString(task.Title),
+		"description":     nullableString(task.Description),
+		"startTime":       nullableClockPtr(task.StartTime),
+		"endTime":         nullableClockPtr(task.EndTime),
+		"durationMinutes": nullableIntPtr(task.DurationMinutes),
+		"priority":        task.Priority,
+		"isRequired":      task.IsRequired,
+		"category":        task.Category,
 	}
+}
+
+func nullableClockPtr(value *time.Time) interface{} {
+	if value == nil {
+		return nil
+	}
+	return nullableClock(*value)
 }
 
 func NewTaskFeedItem(task *DetailedTask) TaskFeedItem {
@@ -1157,6 +1220,8 @@ func NewTaskFeedItem(task *DetailedTask) TaskFeedItem {
 		DurationMinutes:   duration,
 		TargetCount:       task.TargetCount,
 		CurrentCount:      task.CurrentCount,
+		Category:          task.Category,
+		FrequencyConfig:   task.FrequencyConfig,
 		CreatedAt:         task.CreatedAt,
 		CompletedAt:       completedAt,
 	}
@@ -1173,7 +1238,13 @@ const taskUpdateSQL = `UPDATE tasks SET
 		target_count = @targetCount,
 		notes = @notes,
 		title = @title,
-		description = @description
+		description = @description,
+		start_time = @startTime::time,
+		end_time = @endTime::time,
+		duration_minutes = @durationMinutes,
+		priority_level = @priority,
+		is_required = @isRequired,
+		category = @category
 	WHERE id = @id`
 
 const scheduleUpdateSQL = `UPDATE schedule_tasks SET
@@ -1325,6 +1396,7 @@ type DayProgress struct {
 	Pending    int     `json:"pending"`
 	Skipped    int     `json:"skipped"`
 	Failed     int     `json:"failed"`
+	Dismissed  int     `json:"dismissed"`
 	InProgress int     `json:"in_progress"`
 	Percentage float64 `json:"percentage"`
 }
@@ -1336,6 +1408,7 @@ type TaskHistoryDay struct {
 	Pending    int     `json:"pending"`
 	Skipped    int     `json:"skipped"`
 	Failed     int     `json:"failed"`
+	Dismissed  int     `json:"dismissed"`
 	InProgress int     `json:"in_progress"`
 	Percentage float64 `json:"percentage"`
 }
@@ -1359,8 +1432,10 @@ type TaskMetricsRange struct {
 	Pending          int                 `json:"pending"`
 	Skipped          int                 `json:"skipped"`
 	Failed           int                 `json:"failed"`
+	Dismissed        int                 `json:"dismissed"`
 	InProgress       int                 `json:"in_progress"`
 	Percentage       float64             `json:"percentage"`
+	DismissalRate    float64             `json:"dismissal_rate"`
 	DaysCount        int                 `json:"days_count"`
 	CompletionsCount int                 `json:"completions_count"`
 	ActiveDays       int                 `json:"active_days"`
@@ -1396,6 +1471,7 @@ func GetUserDayProgress(ctx context.Context, userID string, day time.Time) (*Day
 			COUNT(*) FILTER (WHERE status_level = 'pending') AS pending,
 			COUNT(*) FILTER (WHERE status_level = 'skipped') AS skipped,
 			COUNT(*) FILTER (WHERE status_level = 'failed') AS failed,
+			COUNT(*) FILTER (WHERE status_level = 'dismissed') AS dismissed,
 			COUNT(*) FILTER (WHERE status_level = 'in_progress') AS in_progress
 		FROM tasks
 		WHERE user_id = $1 AND DATE(date) = DATE($2::timestamptz)`,
@@ -1409,6 +1485,7 @@ func GetUserDayProgress(ctx context.Context, userID string, day time.Time) (*Day
 		&progress.Pending,
 		&progress.Skipped,
 		&progress.Failed,
+		&progress.Dismissed,
 		&progress.InProgress,
 	); err != nil {
 		return nil, err
@@ -1444,6 +1521,7 @@ func GetUserTaskHistory(ctx context.Context, userID string, from time.Time, to t
 				COUNT(*) FILTER (WHERE status_level = 'pending') AS pending,
 				COUNT(*) FILTER (WHERE status_level = 'skipped') AS skipped,
 				COUNT(*) FILTER (WHERE status_level = 'failed') AS failed,
+				COUNT(*) FILTER (WHERE status_level = 'dismissed') AS dismissed,
 				COUNT(*) FILTER (WHERE status_level = 'in_progress') AS in_progress
 			FROM tasks
 			WHERE user_id = $1
@@ -1457,6 +1535,7 @@ func GetUserTaskHistory(ctx context.Context, userID string, from time.Time, to t
 			COALESCE(tc.pending, 0),
 			COALESCE(tc.skipped, 0),
 			COALESCE(tc.failed, 0),
+			COALESCE(tc.dismissed, 0),
 			COALESCE(tc.in_progress, 0)
 		FROM days d
 		LEFT JOIN task_counts tc ON tc.day = d.day
@@ -1486,6 +1565,7 @@ func GetUserTaskHistory(ctx context.Context, userID string, from time.Time, to t
 			&day.Pending,
 			&day.Skipped,
 			&day.Failed,
+			&day.Dismissed,
 			&day.InProgress,
 		); err != nil {
 			return nil, err
@@ -1520,6 +1600,7 @@ func GetUserTaskMetrics(ctx context.Context, userID string, from time.Time, to t
 		metrics.Pending += day.Pending
 		metrics.Skipped += day.Skipped
 		metrics.Failed += day.Failed
+		metrics.Dismissed += day.Dismissed
 		metrics.InProgress += day.InProgress
 		if day.Total > 0 {
 			metrics.ActiveDays++
@@ -1533,6 +1614,7 @@ func GetUserTaskMetrics(ctx context.Context, userID string, from time.Time, to t
 	}
 	if metrics.Total > 0 {
 		metrics.Percentage = math.Round(float64(metrics.Completed)*1000/float64(metrics.Total)) / 10
+		metrics.DismissalRate = math.Round(float64(metrics.Dismissed)*1000/float64(metrics.Total)) / 10
 	}
 	metrics.CurrentStreak = calculateCurrentStreak(history.Days)
 
@@ -1582,4 +1664,143 @@ func calculateCurrentStreak(days []TaskHistoryDay) int {
 		streak++
 	}
 	return streak
+}
+
+type ScheduleHistoryEntry struct {
+	TaskID       string     `json:"task_id"`
+	Date         string     `json:"date"`
+	Status       TaskStatus `json:"status_level"`
+	CurrentCount int        `json:"current_count"`
+	TargetCount  *int       `json:"target_count,omitempty"`
+	CompletedAt  *time.Time `json:"completed_at,omitempty"`
+}
+
+type ScheduleHistory struct {
+	ScheduleID    string                 `json:"schedule_id"`
+	From          string                 `json:"from"`
+	To            string                 `json:"to"`
+	Entries       []ScheduleHistoryEntry `json:"entries"`
+	Total         int                    `json:"total"`
+	Completed     int                    `json:"completed"`
+	Pending       int                    `json:"pending"`
+	Skipped       int                    `json:"skipped"`
+	Failed        int                    `json:"failed"`
+	Dismissed     int                    `json:"dismissed"`
+	InProgress    int                    `json:"in_progress"`
+	Percentage    float64                `json:"percentage"`
+	CurrentStreak int                    `json:"current_streak"`
+	BestStreak    int                    `json:"best_streak"`
+}
+
+func GetScheduleTaskHistory(ctx context.Context, scheduleTaskID string, from time.Time, to time.Time) (*ScheduleHistory, error) {
+	conn, err := GetConn(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	rows, err := conn.Query(
+		ctx,
+		`SELECT
+			t.id,
+			DATE(t.date),
+			t.status_level,
+			t.current_count,
+			COALESCE(t.target_count, st.target_count),
+			t.completed_at
+		FROM tasks t
+		INNER JOIN schedule_tasks st ON st.id = t.schedule_task_id
+		WHERE t.schedule_task_id = $1
+			AND DATE(t.date) BETWEEN $2::date AND $3::date
+		ORDER BY t.date ASC`,
+		scheduleTaskID,
+		from,
+		to,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	history := &ScheduleHistory{
+		ScheduleID: scheduleTaskID,
+		From:       from.Format("2006-01-02"),
+		To:         to.Format("2006-01-02"),
+		Entries:    []ScheduleHistoryEntry{},
+	}
+	for rows.Next() {
+		var entry ScheduleHistoryEntry
+		var day time.Time
+		var targetCount sql.NullInt64
+		var completedAt sql.NullTime
+		if err := rows.Scan(&entry.TaskID, &day, &entry.Status, &entry.CurrentCount, &targetCount, &completedAt); err != nil {
+			return nil, err
+		}
+		entry.Date = day.Format("2006-01-02")
+		if targetCount.Valid {
+			value := int(targetCount.Int64)
+			entry.TargetCount = &value
+		}
+		if completedAt.Valid {
+			entry.CompletedAt = &completedAt.Time
+		}
+		history.Entries = append(history.Entries, entry)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	summarizeScheduleHistory(history, time.Now().Format("2006-01-02"))
+	return history, nil
+}
+
+func summarizeScheduleHistory(history *ScheduleHistory, today string) {
+	history.Total = len(history.Entries)
+	run := 0
+	for _, entry := range history.Entries {
+		switch entry.Status {
+		case TaskStatusCompleted:
+			history.Completed++
+		case TaskStatusPending:
+			history.Pending++
+		case TaskStatusSkipped:
+			history.Skipped++
+		case TaskStatusFailed:
+			history.Failed++
+		case TaskStatusDismissed:
+			history.Dismissed++
+		case TaskStatusInProgress:
+			history.InProgress++
+		}
+		if entry.Status == TaskStatusCompleted {
+			run++
+			history.BestStreak = max(history.BestStreak, run)
+		} else if !isOpenOccurrence(entry, today) {
+			run = 0
+		}
+	}
+	if history.Total > 0 {
+		history.Percentage = math.Round(float64(history.Completed)*1000/float64(history.Total)) / 10
+	}
+
+	for index := len(history.Entries) - 1; index >= 0; index-- {
+		entry := history.Entries[index]
+		if isOpenOccurrence(entry, today) {
+			continue
+		}
+		if entry.Status != TaskStatusCompleted {
+			break
+		}
+		history.CurrentStreak++
+	}
+}
+
+// isOpenOccurrence reports whether an occurrence can still be completed: it is
+// today or later and the user has not settled it. Open occurrences neither
+// extend nor break a streak.
+func isOpenOccurrence(entry ScheduleHistoryEntry, today string) bool {
+	return entry.Date >= today && !entry.Status.IsSettled()
 }
