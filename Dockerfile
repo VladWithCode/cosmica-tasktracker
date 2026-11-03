@@ -1,4 +1,4 @@
-FROM docker.io/oven/bun:1.2 AS web-build
+FROM docker.io/oven/bun:1.4.2 AS web-build
 WORKDIR /src/frontend
 COPY frontend/package.json frontend/bun.lock ./
 RUN bun install --frozen-lockfile
